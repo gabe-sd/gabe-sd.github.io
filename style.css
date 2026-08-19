@@ -1,0 +1,98 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f4f4f5;
+  --fg: #1c1c1e;
+  --cell-bg: #ffffff;
+  --cell-border: #c7c7cc;
+  --accent: #3b82f6;
+  --win: #22c55e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1c1e;
+    --fg: #f4f4f5;
+    --cell-bg: #2c2c2e;
+    --cell-border: #48484a;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+h1 {
+  margin: 0;
+}
+
+#status {
+  margin: 0;
+  font-size: 1.1rem;
+  min-height: 1.5em;
+}
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(70px, 100px));
+  grid-template-rows: repeat(3, minmax(70px, 100px));
+  gap: 6px;
+}
+
+.cell {
+  background: var(--cell-bg);
+  border: 2px solid var(--cell-border);
+  border-radius: 8px;
+  font-size: 2.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--fg);
+}
+
+.cell:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.cell:disabled {
+  cursor: default;
+}
+
+.cell.win {
+  border-color: var(--win);
+  color: var(--win);
+}
+
+#restart {
+  padding: 0.5rem 1.25rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+}
+
+#restart:hover {
+  opacity: 0.9;
+}
