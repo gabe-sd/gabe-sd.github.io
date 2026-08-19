@@ -1,0 +1,78 @@
+#board {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(38px, 60px));
+  grid-template-rows: repeat(8, minmax(38px, 60px));
+  border: 3px solid var(--cell-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.square {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+}
+
+.square.light {
+  background: #eeeed2;
+}
+
+.square.dark {
+  background: #769656;
+}
+
+@media (prefers-color-scheme: dark) {
+  .square.light {
+    background: #b9bfc9;
+  }
+  .square.dark {
+    background: #3f4a3d;
+  }
+}
+
+.square.selected {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.square.check {
+  background: var(--lose);
+}
+
+.piece-w {
+  color: #fbfbfb;
+  text-shadow: 0 0 2px #000, 0 0 1px #000, 0 1px 1px #000;
+}
+
+.piece-b {
+  color: #14141a;
+  text-shadow: 0 0 2px #fff, 0 0 1px #fff;
+}
+
+.square .dot {
+  position: absolute;
+  width: 22%;
+  height: 22%;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.square .ring {
+  position: absolute;
+  inset: 8%;
+  border: 4px solid rgba(0, 0, 0, 0.35);
+  border-radius: 50%;
+  pointer-events: none;
+}

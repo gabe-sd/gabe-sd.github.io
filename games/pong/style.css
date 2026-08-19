@@ -1,0 +1,7 @@
+#board {
+  background: var(--cell-bg);
+  border: 2px solid var(--cell-border);
+  border-radius: 8px;
+  max-width: 100%;
+  touch-action: none;
+}

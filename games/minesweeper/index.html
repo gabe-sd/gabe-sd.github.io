@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minesweeper · Game Arcade</title>
+<link rel="stylesheet" href="../../shared.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+    <a class="back-link" href="../../index.html">← All games</a>
+    <h1>Minesweeper</h1>
+    <div class="hud">
+      <span id="mine-count">💣 10</span>
+      <span id="timer">⏱ 0</span>
+    </div>
+    <p id="status" class="status">Left click to reveal · Right click to flag</p>
+    <div id="board" role="grid" aria-label="Minesweeper board"></div>
+    <button id="restart" class="btn">Restart</button>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>

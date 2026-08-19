@@ -1,0 +1,32 @@
+#board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(70px, 100px));
+  grid-template-rows: repeat(3, minmax(70px, 100px));
+  gap: 6px;
+}
+
+.cell {
+  background: var(--cell-bg);
+  border: 2px solid var(--cell-border);
+  border-radius: 8px;
+  font-size: 2.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--fg);
+}
+
+.cell:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.cell:disabled {
+  cursor: default;
+}
+
+.cell.win {
+  border-color: var(--win);
+  color: var(--win);
+}
