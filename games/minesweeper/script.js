@@ -15,6 +15,7 @@ let flagCount = 0;
 let revealedCount = 0;
 let timerId = null;
 let seconds = 0;
+let chordDown = null;
 
 function emptyGrid() {
   return Array.from({ length: SIZE }, () =>
@@ -75,16 +76,28 @@ function buildBoard() {
       btn.addEventListener("mousedown", (e) => {
         if (e.button === 1) {
           e.preventDefault();
+          chordDown = { r, c };
           setChordPreview(r, c, true);
         }
       });
-      btn.addEventListener("mouseleave", () => setChordPreview(r, c, false));
-      btn.addEventListener("auxclick", (e) => {
-        if (e.button === 1) {
-          e.preventDefault();
+      btn.addEventListener("mouseup", (e) => {
+        if (e.button === 1 && chordDown && chordDown.r === r && chordDown.c === c) {
           setChordPreview(r, c, false);
           handleChord(r, c);
         }
+        chordDown = null;
+      });
+      btn.addEventListener("mouseleave", () => {
+        if (chordDown && chordDown.r === r && chordDown.c === c) {
+          setChordPreview(r, c, false);
+          chordDown = null;
+        }
+      });
+      // Some browsers don't fire the semantic "click"/"auxclick" pair reliably
+      // for the middle button, so the mousedown/mouseup pair above is authoritative;
+      // this just guards against the OS-level middle-click context menu on some setups.
+      btn.addEventListener("auxclick", (e) => {
+        if (e.button === 1) e.preventDefault();
       });
       boardEl.appendChild(btn);
       row.push(btn);
