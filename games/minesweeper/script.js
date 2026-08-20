@@ -15,7 +15,9 @@ let flagCount = 0;
 let revealedCount = 0;
 let timerId = null;
 let seconds = 0;
-let chordDown = null;
+let statusTimer = null;
+
+const DEFAULT_STATUS = "Left click: reveal · Right click: flag · Middle click: chord";
 
 function emptyGrid() {
   return Array.from({ length: SIZE }, () =>
@@ -73,29 +75,16 @@ function buildBoard() {
         e.preventDefault();
         handleFlag(r, c);
       });
+      // Chord on middle-button press rather than release. The middle button is the
+      // scroll wheel, so pressing it nudges the mouse more often than not; waiting
+      // for the release meant any nudge across a cell edge silently cancelled the
+      // chord. preventDefault also suppresses middle-click autoscroll/paste, which
+      // can otherwise swallow the release entirely.
       btn.addEventListener("mousedown", (e) => {
-        if (e.button === 1) {
-          e.preventDefault();
-          chordDown = { r, c };
-          setChordPreview(r, c, true);
-        }
+        if (e.button !== 1) return;
+        e.preventDefault();
+        handleChord(r, c);
       });
-      btn.addEventListener("mouseup", (e) => {
-        if (e.button === 1 && chordDown && chordDown.r === r && chordDown.c === c) {
-          setChordPreview(r, c, false);
-          handleChord(r, c);
-        }
-        chordDown = null;
-      });
-      btn.addEventListener("mouseleave", () => {
-        if (chordDown && chordDown.r === r && chordDown.c === c) {
-          setChordPreview(r, c, false);
-          chordDown = null;
-        }
-      });
-      // Some browsers don't fire the semantic "click"/"auxclick" pair reliably
-      // for the middle button, so the mousedown/mouseup pair above is authoritative;
-      // this just guards against the OS-level middle-click context menu on some setups.
       btn.addEventListener("auxclick", (e) => {
         if (e.button === 1) e.preventDefault();
       });
@@ -155,14 +144,12 @@ function floodReveal(r, c) {
   }
 }
 
-function setChordPreview(r, c, on) {
-  const cell = grid[r][c];
-  if (!cell.revealed || cell.adjacent === 0) return;
-  for (const [nr, nc] of neighbors(r, c)) {
-    const n = grid[nr][nc];
-    if (n.revealed || n.flagged) continue;
-    cellEls[nr][nc].classList.toggle("chord-preview", on);
-  }
+function flashStatus(msg) {
+  statusEl.textContent = msg;
+  if (statusTimer) clearTimeout(statusTimer);
+  statusTimer = setTimeout(() => {
+    if (!gameOver) statusEl.textContent = DEFAULT_STATUS;
+  }, 2500);
 }
 
 function handleChord(r, c) {
@@ -172,7 +159,13 @@ function handleChord(r, c) {
 
   const around = neighbors(r, c);
   const flaggedCount = around.filter(([nr, nc]) => grid[nr][nc].flagged).length;
-  if (flaggedCount !== cell.adjacent) return;
+  if (flaggedCount !== cell.adjacent) {
+    flashStatus(
+      `Chord needs ${cell.adjacent} flag${cell.adjacent === 1 ? "" : "s"} ` +
+      `around this ${cell.adjacent} — there ${flaggedCount === 1 ? "is" : "are"} ${flaggedCount}.`
+    );
+    return;
+  }
 
   let hitMine = false;
   for (const [nr, nc] of around) {
@@ -252,10 +245,11 @@ function restart() {
   flagCount = 0;
   revealedCount = 0;
   stopTimer();
+  if (statusTimer) clearTimeout(statusTimer);
   seconds = 0;
   timerEl.textContent = `⏱ ${seconds}`;
   mineCountEl.textContent = `💣 ${MINE_COUNT}`;
-  statusEl.textContent = "Left click: reveal · Right click: flag · Middle click: chord";
+  statusEl.textContent = DEFAULT_STATUS;
   buildBoard();
 }
 

@@ -44,11 +44,6 @@
   background: var(--cell-bg);
 }
 
-.cell.chord-preview {
-  background: transparent;
-  border-color: var(--accent);
-}
-
 .n1 { color: #3b82f6; }
 .n2 { color: #22c55e; }
 .n3 { color: #ef4444; }
