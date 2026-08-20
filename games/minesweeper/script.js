@@ -8,6 +8,11 @@ const timerEl = document.getElementById("timer");
 const restartBtn = document.getElementById("restart");
 const helpToggle = document.getElementById("help-toggle");
 const instructionsEl = document.getElementById("instructions");
+const bestTimeEl = document.getElementById("best-time");
+
+// Best time is per board configuration, so adding a difficulty later cannot
+// silently compare records from different board sizes.
+const BEST_TIME_KEY = `minesweeper.bestTime.${SIZE}x${SIZE}-${MINE_COUNT}`;
 
 let grid = [];
 let cellEls = [];
@@ -24,6 +29,46 @@ let statusTimer = null;
 // something happens (the line keeps its height, so the board does not shift).
 function defaultStatus() {
   return firstClick ? "Click any cell to start" : "";
+}
+
+// localStorage is not always available — it throws in private windows, with
+// site data blocked, and from file:// in some browsers. A high score is a nice
+// extra, so every access degrades to "no record" rather than breaking the game.
+function loadBestTime() {
+  try {
+    const raw = localStorage.getItem(BEST_TIME_KEY);
+    const value = Number(raw);
+    return raw !== null && Number.isFinite(value) && value >= 0 ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveBestTime(value) {
+  try {
+    localStorage.setItem(BEST_TIME_KEY, String(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function renderBestTime() {
+  const best = loadBestTime();
+  bestTimeEl.textContent = `🏆 ${best === null ? "—" : best + "s"}`;
+}
+
+// Returns the message for the win, recording a new record when there is one.
+function recordWin() {
+  const best = loadBestTime();
+  if (best !== null && best <= seconds) {
+    return `Cleared in ${seconds}s 🎉 (best ${best}s)`;
+  }
+  const saved = saveBestTime(seconds);
+  renderBestTime();
+  return saved
+    ? `Cleared in ${seconds}s — new best time! 🎉`
+    : `Cleared in ${seconds}s 🎉`;
 }
 
 function emptyGrid() {
@@ -243,7 +288,7 @@ function checkWin() {
   if (revealedCount === SIZE * SIZE - MINE_COUNT) {
     gameOver = true;
     stopTimer();
-    statusEl.textContent = "You cleared the board! 🎉";
+    statusEl.textContent = recordWin();
   }
 }
 
@@ -259,6 +304,7 @@ function restart() {
   timerEl.textContent = `⏱ ${seconds}`;
   mineCountEl.textContent = `💣 ${MINE_COUNT}`;
   statusEl.textContent = defaultStatus();
+  renderBestTime();
   buildBoard();
 }
 
