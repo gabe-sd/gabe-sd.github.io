@@ -7,6 +7,10 @@ runtime dependencies. Files are served as-is. The only dependency in the repo is
 `playwright-core`, used by the browser tests and nothing else — keep it that way,
 and never make the site itself need a build or a package install to run.
 
+Known gaps and unscheduled work live in `TODO.md`. Check it before starting
+something new, and delete entries there as they land rather than marking them
+done — git history is the record of what happened.
+
 ## Commands
 
 ```bash
