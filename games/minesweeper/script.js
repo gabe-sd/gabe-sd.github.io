@@ -3,7 +3,7 @@ const MINE_COUNT = 10;
 
 const boardEl = document.getElementById("board");
 const statusEl = document.getElementById("status");
-const mineCountEl = document.getElementById("mine-count");
+const flagCountEl = document.getElementById("flag-count");
 const timerEl = document.getElementById("timer");
 const restartBtn = document.getElementById("restart");
 const helpToggle = document.getElementById("help-toggle");
@@ -249,7 +249,7 @@ function handleFlag(r, c) {
   if (cell.revealed) return;
   cell.flagged = !cell.flagged;
   flagCount += cell.flagged ? 1 : -1;
-  mineCountEl.textContent = `💣 ${MINE_COUNT - flagCount}`;
+  flagCountEl.textContent = `🚩 ${MINE_COUNT - flagCount}`;
   renderCell(r, c);
 }
 
@@ -302,7 +302,7 @@ function restart() {
   if (statusTimer) clearTimeout(statusTimer);
   seconds = 0;
   timerEl.textContent = `⏱ ${seconds}`;
-  mineCountEl.textContent = `💣 ${MINE_COUNT}`;
+  flagCountEl.textContent = `🚩 ${MINE_COUNT}`;
   statusEl.textContent = defaultStatus();
   renderBestTime();
   buildBoard();
