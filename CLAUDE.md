@@ -31,7 +31,8 @@ Each game page follows a contract that `shared.css` depends on:
 
 - Links `../../shared.css` **first**, then its own `style.css`.
 - Uses the ids `#board`, `#status`, `#restart`; games may add their own on top
-  (Minesweeper has `#mine-count`, `#timer`, `#help-toggle`, `#instructions`).
+  (Minesweeper has `#flag-count`, `#timer`, `#best-time`, `#help-toggle`,
+  `#instructions`).
   Game scripts look these up by id, and `shared.css` styles `.page`, `.status`,
   `.hint`, `.btn`, `.back-link` for them.
 - Treats `#status` as game state only — what just happened, or what to do next.
