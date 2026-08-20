@@ -30,9 +30,14 @@ folder and a card in the root `index.html` — nothing else changes.
 Each game page follows a contract that `shared.css` depends on:
 
 - Links `../../shared.css` **first**, then its own `style.css`.
-- Uses the ids `#board`, `#status`, `#restart` (Minesweeper adds `#mine-count`,
-  `#timer`). Game scripts look these up by id, and `shared.css` styles `.page`,
-  `.status`, `.hint`, `.btn`, `.back-link` for them.
+- Uses the ids `#board`, `#status`, `#restart`; games may add their own on top
+  (Minesweeper has `#mine-count`, `#timer`, `#help-toggle`, `#instructions`).
+  Game scripts look these up by id, and `shared.css` styles `.page`, `.status`,
+  `.hint`, `.btn`, `.back-link` for them.
+- Treats `#status` as game state only — what just happened, or what to do next.
+  Standing instructions belong in a collapsible panel (see Minesweeper's
+  `#instructions`), not the status line. `shared.css` gives `.status` a reserved
+  min-height so its text can change without shifting the board.
 - Links back to `../../index.html`.
 
 `shared.css` owns the theme as CSS custom properties (`--bg`, `--fg`, `--cell-bg`,

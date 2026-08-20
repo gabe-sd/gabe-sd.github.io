@@ -15,10 +15,25 @@
       <span id="mine-count">💣 10</span>
       <span id="timer">⏱ 0</span>
     </div>
-    <p id="status" class="status">Left click: reveal · Right click: flag · Middle click: chord</p>
+    <p id="status" class="status">Click any cell to start</p>
     <div id="board" role="grid" aria-label="Minesweeper board"></div>
-    <p class="hint">Chording: middle-click a revealed number once it has that many flags around it to open the rest of its neighbors at once</p>
-    <button id="restart" class="btn">Restart</button>
+    <div class="controls">
+      <button id="restart" class="btn">Restart</button>
+      <button id="help-toggle" class="btn secondary"
+              aria-expanded="false" aria-controls="instructions">How to play</button>
+    </div>
+    <div id="instructions" class="instructions" hidden>
+      <ul>
+        <li><b>Left click</b> — reveal a cell</li>
+        <li><b>Right click</b> — place or remove a flag</li>
+        <li><b>Middle click</b> — chord (see below)</li>
+      </ul>
+      <p>
+        Chording opens all remaining neighbours of a revealed number in one go,
+        once you have flagged exactly that many cells around it. If one of those
+        flags is wrong the chord uncovers a mine and ends the game.
+      </p>
+    </div>
   </main>
   <script src="script.js"></script>
 </body>
