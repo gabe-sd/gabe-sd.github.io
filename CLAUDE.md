@@ -2,22 +2,28 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-A static game arcade: plain HTML/CSS/JS with no build step, no package manager,
-no framework, and no dependencies. Files are served as-is.
+A static game arcade: plain HTML/CSS/JS with no build step, no framework, and no
+runtime dependencies. Files are served as-is. The only dependency in the repo is
+`playwright-core`, used by the browser tests and nothing else — keep it that way,
+and never make the site itself need a build or a package install to run.
 
 ## Commands
 
 ```bash
-python3 -m http.server 8000     # serve at http://localhost:8000
+npm run serve                   # http.server on 8934, the port the tests expect
+npm test                        # all browser suites; non-zero exit on failure
+node tests/chording.test.js     # one suite on its own
 node --check games/<name>/script.js   # syntax only - proves nothing about behaviour
 ```
 
-Serve rather than opening `file://`; relative paths work either way, but a server
-matches how it is deployed.
+`npm install` first (once) for the tests; see `tests/README.md`. Serve rather than
+opening `file://`; relative paths work either way, but a server matches how it is
+deployed.
 
-There is no test suite, linter, or build. The equivalent of "running one test" is
-driving a single game page in a browser and asserting on the resulting game
-state — see *Verifying changes* below.
+There is no linter or build. Tests are browser-driven and live in `tests/` — they
+open real pages and assert on real game state, since there is nothing meaningful
+to unit test in isolation. Add a suite there when you add a game or a feature
+with state worth protecting.
 
 ## Architecture
 
@@ -78,12 +84,28 @@ will not restyle the paddles or ball until reload.
 **Minesweeper** (`games/minesweeper/script.js`) places mines lazily on the first
 reveal, excluding the 3x3 around that cell, so the first click is always safe —
 `grid` is empty until then. `floodReveal` recurses through zero-adjacency cells.
-Chording fires on middle **mousedown** (see below).
+Chording fires on middle **mousedown** (see below). The HUD counter shows flags
+left to place (`MINE_COUNT - flagCount`), which is why it carries a flag icon;
+the bomb icon means an actual revealed mine.
+
+### Persisted state
+
+The Minesweeper best time is the only stored data: one `localStorage` key,
+namespaced by board configuration (`minesweeper.bestTime.9x9-10`) so adding a
+difficulty later cannot compare records across board sizes. Keep it local — no
+network, no accounts.
+
+Wrap every `localStorage` access. It does not merely return `null` when
+unavailable, it *throws* — in private windows, with site data blocked, and from
+`file://` in some browsers — so an unguarded read at load time takes the whole
+game down. `loadBestTime`/`saveBestTime` degrade to "no record" instead, and
+`tests/best-time.test.js` covers that path by making storage throw.
 
 ## Verifying changes
 
 Drive the real page and assert on game state. Reading the code and reasoning about
-it is not verification, and `node --check` only catches syntax errors.
+it is not verification, and `node --check` only catches syntax errors. Run
+`npm test` before merging; add cases for what you changed.
 
 ### Mouse/pointer behaviour must be verified with real input
 
@@ -112,6 +134,9 @@ Rules that follow:
   broken version, watch it fail, restore, watch it pass. A passing "after" alone is
   not evidence.
 - Prefer input handling that does not depend on the pointer staying still.
+
+`tests/chording.test.js` case 2 is the standing guard for this — it moves the
+pointer while the button is held. Do not delete it.
 
 ## Machine-specific: driving a real browser on the dev box
 
