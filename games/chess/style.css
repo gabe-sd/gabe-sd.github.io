@@ -7,13 +7,6 @@
   overflow: hidden;
 }
 
-.hint {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--muted);
-  text-align: center;
-}
-
 .square {
   display: flex;
   align-items: center;

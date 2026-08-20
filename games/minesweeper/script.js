@@ -72,6 +72,20 @@ function buildBoard() {
         e.preventDefault();
         handleFlag(r, c);
       });
+      btn.addEventListener("mousedown", (e) => {
+        if (e.button === 1) {
+          e.preventDefault();
+          setChordPreview(r, c, true);
+        }
+      });
+      btn.addEventListener("mouseleave", () => setChordPreview(r, c, false));
+      btn.addEventListener("auxclick", (e) => {
+        if (e.button === 1) {
+          e.preventDefault();
+          setChordPreview(r, c, false);
+          handleChord(r, c);
+        }
+      });
       boardEl.appendChild(btn);
       row.push(btn);
     }
@@ -126,6 +140,47 @@ function floodReveal(r, c) {
   if (cell.adjacent === 0) {
     for (const [nr, nc] of neighbors(r, c)) floodReveal(nr, nc);
   }
+}
+
+function setChordPreview(r, c, on) {
+  const cell = grid[r][c];
+  if (!cell.revealed || cell.adjacent === 0) return;
+  for (const [nr, nc] of neighbors(r, c)) {
+    const n = grid[nr][nc];
+    if (n.revealed || n.flagged) continue;
+    cellEls[nr][nc].classList.toggle("chord-preview", on);
+  }
+}
+
+function handleChord(r, c) {
+  if (gameOver) return;
+  const cell = grid[r][c];
+  if (!cell.revealed || cell.adjacent === 0) return;
+
+  const around = neighbors(r, c);
+  const flaggedCount = around.filter(([nr, nc]) => grid[nr][nc].flagged).length;
+  if (flaggedCount !== cell.adjacent) return;
+
+  let hitMine = false;
+  for (const [nr, nc] of around) {
+    const n = grid[nr][nc];
+    if (n.flagged || n.revealed) continue;
+    if (n.mine) {
+      hitMine = true;
+    } else {
+      floodReveal(nr, nc);
+    }
+  }
+
+  if (hitMine) {
+    revealAllMines();
+    gameOver = true;
+    stopTimer();
+    statusEl.textContent = "Boom! A flag was wrong.";
+    return;
+  }
+
+  checkWin();
 }
 
 function handleFlag(r, c) {
@@ -187,7 +242,7 @@ function restart() {
   seconds = 0;
   timerEl.textContent = `⏱ ${seconds}`;
   mineCountEl.textContent = `💣 ${MINE_COUNT}`;
-  statusEl.textContent = "Left click to reveal · Right click to flag";
+  statusEl.textContent = "Left click: reveal · Right click: flag · Middle click: chord";
   buildBoard();
 }
 
