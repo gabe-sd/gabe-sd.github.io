@@ -6,6 +6,8 @@ const statusEl = document.getElementById("status");
 const mineCountEl = document.getElementById("mine-count");
 const timerEl = document.getElementById("timer");
 const restartBtn = document.getElementById("restart");
+const helpToggle = document.getElementById("help-toggle");
+const instructionsEl = document.getElementById("instructions");
 
 let grid = [];
 let cellEls = [];
@@ -17,7 +19,12 @@ let timerId = null;
 let seconds = 0;
 let statusTimer = null;
 
-const DEFAULT_STATUS = "Left click: reveal · Right click: flag · Middle click: chord";
+// The status line reports game state only; the controls live in the instructions
+// panel. Before the first reveal it prompts, after that it stays empty until
+// something happens (the line keeps its height, so the board does not shift).
+function defaultStatus() {
+  return firstClick ? "Click any cell to start" : "";
+}
 
 function emptyGrid() {
   return Array.from({ length: SIZE }, () =>
@@ -119,6 +126,8 @@ function handleReveal(r, c) {
     placeMines(r, c);
     firstClick = false;
     startTimer();
+    // drop the "click any cell to start" prompt now that play has begun
+    statusEl.textContent = defaultStatus();
   }
 
   if (cell.mine) {
@@ -148,7 +157,7 @@ function flashStatus(msg) {
   statusEl.textContent = msg;
   if (statusTimer) clearTimeout(statusTimer);
   statusTimer = setTimeout(() => {
-    if (!gameOver) statusEl.textContent = DEFAULT_STATUS;
+    if (!gameOver) statusEl.textContent = defaultStatus();
   }, 2500);
 }
 
@@ -249,9 +258,17 @@ function restart() {
   seconds = 0;
   timerEl.textContent = `⏱ ${seconds}`;
   mineCountEl.textContent = `💣 ${MINE_COUNT}`;
-  statusEl.textContent = DEFAULT_STATUS;
+  statusEl.textContent = defaultStatus();
   buildBoard();
 }
 
+function toggleInstructions() {
+  const open = instructionsEl.hasAttribute("hidden");
+  instructionsEl.toggleAttribute("hidden", !open);
+  helpToggle.setAttribute("aria-expanded", String(open));
+  helpToggle.textContent = open ? "Hide instructions" : "How to play";
+}
+
 restartBtn.addEventListener("click", restart);
+helpToggle.addEventListener("click", toggleInstructions);
 restart();
