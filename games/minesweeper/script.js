@@ -9,6 +9,9 @@ const restartBtn = document.getElementById("restart");
 const helpToggle = document.getElementById("help-toggle");
 const instructionsEl = document.getElementById("instructions");
 const bestTimeEl = document.getElementById("best-time");
+const settingsToggle = document.getElementById("settings-toggle");
+const settingsEl = document.getElementById("settings");
+const resetBestBtn = document.getElementById("reset-best");
 
 // Best time is per board configuration, so adding a difficulty later cannot
 // silently compare records from different board sizes.
@@ -23,6 +26,8 @@ let revealedCount = 0;
 let timerId = null;
 let seconds = 0;
 let statusTimer = null;
+let resetArmed = false;
+let resetTimer = null;
 
 // The status line reports game state only; the controls live in the instructions
 // panel. Before the first reveal it prompts, after that it stays empty until
@@ -53,9 +58,23 @@ function saveBestTime(value) {
   }
 }
 
+function clearBestTime() {
+  try {
+    localStorage.removeItem(BEST_TIME_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function renderBestTime() {
   const best = loadBestTime();
   bestTimeEl.textContent = `🏆 ${best === null ? "—" : best + "s"}`;
+  // Nothing to clear without a record - and storage being unavailable reads as
+  // "no record", which is also nothing to clear. The greyed-out button is the
+  // whole explanation; the trophy above it says what there is to clear.
+  resetBestBtn.disabled = best === null;
+  if (best === null) disarmReset();
 }
 
 // Returns the message for the win, recording a new record when there is one.
@@ -315,6 +334,43 @@ function toggleInstructions() {
   helpToggle.textContent = open ? "Hide instructions" : "How to play";
 }
 
+function toggleSettings() {
+  const open = settingsEl.hasAttribute("hidden");
+  settingsEl.toggleAttribute("hidden", !open);
+  settingsToggle.setAttribute("aria-expanded", String(open));
+  // Closing the panel abandons a half-finished reset rather than leaving it
+  // armed for whenever the panel is next opened.
+  if (!open) disarmReset();
+}
+
+function disarmReset() {
+  resetArmed = false;
+  if (resetTimer) clearTimeout(resetTimer);
+  resetTimer = null;
+  resetBestBtn.textContent = "Reset best time";
+  resetBestBtn.classList.remove("confirming");
+}
+
+// Two-step, because a cleared record cannot be recovered: the first click arms
+// the button, the second one does it. Arming lapses after a few seconds. The
+// result needs no message - the trophy drops to a dash and the button greys out.
+function handleResetBest() {
+  if (resetBestBtn.disabled) return;
+  if (!resetArmed) {
+    resetArmed = true;
+    resetBestBtn.textContent = "Sure? Click to confirm";
+    resetBestBtn.classList.add("confirming");
+    if (resetTimer) clearTimeout(resetTimer);
+    resetTimer = setTimeout(disarmReset, 5000);
+    return;
+  }
+  clearBestTime();
+  disarmReset();
+  renderBestTime();
+}
+
 restartBtn.addEventListener("click", restart);
 helpToggle.addEventListener("click", toggleInstructions);
+settingsToggle.addEventListener("click", toggleSettings);
+resetBestBtn.addEventListener("click", handleResetBest);
 restart();
