@@ -53,7 +53,8 @@ Each game page follows a contract that `shared.css` depends on:
 - Links `../../shared.css` **first**, then its own `style.css`.
 - Uses the ids `#board`, `#status`, `#restart`; games may add their own on top
   (Minesweeper has `#flag-count`, `#timer`, `#best-time`, `#help-toggle`,
-  `#instructions`).
+  `#instructions`, and a gear button `#settings-toggle` opening `#settings`,
+  which holds `#reset-best`).
   Game scripts look these up by id, and `shared.css` styles `.page`, `.status`,
   `.hint`, `.btn`, `.back-link` for them.
 - Treats `#status` as game state only — what just happened, or what to do next.
@@ -113,8 +114,19 @@ network, no accounts.
 Wrap every `localStorage` access. It does not merely return `null` when
 unavailable, it *throws* — in private windows, with site data blocked, and from
 `file://` in some browsers — so an unguarded read at load time takes the whole
-game down. `loadBestTime`/`saveBestTime` degrade to "no record" instead, and
+game down. `loadBestTime`/`saveBestTime`/`clearBestTime` degrade to "no record" instead, and
 `tests/best-time.test.js` covers that path by making storage throw.
+
+The gear panel's Reset best time button clears the key. It is disabled whenever
+`loadBestTime()` returns `null`, which covers both "no record yet" and "storage
+unavailable" — there is nothing to clear either way, and the greyed-out button is
+the whole explanation, so it carries no note. Clearing cannot be undone, so the
+button is two-step: the first click arms it, the second clears. Anything else
+destructive added to that panel should follow the same pattern.
+
+Collapsible panels toggle via the `hidden` attribute, so any `display` rule on
+one must be scoped to `:not([hidden])` — a display value otherwise wins over
+`hidden` and the panel renders open on load.
 
 ## Verifying changes
 

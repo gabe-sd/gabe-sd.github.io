@@ -45,9 +45,11 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
 - **instructions-panel.test.js** — the How to play toggle, and the rule that
   `#status` reports game state only. Also asserts the board does not shift when
   the status text changes.
-- **best-time.test.js** — the locally stored personal best, including the path
-  where `localStorage` throws (private windows, blocked site data), which would
-  otherwise break the page on load.
+- **best-time.test.js** — the locally stored personal best: recording it,
+  clearing it from the gear panel (including that one click only arms the reset
+  and closing the panel abandons it), and the path where `localStorage` throws
+  (private windows, blocked site data), which would otherwise break the page on
+  load.
 
 These drive input through Playwright, which is enough for ordinary clicks. For a
 *new* pointer bug, reproduce with real OS-level input first — see
