@@ -22,6 +22,9 @@
       <button id="restart" class="btn">Restart</button>
       <button id="help-toggle" class="btn secondary"
               aria-expanded="false" aria-controls="instructions">How to play</button>
+      <button id="settings-toggle" class="btn secondary icon" title="Advanced"
+              aria-expanded="false" aria-controls="settings"
+              aria-label="Advanced controls">⚙</button>
     </div>
     <div id="instructions" class="instructions" hidden>
       <ul>
@@ -34,6 +37,9 @@
         once you have flagged exactly that many cells around it. If one of those
         flags is wrong the chord uncovers a mine and ends the game.
       </p>
+    </div>
+    <div id="settings" class="settings" hidden>
+      <button id="reset-best" class="btn secondary" disabled>Reset best time</button>
     </div>
   </main>
   <script src="script.js"></script>

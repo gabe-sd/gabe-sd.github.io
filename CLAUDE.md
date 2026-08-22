@@ -11,6 +11,17 @@ Known gaps and unscheduled work live in `TODO.md`. Check it before starting
 something new, and delete entries there as they land rather than marking them
 done — git history is the record of what happened.
 
+## Work on a branch, never on main
+
+Any new feature or fix starts with a branch — `git checkout -b <short-name>`
+before the first edit, not after the work is done. `main` stays clean so a
+half-finished change can be abandoned or set aside without unpicking it, and so
+the merge commit is what records the feature (see `minesweeper-highscore` in the
+history). Name it for the change, not the game alone.
+
+If you catch yourself editing on `main`, move the work across before committing:
+`git checkout -b <name>` carries uncommitted changes with it.
+
 ## Commands
 
 ```bash

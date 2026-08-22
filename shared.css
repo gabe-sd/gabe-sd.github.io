@@ -87,8 +87,13 @@ button {
   cursor: pointer;
 }
 
-.btn:hover {
+.btn:not(:disabled):hover {
   opacity: 0.9;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .btn.secondary {

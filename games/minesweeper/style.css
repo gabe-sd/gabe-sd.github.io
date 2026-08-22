@@ -17,7 +17,8 @@
   gap: 0.6rem;
 }
 
-.instructions {
+.instructions,
+.settings {
   max-width: 340px;
   padding: 0.85rem 1rem;
   background: var(--card-bg);
@@ -38,6 +39,32 @@
 .instructions p {
   margin: 0;
   color: var(--muted);
+}
+
+/* The gear sits with Restart/How to play, so it is square rather than a pill. */
+.btn.icon {
+  padding: 0.5rem 0.7rem;
+  line-height: 1;
+}
+
+/* :not([hidden]) because a display of any kind would otherwise beat the hidden
+   attribute the toggle uses. */
+.settings:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings .btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+/* Second click of the two-step reset - clearing a record cannot be undone. */
+.settings .btn.confirming {
+  background: var(--lose);
+  border-color: var(--lose);
+  color: white;
 }
 
 .cell {
