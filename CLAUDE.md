@@ -7,6 +7,12 @@ runtime dependencies. Files are served as-is. The only dependency in the repo is
 `playwright-core`, used by the browser tests and nothing else — keep it that way,
 and never make the site itself need a build or a package install to run.
 
+The repo is named `gabe-sd.github.io`, which makes it a GitHub Pages *user* site:
+it deploys from `main` to the domain root, `https://gabe-sd.github.io/`, not to a
+`/<repo>/` subpath. Every path in the site is relative (`shared.css`,
+`../../index.html`), so nothing depends on that prefix either way — keep it
+relative, and a future rename stays a non-event.
+
 Known gaps and unscheduled work live in `TODO.md`. Check it before starting
 something new, and delete entries there as they land rather than marking them
 done — git history is the record of what happened.
