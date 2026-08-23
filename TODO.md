@@ -48,7 +48,9 @@ Entry IDs (`P1`, `P2`, ...) are for referring to these in conversation. They are
 assigned once and never reused or renumbered — deleting a landed entry leaves a
 gap, and closing that gap would silently repoint every reference made before it.
 Keep them out of commit messages and branch names: the ID stops meaning anything
-the moment the entry is deleted, so history has to describe itself.
+the moment the entry is deleted, so history has to describe itself. When deleting
+a landed entry, grep the file for its ID first — a cross-reference to an entry
+that no longer exists is unrecoverable without digging through old versions.
 
 ### P1 — Movement is frame-rate dependent
 
@@ -162,27 +164,6 @@ in `CLAUDE.md` reserves `#status` for game state only — standing instructions 
 a collapsible panel like Minesweeper's `#instructions`. Worth folding in whenever
 the controls list grows, which most of the entries above will do.
 
-### P12 — No test coverage
-
-Nothing in `tests/` touches Pong, so every change above is verified only by playing
-it. The repo's usual affordance applies: the script is a classic `<script src>`, so
-`page.evaluate()` can assign `ball = {x: 5, y: 200, vx: -6, vy: 0}`, call `update()`
-a fixed number of times, and read the result. That makes the physics genuinely
-testable — paddle collision at the paddle ends, the rescue bug above, the speed
-cap, serve direction, and reaching `WIN_SCORE`.
-
-- The loop has to be frozen first or it keeps moving the ball between calls, so
-  nothing is deterministic. `cancelAnimationFrame(rafId)` from the test does it —
-  `rafId` is global and holds the pending frame. This is the only reason that
-  variable must survive P16.
-- Stepping `update()` by hand means the test does not depend on real frame timing.
-  After the delta-time change it will need to take a delta argument, or read one
-  from a variable a test can set.
-- Assert on outcomes that survive P1, not on per-frame positions: that a ball
-  aimed at the paddle ends up travelling right, that a miss increments the score.
-  Tests pinned to exact pixels-per-frame all break the moment movement becomes
-  time-scaled, which defeats the point of writing them first.
-
 ### P13 — Theme changes need a reload
 
 Known limitation, documented in `CLAUDE.md`: a canvas cannot use CSS custom
@@ -222,8 +203,9 @@ version.
 
 - Do **not** delete `rafId` as unused. It is never passed to
   `cancelAnimationFrame` by the game, but it is the only handle a test has to
-  freeze the loop and step `update()` deterministically (see P12). Removing it
-  would take the Pong suite's freeze control with it.
+  freeze the loop and step `update()` deterministically. Removing it would take
+  the Pong suite's freeze control with it — see the `freeze` helper in
+  `tests/pong.test.js`.
 
 ## Improve site design and visual appeal
 
