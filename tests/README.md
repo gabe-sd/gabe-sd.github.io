@@ -13,9 +13,13 @@ npm install
 ```
 
 `playwright-core` drives a browser you already have rather than downloading one.
-It is pinned to exactly 1.45.0 in `package.json`, the last release that runs on
-Node 18 — a range like `^1.45` resolves to a current 1.x that refuses to start
-with "Playwright requires Node.js 20 or higher".
+It is pinned to exactly 1.45.0 in `package.json`. That pin was originally forced
+by Node 18, where anything newer refuses to start with "Playwright requires
+Node.js 20 or higher"; the dev box now runs Node 22, so the constraint is gone
+and the pin is only holding the suites to the version they are known to pass
+on. Moving to a current 1.x is now a normal dependency bump — run the suites
+after it, since a browser-driving library is exactly the kind of dependency
+whose behaviour shifts between releases.
 
 ## Running
 
