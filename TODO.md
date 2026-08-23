@@ -44,7 +44,13 @@ below alongside the first change rather than after it. Suggested order: frame-ra
 independence and the velocity model together (they are one rewrite of `update()`),
 then the round lifecycle, then the AI and its settings.
 
-### Movement is frame-rate dependent
+Entry IDs (`P1`, `P2`, ...) are for referring to these in conversation. They are
+assigned once and never reused or renumbered — deleting a landed entry leaves a
+gap, and closing that gap would silently repoint every reference made before it.
+Keep them out of commit messages and branch names: the ID stops meaning anything
+the moment the entry is deleted, so history has to describe itself.
+
+### P1 — Movement is frame-rate dependent
 
 `update()` moves everything a fixed number of pixels per *frame*, and
 `requestAnimationFrame` fires at the display refresh rate — so a 144Hz monitor
@@ -58,7 +64,7 @@ Scale every movement by elapsed time instead.
   than per-frame. The current values are per-frame at 60Hz, so multiply by 60 to
   land on the same feel.
 
-### The paddle can rescue a ball that is already past it
+### P2 — The paddle can rescue a ball that is already past it
 
 Paddle collision tests `ball.x <= PADDLE_WIDTH` — a half-plane, not a band. A ball
 that misses vertically stays inside that region for several frames while it
@@ -67,7 +73,7 @@ registers a hit. Slow balls linger there longest, so it is most exploitable exac
 when the game is easiest. Test the crossing between the previous and current
 position, not the current position alone.
 
-### Ball velocity is unbounded and never normalized
+### P3 — Ball velocity is unbounded and never normalized
 
 Two separate problems in the same few lines of `update()`:
 
@@ -81,18 +87,18 @@ Fix both at once: derive an angle from the hit position, then set `vx`/`vy` from
 `(speed, angle)` with `speed` capped. That also removes the oddity that only `vx`
 grows, which flattens the ball's trajectory as a rally goes on.
 
-### Arrow keys scroll the page
+### P4 — Arrow keys scroll the page
 
 `handleKeyDown` never calls `preventDefault()`, so in a short window the up/down
 arrows scroll the document out from under the canvas while you play.
 
-### Mouse and keyboard controls fight each other
+### P5 — Mouse and keyboard controls fight each other
 
 The `pointermove` handler sets `player.y` absolutely while the keys move it
 relatively, so brushing the mouse mid-rally teleports the paddle. Track which
 input was used last and ignore the other until it is used again.
 
-### Round lifecycle: pause between points, sensible serve, no auto-start
+### P6 — Round lifecycle: pause between points, sensible serve, no auto-start
 
 Three changes to the same area, best done together:
 
@@ -104,13 +110,13 @@ Three changes to the same area, best done together:
 - The script calls `loop()` at load, so the ball is live before the player has read
   the controls or focused the window. Start in a "press Space to serve" state.
 
-### No pause, and no auto-pause on blur
+### P7 — No pause, and no auto-pause on blur
 
 There is no way to stop the game. Add a Space or Escape toggle, and pause on
 `blur` and `visibilitychange` so alt-tabbing does not cost a point. This pairs with
 the delta clamp above — both exist because the game keeps running when unattended.
 
-### The AI is an omniscient tracker
+### P8 — The AI is an omniscient tracker
 
 The AI chases the ball's *current* y at all times, even while the ball travels away
 from it. It is beatable only because `AI_SPEED` is slower than the ball, which
@@ -127,7 +133,7 @@ possible:
 - aim at a chosen point on its paddle rather than always the centre, so its
   returns vary.
 
-### Difficulty settings
+### P9 — Difficulty settings
 
 Depends on the predictive AI above. The honest knobs are AI *error* and *reaction
 delay* — speed alone only moves the AI between perfect and useless. An Easy /
@@ -144,19 +150,19 @@ base speed, and possibly `PADDLE_HEIGHT`.
   returning null when unavailable, and an unguarded read at load takes the page
   down. Treat "cannot read" as the default difficulty.
 
-### Configurable win score
+### P10 — Configurable win score
 
 `WIN_SCORE` is hardcoded to 5, which is a short game. First to 5 / 7 / 11 belongs
 in the same settings panel as the difficulty.
 
-### Standing instructions are in the status line
+### P11 — Standing instructions are in the status line
 
 `#status` starts as "First to 5 wins · W/S or ↑/↓ to move", but the page contract
 in `CLAUDE.md` reserves `#status` for game state only — standing instructions go in
 a collapsible panel like Minesweeper's `#instructions`. Worth folding in whenever
 the controls list grows, which most of the entries above will do.
 
-### No test coverage
+### P12 — No test coverage
 
 Nothing in `tests/` touches Pong, so every change above is verified only by playing
 it. The repo's usual affordance applies: the script is a classic `<script src>`, so
@@ -165,11 +171,19 @@ a fixed number of times, and read the result. That makes the physics genuinely
 testable — paddle collision at the paddle ends, the rescue bug above, the speed
 cap, serve direction, and reaching `WIN_SCORE`.
 
+- The loop has to be frozen first or it keeps moving the ball between calls, so
+  nothing is deterministic. `cancelAnimationFrame(rafId)` from the test does it —
+  `rafId` is global and holds the pending frame. This is the only reason that
+  variable must survive P16.
 - Stepping `update()` by hand means the test does not depend on real frame timing.
   After the delta-time change it will need to take a delta argument, or read one
   from a variable a test can set.
+- Assert on outcomes that survive P1, not on per-frame positions: that a ball
+  aimed at the paddle ends up travelling right, that a miss increments the score.
+  Tests pinned to exact pixels-per-frame all break the moment movement becomes
+  time-scaled, which defeats the point of writing them first.
 
-### Theme changes need a reload
+### P13 — Theme changes need a reload
 
 Known limitation, documented in `CLAUDE.md`: a canvas cannot use CSS custom
 properties, so `colors` is read once at load via `getComputedStyle`. Switching the
@@ -177,7 +191,7 @@ OS theme mid-game leaves the paddles and ball in the old palette. Re-reading the
 from a `matchMedia("(prefers-color-scheme: dark)")` change listener closes it in a
 few lines.
 
-### Blurry on high-DPI displays
+### P14 — Blurry on high-DPI displays
 
 The canvas backing store is a fixed 600x400 scaled by CSS `max-width: 100%`, so it
 is soft on any display with `devicePixelRatio > 1`. Size the backing store by
@@ -187,7 +201,7 @@ is soft on any display with `devicePixelRatio > 1`. Size the backing store by
   `HEIGHT` to the element's rendered height, so it survives this change — but it is
   the thing to check first if the paddle starts tracking the pointer incorrectly.
 
-### Nice to have
+### P15 — Nice to have
 
 - **Sound.** Classic Pong is its blip. A WebAudio oscillator gives paddle, wall and
   score tones with no asset files and no dependency, which is what keeps it
@@ -200,11 +214,16 @@ is soft on any display with `devicePixelRatio > 1`. Size the backing store by
 - **Hit feedback.** A short ball trail, a paddle flash on contact, a flash on
   score. A few lines each in `draw()`.
 
-### Dead code
+### P16 — The loop never stops
 
-`rafId` is assigned every frame and never passed to `cancelAnimationFrame`, and the
-loop keeps running after `gameOver`. Either use it to stop the loop or drop the
-variable.
+`loop()` keeps scheduling frames after `gameOver`, redrawing a frozen board
+forever. Stopping it on game over and restarting it in `restart()` is the tidy
+version.
+
+- Do **not** delete `rafId` as unused. It is never passed to
+  `cancelAnimationFrame` by the game, but it is the only handle a test has to
+  freeze the loop and step `update()` deterministically (see P12). Removing it
+  would take the Pong suite's freeze control with it.
 
 ## Improve site design and visual appeal
 
