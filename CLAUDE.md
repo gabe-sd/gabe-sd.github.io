@@ -192,7 +192,9 @@ pointer while the button is held. Do not delete it.
   telemetry to a local HTTP server, or read state over CDP.
 - CDP over websocket needs `--remote-allow-origins='*'`, or `suppress_origin=True`
   on `websocket.create_connection`.
-- Node here is v18, so Playwright must be pinned to ~1.45 (newer requires 20+).
+- Node here is v22, so nothing forces the `playwright-core` pin any more. It
+  stays at exactly 1.45.0 because that is what the suites are known to pass on,
+  not because a newer one would refuse to start — see `tests/README.md`.
 
 **Caution:** XTEST clicks go to the real shared desktop and land on whatever window
 is on top — possibly the user's own applications rather than the test window. Check
