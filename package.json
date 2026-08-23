@@ -1,5 +1,5 @@
 {
-  "name": "test-website",
+  "name": "gabe-sd.github.io",
   "private": true,
   "description": "Static game arcade. The site has no dependencies; this manifest exists only for the browser tests.",
   "scripts": {
