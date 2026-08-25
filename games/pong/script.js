@@ -64,6 +64,7 @@ let pointerAnchor = null;
 let phase = "serve";
 let serveTicks = 0;
 let serveTo = Math.random() < 0.5 ? 1 : -1; // -1 travels left, towards the player
+let paused = false;
 
 function centredBall() {
   return { x: WIDTH / 2, y: HEIGHT / 2, vx: 0, vy: 0 };
@@ -88,9 +89,19 @@ function serve() {
   updateStatus();
 }
 
+function setPaused(value) {
+  if (gameOver || paused === value) return;
+  paused = value;
+  updateStatus();
+}
+
 function updateStatus() {
   if (gameOver) return; // the win or loss message stands until restart
   const score = `You ${player.score} — ${ai.score} AI`;
+  if (paused) {
+    statusEl.textContent = `${score} · paused, Esc to resume`;
+    return;
+  }
   if (phase === "countdown") {
     statusEl.textContent = `${score} · serving…`;
   } else if (phase === "serve") {
@@ -118,7 +129,7 @@ function bounce(paddleY, dir) {
 }
 
 function update() {
-  if (gameOver) return;
+  if (gameOver || paused) return;
 
   if (control === "keyboard") {
     if (keys.up) player.y -= PADDLE_SPEED;
@@ -233,7 +244,12 @@ function advance(elapsedMs) {
 
 function loop(now) {
   if (lastFrame === null) lastFrame = now;
-  advance(now - lastFrame);
+  if (paused) {
+    // Hold the clock still rather than banking real time to replay on resume.
+    accumulator = 0;
+  } else {
+    advance(now - lastFrame);
+  }
   lastFrame = now;
   draw();
   // Nothing moves once the game is over, so stop scheduling frames rather than
@@ -277,7 +293,15 @@ function handleKeyDown(e) {
     // mean opening the help panel also started the point.
     if (e.target instanceof HTMLButtonElement) return;
     e.preventDefault(); // Space scrolls the document by default
-    if (phase === "serve") serve();
+    if (phase === "serve" && !paused) serve();
+    return;
+  }
+
+  // Escape rather than Space, which is already the serve. "p" is the habit a lot
+  // of players have.
+  if (e.key === "Escape" || e.key === "p" || e.key === "P") {
+    e.preventDefault();
+    setPaused(!paused);
     return;
   }
   const dir = keyDirection(e.key);
@@ -329,6 +353,7 @@ function restart() {
   pointerAnchor = null;
   phase = "serve";
   serveTo = Math.random() < 0.5 ? 1 : -1;
+  paused = false;
   updateStatus();
   start();
 }
@@ -336,7 +361,18 @@ function restart() {
 window.addEventListener("keydown", handleKeyDown);
 window.addEventListener("keyup", handleKeyUp);
 canvas.addEventListener("pointermove", handlePointerMove);
-canvas.addEventListener("pointerdown", () => { if (phase === "serve") serve(); });
+canvas.addEventListener("pointerdown", () => {
+  // A mouse-only player has to be able to get going again without the keyboard.
+  if (paused) return setPaused(false);
+  if (phase === "serve") serve();
+});
+
+// Losing the window mid-rally should not cost a point. Deliberately does not
+// resume on focus: coming back to a live ball is the thing being avoided.
+window.addEventListener("blur", () => setPaused(true));
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) setPaused(true);
+});
 restartBtn.addEventListener("click", restart);
 helpToggle.addEventListener("click", toggleHelp);
 

@@ -67,3 +67,12 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
 These drive input through Playwright, which is enough for ordinary clicks. For a
 *new* pointer bug, reproduce with real OS-level input first — see
 `CLAUDE.md` for why and how.
+
+One known gap: Pong's pause-on-blur is covered by dispatching `blur` and
+`visibilitychange`, which exercises the wiring but not the browser's delivery of
+them. `bringToFront()` cannot stand in for a real focus change — tried with a
+second page, with a headed browser, and with a second tab in one context, and
+none of them produce a blur, a visibilitychange, or even a `document.hasFocus()`
+flip, because it activates the CDP target without touching window-manager focus.
+Closing that gap properly needs XTEST against the real desktop; don't spend the
+time again on `bringToFront`.

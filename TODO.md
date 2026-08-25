@@ -61,12 +61,6 @@ registers a hit. Slow balls linger there longest, so it is most exploitable exac
 when the game is easiest. Test the crossing between the previous and current
 position, not the current position alone.
 
-### P7 — No pause, and no auto-pause on blur
-
-There is no way to stop the game. Add a Space or Escape toggle, and pause on
-`blur` and `visibilitychange` so alt-tabbing does not cost a point. This pairs with
-the delta clamp above — both exist because the game keeps running when unattended.
-
 ### P8 — The AI is an omniscient tracker
 
 The AI chases the ball's *current* y at all times, even while the ball travels away
