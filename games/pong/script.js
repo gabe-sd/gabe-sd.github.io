@@ -43,6 +43,7 @@ let gameOver = false;
 let rafId = null;
 let accumulator = 0;
 let lastFrame = null;
+let running = false;
 
 function newBall() {
   const angle = (Math.random() * 0.6 - 0.3) * Math.PI;
@@ -174,6 +175,23 @@ function loop(now) {
   advance(now - lastFrame);
   lastFrame = now;
   draw();
+  // Nothing moves once the game is over, so stop scheduling frames rather than
+  // redrawing a frozen board forever. restart() starts it again.
+  if (gameOver) {
+    running = false;
+    rafId = null;
+    return;
+  }
+  rafId = requestAnimationFrame(loop);
+}
+
+// Guarded by `running` rather than by rafId, so that a caller which has already
+// cancelled the pending frame - the test harness does exactly this - does not
+// get the loop restarted underneath it by restart().
+function start() {
+  if (running) return;
+  running = true;
+  lastFrame = null;
   rafId = requestAnimationFrame(loop);
 }
 
@@ -217,6 +235,7 @@ function restart() {
   gameOver = false;
   accumulator = 0;
   statusEl.textContent = "First to 5 wins · W/S or ↑/↓ to move";
+  start();
 }
 
 window.addEventListener("keydown", handleKeyDown);
@@ -224,4 +243,4 @@ window.addEventListener("keyup", handleKeyUp);
 canvas.addEventListener("pointermove", handlePointerMove);
 restartBtn.addEventListener("click", restart);
 
-rafId = requestAnimationFrame(loop);
+start();

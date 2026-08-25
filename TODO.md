@@ -193,18 +193,6 @@ is soft on any display with `devicePixelRatio > 1`. Size the backing store by
 - **Hit feedback.** A short ball trail, a paddle flash on contact, a flash on
   score. A few lines each in `draw()`.
 
-### P16 — The loop never stops
-
-`loop()` keeps scheduling frames after `gameOver`, redrawing a frozen board
-forever. Stopping it on game over and restarting it in `restart()` is the tidy
-version.
-
-- Do **not** delete `rafId` as unused. It is never passed to
-  `cancelAnimationFrame` by the game, but it is the only handle a test has to
-  freeze the loop and step `update()` deterministically. Removing it would take
-  the Pong suite's freeze control with it — see the `freeze` helper in
-  `tests/pong.test.js`.
-
 ## Improve site design and visual appeal
 
 ## Plan and architect a backend for stored values e.g. highscore table

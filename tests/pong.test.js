@@ -261,6 +261,24 @@ const { check, report } = makeChecks();
     check("status announces the loss",
       (await page.textContent("#status")).includes("AI wins"),
       await page.textContent("#status"));
+
+    // The loop stops itself once the game is over rather than redrawing a frozen
+    // board forever. Driving loop() by hand is safe here: with gameOver set it
+    // schedules nothing, and update() returns immediately.
+    const hasStart = await page.evaluate(() => typeof start === "function");
+    check("start() owns loop scheduling", hasStart);
+    if (hasStart) {
+      const stopped = await page.evaluate(() => {
+        loop(performance.now());
+        const r = { rafId, running };
+        running = true; // keep the suite's frozen state for the cases below
+        return r;
+      });
+      check("no frame is scheduled once the game is over",
+        stopped.rafId === null, stopped.rafId);
+      check("the loop marks itself stopped", stopped.running === false,
+        stopped.running);
+    }
   }
 
   console.log("10. restart clears everything");
