@@ -28,6 +28,21 @@ history). Name it for the change, not the game alone.
 If you catch yourself editing on `main`, move the work across before committing:
 `git checkout -b <name>` carries uncommitted changes with it.
 
+Two principles follow, both learned by breaking them:
+
+- **A branch is not finished until it is merged, so keep one open at a time.**
+  Unmerged work is a liability, not a safe place to leave things. Two branches
+  touching the same file diverge silently, and the conflict surfaces later as a
+  puzzle instead of at the moment it was created.
+- **Never branch from a base that is missing work you depend on.** If the change
+  builds on something unmerged, merge that first or branch from it. Cutting from
+  `main` to "keep it clean" is the one option that cannot work.
+
+A doc-only edit belonging to work already in flight rides on that branch rather
+than taking its own. The rule exists so half-finished work can be abandoned and so
+the merge commit records the feature; a one-commit note gets neither and pays the
+stale-base cost.
+
 ## Commands
 
 ```bash
@@ -87,6 +102,11 @@ clicking a game into shape. Keep it that way — switching a game to a module wo
 break that.
 
 ### Per-game designs worth knowing before editing
+
+Keep each entry to a paragraph or two of *invariants* — what a reader must not
+break. When one outgrows that it has started carrying design rationale instead,
+which belongs in `games/<name>/DESIGN.md` with the invariants and a pointer left
+here. Pong is at that threshold now.
 
 **Chess** (`games/chess/script.js`) is the substantial one. Legality is layered:
 `generatePseudoMoves` produces moves ignoring check; `applyMove` is pure — it
@@ -160,6 +180,31 @@ Drive the real page and assert on game state. Reading the code and reasoning abo
 it is not verification, and `node --check` only catches syntax errors. Run
 `npm test` before merging; add cases for what you changed.
 
+Four principles underneath that, each of which has already paid for itself here:
+
+- **A test that has never failed has not been shown to test anything.** Prove
+  every fix by reverting to the broken code, watching the new test fail, then
+  restoring and watching it pass. What that catches is not a bad fix — it is a
+  test that passes for the wrong reason.
+- **Characterise before you change.** Against code with no coverage, first write
+  tests for what it does *now*. Every test failure while building Pong out was a
+  wrong assumption of the author's rather than a regression, which is what these
+  tests are mostly for: an assumption-checker first, a safety net second.
+- **Assert outcomes, not mechanics.** "The ball came back" survives a rewrite of
+  how movement is timed; "the ball moved six pixels" does not. A test pinned to
+  the implementation has to be rewritten by the very change it was meant to guard.
+- **Write down what you ruled out.** A dead end nobody records gets explored again
+  by the next person, or by you in a month. `tests/README.md` carries the ones
+  found so far.
+
+Behaviour you are knowingly leaving broken should be pinned as a passing assertion
+that states the wrong result and says so. Fixing it then turns a check red, so the
+before/after evidence arrives without anyone having to remember to look for it.
+
+Where a suite drives the harness itself — freezing a loop, stepping a tick — assert
+that the harness works before assuming it does. A freeze that silently stops
+working turns every later check into a race that still passes.
+
 ### Mouse/pointer behaviour must be verified with real input
 
 Do not trust Playwright `page.mouse` or CDP `Input.dispatchMouseEvent` alone for
@@ -183,9 +228,9 @@ Rules that follow:
   releasing on a different element than the press, repeated fires.
 - If a test passes but the reporter says it is broken, suspect the harness before
   concluding it is environmental.
-- Prove a fix with a before/after run under *identical* real input — revert to the
-  broken version, watch it fail, restore, watch it pass. A passing "after" alone is
-  not evidence.
+- Run the before/after proof above under *identical real input*, not synthetic —
+  a synthetic replay of a pointer bug is what produced the false passes in the
+  first place.
 - Prefer input handling that does not depend on the pointer staying still.
 
 `tests/chording.test.js` case 2 is the standing guard for this — it moves the
