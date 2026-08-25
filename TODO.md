@@ -61,12 +61,6 @@ registers a hit. Slow balls linger there longest, so it is most exploitable exac
 when the game is easiest. Test the crossing between the previous and current
 position, not the current position alone.
 
-### P5 — Mouse and keyboard controls fight each other
-
-The `pointermove` handler sets `player.y` absolutely while the keys move it
-relatively, so brushing the mouse mid-rally teleports the paddle. Track which
-input was used last and ignore the other until it is used again.
-
 ### P6 — Round lifecycle: pause between points, sensible serve, no auto-start
 
 Three changes to the same area, best done together:

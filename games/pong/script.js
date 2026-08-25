@@ -52,6 +52,8 @@ let rafId = null;
 let accumulator = 0;
 let lastFrame = null;
 let running = false;
+let control = "keyboard"; // or "pointer" - whichever the player last used
+let pointerAnchor = null;
 
 function newBall() {
   const angle = (Math.random() * 0.6 - 0.3) * Math.PI;
@@ -82,8 +84,10 @@ function bounce(paddleY, dir) {
 function update() {
   if (gameOver) return;
 
-  if (keys.up) player.y -= PADDLE_SPEED;
-  if (keys.down) player.y += PADDLE_SPEED;
+  if (control === "keyboard") {
+    if (keys.up) player.y -= PADDLE_SPEED;
+    if (keys.down) player.y += PADDLE_SPEED;
+  }
   player.y = Math.max(0, Math.min(HEIGHT - PADDLE_HEIGHT, player.y));
 
   const aiCenter = ai.y + PADDLE_HEIGHT / 2;
@@ -203,6 +207,11 @@ function start() {
   rafId = requestAnimationFrame(loop);
 }
 
+// Handing control to the pointer on *any* movement would not fix anything: the
+// problem is the mouse being brushed mid-rally, not moved on purpose. It has to
+// travel far enough to look deliberate first.
+const POINTER_TAKEOVER_PX = 12;
+
 const UP_KEYS = ["w", "W", "ArrowUp"];
 const DOWN_KEYS = ["s", "S", "ArrowDown"];
 
@@ -219,6 +228,8 @@ function handleKeyDown(e) {
   // The arrows scroll the document by default, which drags the board out from
   // under the player on a short window.
   e.preventDefault();
+  control = "keyboard";
+  pointerAnchor = null;
   keys[dir] = true;
 }
 
@@ -230,6 +241,15 @@ function handleKeyUp(e) {
 }
 
 function handlePointerMove(e) {
+  if (control === "keyboard") {
+    if (pointerAnchor === null) {
+      pointerAnchor = { x: e.clientX, y: e.clientY };
+      return;
+    }
+    const moved = Math.hypot(e.clientX - pointerAnchor.x, e.clientY - pointerAnchor.y);
+    if (moved < POINTER_TAKEOVER_PX) return;
+    control = "pointer";
+  }
   const rect = canvas.getBoundingClientRect();
   const scale = HEIGHT / rect.height;
   const y = (e.clientY - rect.top) * scale;
@@ -242,6 +262,8 @@ function restart() {
   ball = newBall();
   gameOver = false;
   accumulator = 0;
+  control = "keyboard";
+  pointerAnchor = null;
   statusEl.textContent = "First to 5 wins · W/S or ↑/↓ to move";
   start();
 }

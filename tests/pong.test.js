@@ -335,14 +335,32 @@ const { check, report } = makeChecks();
     await page.evaluate(() => { document.body.style.minHeight = ""; });
 
     const box = await (await page.$("#board")).boundingBox();
+
+    // A brushed mouse must not take the paddle off the keyboard mid-rally, so
+    // the pointer only takes over after moving far enough to look deliberate.
+    await set({ player: { y: 200 } });
+    const midY = box.y + box.height * 0.5;
+    await page.mouse.move(box.x + box.width / 2, midY);
+    await page.mouse.move(box.x + box.width / 2, midY + 4);
+    await page.waitForTimeout(60);
+    check("a small nudge does not steal control from the keyboard",
+      (await read()).player.y === 200, (await read()).player.y);
+
     const clientY = box.y + box.height * 0.25;
     await page.mouse.move(box.x + box.width / 2, clientY);
     await page.waitForTimeout(60);
     const scale = HEIGHT / box.height;
     const want = Math.max(0, Math.min(MAX_Y, (clientY - box.y) * scale - PADDLE_HEIGHT / 2));
     const got = (await read()).player.y;
-    check("pointer centres the paddle on the cursor",
+    check("a deliberate move does hand over to the pointer",
       Math.abs(got - want) < 1.5, `${got} vs ${want}`);
+
+    // ...and the keyboard takes it straight back on the next keypress.
+    await page.keyboard.down("w");
+    await step(3);
+    await page.keyboard.up("w");
+    check("a keypress reclaims control from the pointer",
+      (await read()).player.y < got, `${got} -> ${(await read()).player.y}`);
   }
 
   console.log("12. the canvas palette follows the OS theme");
