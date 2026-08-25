@@ -107,11 +107,14 @@ per-frame movement back into `loop()`. `advance()` clamps a single frame to
 once. Ball speed is recomputed and capped on every paddle hit by `bounce()`, which
 also derives the angle from the strike position: nothing may accumulate into
 `ball.vy` directly, which is what previously let a long rally reach ten times the
-serve speed and skip straight past a paddle. A canvas cannot use CSS custom
-properties, so theme
-colours are read once at load via `getComputedStyle` into a `colors` object; only
-the background is re-read per frame. Consequence: switching the OS theme mid-game
-will not restyle the paddles or ball until reload.
+serve speed and skip straight past a paddle. The loop stops itself once
+`gameOver` is set and `restart()` brings it back, but scheduling is guarded by
+`running` rather than by `rafId`, so a caller that has cancelled the pending
+frame — the test harness does exactly that — does not get it restarted
+underneath them. A canvas cannot use CSS custom properties, so theme colours are
+copied into a plain `colors` object by `readColors()` and re-copied from a
+`prefers-color-scheme` change listener; only the background is re-read per
+frame.
 
 **Minesweeper** (`games/minesweeper/script.js`) places mines lazily on the first
 reveal, excluding the 3x3 around that cell, so the first click is always safe —

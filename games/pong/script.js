@@ -28,12 +28,20 @@ const BALL_SPEEDUP = 1.05;
 // Steepest a paddle can send the ball, measured off the horizontal.
 const MAX_BOUNCE_ANGLE = Math.PI / 3;
 
-const style = getComputedStyle(document.documentElement);
-const colors = {
-  fg: style.getPropertyValue("--fg").trim() || "#1c1c1e",
-  accent: style.getPropertyValue("--accent").trim() || "#3b82f6",
-  border: style.getPropertyValue("--cell-border").trim() || "#c7c7cc",
-};
+// A canvas cannot read CSS custom properties, so the theme tokens are copied
+// into plain values here and re-copied whenever the OS theme flips.
+function readColors() {
+  const style = getComputedStyle(document.documentElement);
+  return {
+    fg: style.getPropertyValue("--fg").trim() || "#1c1c1e",
+    accent: style.getPropertyValue("--accent").trim() || "#3b82f6",
+    border: style.getPropertyValue("--cell-border").trim() || "#c7c7cc",
+  };
+}
+
+let colors = readColors();
+const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+darkQuery.addEventListener("change", () => { colors = readColors(); });
 
 let player = { y: HEIGHT / 2 - PADDLE_HEIGHT / 2, score: 0 };
 let ai = { y: HEIGHT / 2 - PADDLE_HEIGHT / 2, score: 0 };

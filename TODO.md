@@ -162,14 +162,6 @@ help button gets.
   controls are absent from the status line and that the panel toggles, mirroring
   `tests/instructions-panel.test.js`.
 
-### P13 — Theme changes need a reload
-
-Known limitation, documented in `CLAUDE.md`: a canvas cannot use CSS custom
-properties, so `colors` is read once at load via `getComputedStyle`. Switching the
-OS theme mid-game leaves the paddles and ball in the old palette. Re-reading them
-from a `matchMedia("(prefers-color-scheme: dark)")` change listener closes it in a
-few lines.
-
 ### P14 — Blurry on high-DPI displays
 
 The canvas backing store is a fixed 600x400 scaled by CSS `max-width: 100%`, so it

@@ -345,7 +345,23 @@ const { check, report } = makeChecks();
       Math.abs(got - want) < 1.5, `${got} vs ${want}`);
   }
 
-  console.log("12. known bugs, pinned - these assertions invert when the fix lands");
+  console.log("12. the canvas palette follows the OS theme");
+  {
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.waitForTimeout(80);
+    const light = await page.evaluate(() => ({ ...colors }));
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.waitForTimeout(80);
+    const dark = await page.evaluate(() => ({ ...colors }));
+    check("foreground changes with the theme, without a reload",
+      light.fg !== dark.fg, `${light.fg} -> ${dark.fg}`);
+    check("the palette is fully populated in both",
+      [light.fg, light.accent, light.border, dark.fg, dark.accent, dark.border]
+        .every((c) => typeof c === "string" && c.length > 0));
+    await page.emulateMedia({ colorScheme: "light" });
+  }
+
+  console.log("13. known bugs, pinned - these assertions invert when the fix lands");
   {
     // P2: collision is a half-plane test (ball.x <= PADDLE_WIDTH), not a crossing
     // test, so a ball that already went past the paddle is still rescued if the
