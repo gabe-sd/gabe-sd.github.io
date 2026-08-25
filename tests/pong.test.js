@@ -505,7 +505,84 @@ const { check, report } = makeChecks();
       (await page.getAttribute("#help-toggle", "aria-expanded")) === "false");
   }
 
-  console.log("15. known bugs, pinned - these assertions invert when the fix lands");
+  console.log("15. pause");
+  {
+    await freeze();
+    await set({ ball: { x: 300, y: 200, vx: 6, vy: 0 } });
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(60);
+    check("Escape pauses", await page.evaluate(() => paused));
+    await step(10);
+    check("nothing moves while paused", (await read()).ball.x === 300,
+      (await read()).ball.x);
+    check("status says so",
+      (await page.textContent("#status")).toLowerCase().includes("paused"),
+      await page.textContent("#status"));
+
+    // Paused real time is dropped, not banked up to replay on resume.
+    const banked = await page.evaluate(() => {
+      loop(performance.now() + 5000);
+      cancelAnimationFrame(rafId); // loop scheduled a frame; take it back
+      return { acc: accumulator, x: ball.x };
+    });
+    check("a paused frame banks no time", banked.acc === 0, banked.acc);
+    check("and moves nothing", banked.x === 300, banked.x);
+
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(60);
+    check("Escape resumes", !(await page.evaluate(() => paused)));
+    await step(1);
+    check("play carries on from where it stopped", (await read()).ball.x === 306,
+      (await read()).ball.x);
+
+    await page.keyboard.press("p");
+    await page.waitForTimeout(60);
+    check("p pauses too", await page.evaluate(() => paused));
+    await page.keyboard.press("p");
+    await page.waitForTimeout(60);
+    check("and resumes", !(await page.evaluate(() => paused)));
+
+    // These four are dispatched rather than driven by a real focus change, and
+    // that is a harness limit, not a preference. bringToFront() was tried three
+    // ways - a second page, a second page in a headed browser, and a second tab
+    // in the same context - and none of them produce a blur, a visibilitychange
+    // or even a hasFocus() flip: it activates the CDP target without moving the
+    // window manager's focus. Anything better needs XTEST against the real
+    // desktop, which CLAUDE.md warns lands on whatever window is on top. So what
+    // is covered here is the wiring, not the browser's delivery of the event.
+    await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+    await page.waitForTimeout(60);
+    check("losing the window pauses the game", await page.evaluate(() => paused));
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await page.waitForTimeout(60);
+    check("getting it back does not resume for you - a live ball is the thing "
+      + "being avoided", await page.evaluate(() => paused));
+
+    // Mouse-only players need a way back in without the keyboard.
+    const bb = await (await page.$("#board")).boundingBox();
+    await page.mouse.click(bb.x + bb.width / 2, bb.y + bb.height / 2);
+    await page.waitForTimeout(60);
+    check("clicking the board resumes", !(await page.evaluate(() => paused)));
+
+    // The visibility handler on its own, since a backgrounded tab may deliver
+    // either event.
+    await page.evaluate(() => {
+      Object.defineProperty(document, "hidden", { value: true, configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    check("a hidden tab pauses", await page.evaluate(() => paused));
+    await page.evaluate(() => {
+      Object.defineProperty(document, "hidden", { value: false, configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    check("becoming visible again does not resume either",
+      await page.evaluate(() => paused));
+
+    await page.evaluate(() => restart());
+    check("restart clears the pause", !(await page.evaluate(() => paused)));
+  }
+
+  console.log("16. known bugs, pinned - these assertions invert when the fix lands");
   {
     // P2: collision is a half-plane test (ball.x <= PADDLE_WIDTH), not a crossing
     // test, so a ball that already went past the paddle is still rescued if the

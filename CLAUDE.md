@@ -112,8 +112,11 @@ the serve speed and skip straight past a paddle. Play is a three-phase machine:
 `serve` waits for the player, `countdown` is the pause after a point, `play` is
 a live ball, and `update()` moves the paddles but returns before touching the
 ball in anything but `play` — a test that places the ball by hand has to set
-`phase` too. The loop stops itself once `gameOver` is set and `restart()` brings
-it back, but scheduling is guarded by `running` rather than by `rafId`, so a
+`phase` too. Pausing (Escape or `p`, and automatically on `blur` or a
+hidden tab) gates `update()` entirely and zeroes the accumulator, so paused real
+time is dropped rather than banked up to replay on resume; it deliberately does
+not resume on focus. The loop stops itself once `gameOver` is set and `restart()`
+brings it back, but scheduling is guarded by `running` rather than by `rafId`, so a
 caller that has cancelled the pending frame — the test harness does exactly
 that — does not get it restarted underneath them. A canvas cannot use CSS custom properties, so theme colours are
 copied into a plain `colors` object by `readColors()` and re-copied from a
