@@ -27,6 +27,9 @@ const BALL_SPEED_MAX = 10;
 const BALL_SPEEDUP = 1.05;
 // Steepest a paddle can send the ball, measured off the horizontal.
 const MAX_BOUNCE_ANGLE = Math.PI / 3;
+// Pause between a point and the next serve, in ticks. Counted in ticks rather
+// than milliseconds so it is exact and does not need a second clock.
+const SERVE_DELAY_TICKS = 60;
 
 // A canvas cannot read CSS custom properties, so the theme tokens are copied
 // into plain values here and re-copied whenever the OS theme flips.
@@ -45,7 +48,7 @@ darkQuery.addEventListener("change", () => { colors = readColors(); });
 
 let player = { y: HEIGHT / 2 - PADDLE_HEIGHT / 2, score: 0 };
 let ai = { y: HEIGHT / 2 - PADDLE_HEIGHT / 2, score: 0 };
-let ball = newBall();
+let ball = centredBall();
 let keys = { up: false, down: false };
 let gameOver = false;
 let rafId = null;
@@ -54,16 +57,47 @@ let lastFrame = null;
 let running = false;
 let control = "keyboard"; // or "pointer" - whichever the player last used
 let pointerAnchor = null;
+// "serve" waits for the player, "countdown" is the pause after a point, "play" is
+// a live ball. The ball sits still at the centre in everything but "play".
+let phase = "serve";
+let serveTicks = 0;
+let serveTo = Math.random() < 0.5 ? 1 : -1; // -1 travels left, towards the player
 
-function newBall() {
+function centredBall() {
+  return { x: WIDTH / 2, y: HEIGHT / 2, vx: 0, vy: 0 };
+}
+
+// dir is the direction of travel, not a random choice: the serve goes to whoever
+// conceded the last point, so a point cannot be won by the coin flip that used to
+// decide this.
+function newBall(dir) {
   const angle = (Math.random() * 0.6 - 0.3) * Math.PI;
-  const dir = Math.random() < 0.5 ? 1 : -1;
   return {
     x: WIDTH / 2,
     y: HEIGHT / 2,
     vx: dir * BALL_SPEED * Math.cos(angle),
     vy: BALL_SPEED * Math.sin(angle),
   };
+}
+
+function serve() {
+  ball = newBall(serveTo);
+  phase = "play";
+  updateStatus();
+}
+
+function updateStatus() {
+  if (gameOver) return; // the win or loss message stands until restart
+  const score = `You ${player.score} — ${ai.score} AI`;
+  if (phase === "countdown") {
+    statusEl.textContent = `${score} · serving…`;
+  } else if (phase === "serve") {
+    statusEl.textContent = player.score || ai.score
+      ? `${score} · press Space to serve`
+      : "Press Space to serve · W/S or ↑/↓ to move";
+  } else {
+    statusEl.textContent = score;
+  }
 }
 
 // Reflect off a paddle, dir being the direction the ball leaves in. The angle
@@ -95,6 +129,15 @@ function update() {
   else if (aiCenter > ball.y + 10) ai.y -= AI_SPEED;
   ai.y = Math.max(0, Math.min(HEIGHT - PADDLE_HEIGHT, ai.y));
 
+  // Paddles keep moving between points so both sides can get into position, but
+  // the ball waits.
+  if (phase === "countdown") {
+    serveTicks -= 1;
+    if (serveTicks <= 0) serve();
+    return;
+  }
+  if (phase !== "play") return;
+
   ball.x += ball.vx;
   ball.y += ball.vy;
 
@@ -125,9 +168,11 @@ function update() {
 
   if (ball.x < 0) {
     ai.score += 1;
+    serveTo = -1; // back at the player who just conceded
     onScore();
   } else if (ball.x > WIDTH) {
     player.score += 1;
+    serveTo = 1;
     onScore();
   }
 }
@@ -139,8 +184,10 @@ function onScore() {
       player.score > ai.score ? "You win! 🎉" : "AI wins!";
     return;
   }
-  ball = newBall();
-  statusEl.textContent = `You ${player.score} — ${ai.score} AI`;
+  ball = centredBall();
+  phase = "countdown";
+  serveTicks = SERVE_DELAY_TICKS;
+  updateStatus();
 }
 
 function draw() {
@@ -223,6 +270,11 @@ function keyDirection(key) {
 }
 
 function handleKeyDown(e) {
+  if (e.key === " ") {
+    e.preventDefault(); // Space scrolls the document by default
+    if (phase === "serve") serve();
+    return;
+  }
   const dir = keyDirection(e.key);
   if (!dir) return;
   // The arrows scroll the document by default, which drags the board out from
@@ -259,18 +311,22 @@ function handlePointerMove(e) {
 function restart() {
   player = { y: HEIGHT / 2 - PADDLE_HEIGHT / 2, score: 0 };
   ai = { y: HEIGHT / 2 - PADDLE_HEIGHT / 2, score: 0 };
-  ball = newBall();
+  ball = centredBall();
   gameOver = false;
   accumulator = 0;
   control = "keyboard";
   pointerAnchor = null;
-  statusEl.textContent = "First to 5 wins · W/S or ↑/↓ to move";
+  phase = "serve";
+  serveTo = Math.random() < 0.5 ? 1 : -1;
+  updateStatus();
   start();
 }
 
 window.addEventListener("keydown", handleKeyDown);
 window.addEventListener("keyup", handleKeyUp);
 canvas.addEventListener("pointermove", handlePointerMove);
+canvas.addEventListener("pointerdown", () => { if (phase === "serve") serve(); });
 restartBtn.addEventListener("click", restart);
 
+updateStatus();
 start();

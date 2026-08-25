@@ -19,7 +19,13 @@ const { check, report } = makeChecks();
   await page.waitForSelector("#board");
 
   // Stop the loop, then reset, so no stray frame has moved anything.
-  const freeze = () => page.evaluate(() => { cancelAnimationFrame(rafId); restart(); });
+  // Also drops straight into "play": almost every case below places the ball by
+  // hand, and would otherwise sit in the serve phase where the ball cannot move.
+  const freeze = () => page.evaluate(() => {
+    cancelAnimationFrame(rafId);
+    restart();
+    phase = "play";
+  });
   const freezeOnly = () => page.evaluate(() => cancelAnimationFrame(rafId));
   // Stops on the update that scores, so the re-serve can be inspected before the
   // next frame moves the new ball off centre.
@@ -68,11 +74,13 @@ const { check, report } = makeChecks();
     // by the time the loop can be frozen it has already moved. That it starts
     // reacting with no delay is the behaviour P8 replaces.
     check("ai paddle is on the board", s.ai.y >= 0 && s.ai.y <= MAX_Y, s.ai.y);
-    check("ball is on the board", s.ball.x > 0 && s.ball.x < WIDTH, s.ball.x);
-    // Pinned: the game serves itself the instant the script runs. P6 makes it
-    // wait for the player, at which point this inverts to vx === 0.
-    check("ball is already in play on load (P6 changes this)", s.ball.vx !== 0,
-      s.ball.vx);
+    check("ball starts centred", s.ball.x === WIDTH / 2 && s.ball.y === HEIGHT / 2,
+      `${s.ball.x},${s.ball.y}`);
+    check("ball waits to be served rather than launching itself",
+      s.ball.vx === 0 && s.ball.vy === 0, `${s.ball.vx},${s.ball.vy}`);
+    check("status prompts for a serve",
+      (await page.textContent("#status")).includes("Press Space"),
+      await page.textContent("#status"));
     check("canvas is 600x400", WIDTH === 600 && HEIGHT === 400, `${WIDTH}x${HEIGHT}`);
   }
 
@@ -218,9 +226,10 @@ const { check, report } = makeChecks();
     const s = await read();
     check("ai scores when the ball passes the player", s.ai.score === 1, s.ai.score);
     check("it took the expected number of frames", steps > 0, steps);
-    check("ball is re-served from the centre",
+    check("ball returns to the centre",
       s.ball.x === WIDTH / 2 && s.ball.y === HEIGHT / 2, `${s.ball.x},${s.ball.y}`);
-    check("re-served ball is moving", s.ball.vx !== 0, s.ball.vx);
+    check("ball waits rather than launching straight away", s.ball.vx === 0,
+      s.ball.vx);
     check("status reports the score",
       (await page.textContent("#status")).includes("0"),
       await page.textContent("#status"));
@@ -232,7 +241,68 @@ const { check, report } = makeChecks();
       (await read()).player.score === 1);
   }
 
-  console.log("9. reaching WIN_SCORE ends the game");
+  console.log("9. the round lifecycle");
+  {
+    await freeze();
+    await set({ player: { y: 0 }, ball: { x: 40, y: 300, vx: -6, vy: 0 } });
+    await stepToScore(30);
+    const conceded = await page.evaluate(() => ({ phase, serveTicks, vx: ball.vx }));
+    check("a point starts the serve countdown", conceded.phase === "countdown",
+      conceded.phase);
+    check("the ball holds still through it", conceded.vx === 0, conceded.vx);
+    check("status says a serve is coming",
+      (await page.textContent("#status")).includes("serving"),
+      await page.textContent("#status"));
+
+    await step(conceded.serveTicks - 1);
+    check("still waiting one tick short of the delay",
+      (await read()).ball.vx === 0, (await read()).ball.vx);
+    await step(1);
+    const served = await read();
+    check("it serves itself when the countdown runs out", served.ball.vx !== 0,
+      served.ball.vx);
+    check("and serves at the player who conceded", served.ball.vx < 0,
+      served.ball.vx);
+
+    await freeze();
+    await set({ ai: { y: 0 }, ball: { x: WIDTH - 40, y: 300, vx: 6, vy: 0 } });
+    await stepToScore(30);
+    await step(await page.evaluate(() => serveTicks));
+    check("a point against the ai serves back at the ai",
+      (await read()).ball.vx > 0, (await read()).ball.vx);
+
+    // The first serve of a game waits for the player instead of counting down.
+    await freeze();
+    await page.evaluate(() => { phase = "serve"; ball = centredBall(); });
+    await step(30);
+    const waiting = await read();
+    check("the ball does not move while waiting to be served",
+      waiting.ball.x === WIDTH / 2 && waiting.ball.vx === 0,
+      `${waiting.ball.x},${waiting.ball.vx}`);
+
+    await set({ player: { y: 200 } });
+    await page.keyboard.down("w");
+    await step(3);
+    await page.keyboard.up("w");
+    check("paddles still move while waiting, so both sides can get set",
+      (await read()).player.y < 200, (await read()).player.y);
+
+    await page.keyboard.press("Space");
+    await page.waitForTimeout(60);
+    check("Space serves", (await read()).ball.vx !== 0, (await read()).ball.vx);
+    check("and the game goes live",
+      (await page.evaluate(() => phase)) === "play");
+
+    await freeze();
+    await page.evaluate(() => { phase = "serve"; ball = centredBall(); });
+    const bb = await (await page.$("#board")).boundingBox();
+    await page.mouse.click(bb.x + bb.width / 2, bb.y + bb.height / 2);
+    await page.waitForTimeout(60);
+    check("clicking the board serves too", (await read()).ball.vx !== 0,
+      (await read()).ball.vx);
+  }
+
+  console.log("10. reaching WIN_SCORE ends the game");
   {
     await freeze();
     await set({
@@ -281,7 +351,7 @@ const { check, report } = makeChecks();
     }
   }
 
-  console.log("10. restart clears everything");
+  console.log("11. restart clears everything");
   {
     const s = await read();
     check("preconditions: game is over with a score on the board",
@@ -295,7 +365,7 @@ const { check, report } = makeChecks();
       t.ball.x === WIDTH / 2 && t.ball.y === HEIGHT / 2);
   }
 
-  console.log("11. paddle controls");
+  console.log("12. paddle controls");
   {
     await freeze();
     await set({ player: { y: 200 } });
@@ -329,6 +399,11 @@ const { check, report } = makeChecks();
     await page.keyboard.down("ArrowDown");
     await page.waitForTimeout(60);
     await page.keyboard.up("ArrowDown");
+    await page.keyboard.press("Space");
+    await page.waitForTimeout(60);
+    check("Space does not scroll the page",
+      (await page.evaluate(() => window.scrollY)) === 0,
+      await page.evaluate(() => window.scrollY));
     check("arrow keys do not scroll the page",
       (await page.evaluate(() => window.scrollY)) === 0,
       await page.evaluate(() => window.scrollY));
@@ -363,7 +438,7 @@ const { check, report } = makeChecks();
       (await read()).player.y < got, `${got} -> ${(await read()).player.y}`);
   }
 
-  console.log("12. the canvas palette follows the OS theme");
+  console.log("13. the canvas palette follows the OS theme");
   {
     await page.emulateMedia({ colorScheme: "light" });
     await page.waitForTimeout(80);
@@ -379,7 +454,7 @@ const { check, report } = makeChecks();
     await page.emulateMedia({ colorScheme: "light" });
   }
 
-  console.log("13. known bugs, pinned - these assertions invert when the fix lands");
+  console.log("14. known bugs, pinned - these assertions invert when the fix lands");
   {
     // P2: collision is a half-plane test (ball.x <= PADDLE_WIDTH), not a crossing
     // test, so a ball that already went past the paddle is still rescued if the

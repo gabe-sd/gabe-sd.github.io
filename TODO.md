@@ -61,18 +61,6 @@ registers a hit. Slow balls linger there longest, so it is most exploitable exac
 when the game is easiest. Test the crossing between the previous and current
 position, not the current position alone.
 
-### P6 — Round lifecycle: pause between points, sensible serve, no auto-start
-
-Three changes to the same area, best done together:
-
-- `onScore()` spawns the next ball instantly at centre. A player can concede and be
-  under fire before registering the first point. Freeze the ball at centre for
-  about a second with a countdown, then serve.
-- `newBall()` picks its direction at random, so points can be won by coin flip when
-  it serves itself into the AI. Serve toward whoever just conceded.
-- The script calls `loop()` at load, so the ball is live before the player has read
-  the controls or focused the window. Start in a "press Space to serve" state.
-
 ### P7 — No pause, and no auto-pause on blur
 
 There is no way to stop the game. Add a Space or Escape toggle, and pause on
@@ -148,9 +136,9 @@ help button gets.
 - Content is the controls (W/S, arrow keys, and that the mouse steers too) plus
   the win condition. P9 and P10 both add to this panel if they land, so do not
   hardcode "first to 5" anywhere the win score cannot reach.
-- What replaces the text in `#status` depends on P6. Until it lands the honest
-  answer is the score from the first frame; once the game waits to serve, the
-  status becomes "Press Space to serve", which is genuine state.
+- `#status` already carries genuine state — the score, the serve prompt, the
+  serve countdown. Only the controls hint appended to the first-serve message
+  needs to move; leave the state messages alone.
 - `tests/pong.test.js` pins the current violation in its last section, asserting
   that `#status` contains "W/S". Rewrite that assertion as part of this: assert the
   controls are absent from the status line and that the panel toggles, mirroring
