@@ -3,7 +3,8 @@
 // see "Scripts are classic, not modules" in CLAUDE.md for why that is reachable.
 //
 // Assertions are deliberately about outcomes (did it bounce, did that score) and
-// not about pixels-per-frame, so they survive movement becoming time-scaled.
+// not about pixels-per-frame. Movement is a fixed timestep, so update() is always
+// one tick's worth and stepping it by hand stays exact.
 const { launch, url, makeChecks } = require("./helpers");
 
 const PAGE = url("/games/pong/index.html");
@@ -39,10 +40,20 @@ const { check, report } = makeChecks();
   const read = () => page.evaluate(() => ({
     ball: { ...ball }, player: { ...player }, ai: { ...ai }, gameOver,
   }));
-  const consts = await page.evaluate(() => ({
+  const opt = (name) => `typeof ${name} === "undefined" ? null : ${name}`;
+  const consts = await page.evaluate(`({
     WIDTH, HEIGHT, PADDLE_WIDTH, PADDLE_HEIGHT, BALL_SIZE, WIN_SCORE, PADDLE_SPEED,
-  }));
+    TICK_MS: ${opt("TICK_MS")},
+    MAX_CATCHUP_MS: ${opt("MAX_CATCHUP_MS")},
+    BALL_SPEED: ${opt("BALL_SPEED")},
+    BALL_SPEED_MAX: ${opt("BALL_SPEED_MAX")},
+    MAX_BOUNCE_ANGLE: ${opt("MAX_BOUNCE_ANGLE")},
+  })`);
   const { WIDTH, HEIGHT, PADDLE_WIDTH, PADDLE_HEIGHT, BALL_SIZE, WIN_SCORE } = consts;
+  const SPEED_MAX = consts.BALL_SPEED_MAX ?? 10;
+  const TICK = consts.TICK_MS ?? 1000 / 60;
+  const CATCHUP = consts.MAX_CATCHUP_MS ?? 250;
+  const STEEPEST = Math.tan(consts.MAX_BOUNCE_ANGLE ?? Math.PI / 3);
   const MAX_Y = HEIGHT - PADDLE_HEIGHT;
 
   console.log("1. state at load");
@@ -129,7 +140,77 @@ const { check, report } = makeChecks();
     check("stays inside the bottom edge", bot.ball.y <= HEIGHT - BALL_SIZE, bot.ball.y);
   }
 
-  console.log("6. a clean miss scores");
+  console.log("6. velocity model: speed capped, angle bounded");
+  {
+    await freeze();
+    await set({ player: { y: 160 }, ai: { y: 160 }, ball: { x: 300, y: 200, vx: -6, vy: 0 } });
+    // Keep both paddles offset under the ball so every hit lands near an edge -
+    // the worst case for both the speed cap and the steepest angle - and rally
+    // long enough that the old compounding growth would have run away.
+    const rally = await page.evaluate((n) => {
+      let maxSpeed = 0, maxSteep = 0, minAbsVx = Infinity, hits = 0;
+      const clamp = (v) => Math.max(0, Math.min(HEIGHT - PADDLE_HEIGHT, v));
+      for (let i = 0; i < n; i++) {
+        const was = Math.sign(ball.vx);
+        update();
+        if (Math.sign(ball.vx) !== was) hits++;
+        player.y = clamp(ball.y - PADDLE_HEIGHT * 0.85);
+        ai.y = player.y;
+        const speed = Math.hypot(ball.vx, ball.vy);
+        if (speed > maxSpeed) maxSpeed = speed;
+        maxSteep = Math.max(maxSteep, Math.abs(ball.vy) / Math.max(1e-9, Math.abs(ball.vx)));
+        minAbsVx = Math.min(minAbsVx, Math.abs(ball.vx));
+      }
+      return { maxSpeed, maxSteep, minAbsVx, hits, points: player.score + ai.score };
+    }, 5000);
+
+    // 30 hits is 1.05^30, a ~4x runaway under the old model, against a 2x cap.
+    check("the rally actually happened", rally.hits > 30, `${rally.hits} hits`);
+    check("nobody scored during it", rally.points === 0, rally.points);
+    check("ball speeds up towards the cap", rally.maxSpeed > 6, rally.maxSpeed);
+    check("speed never exceeds the cap", rally.maxSpeed <= SPEED_MAX + 1e-6,
+      `${rally.maxSpeed} vs ${SPEED_MAX}`);
+    check("ball never gets steeper than the bounce limit",
+      rally.maxSteep <= STEEPEST + 1e-6, `${rally.maxSteep} vs ${STEEPEST}`);
+    check("ball never stalls vertically", rally.minAbsVx > 0.5, rally.minAbsVx);
+
+    // A hit right at the paddle tip is the steepest legal return.
+    await freeze();
+    await set({ player: { y: 160 }, ball: { x: 16, y: 232, vx: -6, vy: 0 } });
+    await step(1);
+    const edge = (await read()).ball;
+    check("an edge hit still comes off within the angle limit",
+      Math.abs(edge.vy) / Math.abs(edge.vx) <= STEEPEST + 1e-6,
+      `${edge.vx},${edge.vy}`);
+  }
+
+  console.log("7. fixed timestep pacing");
+  {
+    await freeze();
+    const hasAdvance = await page.evaluate(() => typeof advance === "function");
+    check("advance() exists to drain real time into ticks", hasAdvance);
+    if (hasAdvance) {
+      const pace = await page.evaluate((stallMs) => {
+        const out = {};
+        for (const hz of [30, 60, 144]) {
+          accumulator = 0;
+          let ticks = 0;
+          for (let i = 0; i < hz; i++) ticks += advance(1000 / hz);
+          out[hz] = ticks;
+        }
+        accumulator = 0;
+        out.stall = advance(stallMs);
+        return out;
+      }, 60000);
+      check("60Hz simulates ~60 ticks per second", Math.abs(pace[60] - 60) <= 1, pace[60]);
+      check("144Hz simulates the same amount", Math.abs(pace[144] - 60) <= 1, pace[144]);
+      check("30Hz simulates the same amount", Math.abs(pace[30] - 60) <= 1, pace[30]);
+      check("a minute-long stall is clamped, not caught up on",
+        pace.stall <= Math.ceil(CATCHUP / TICK), `${pace.stall} ticks`);
+    }
+  }
+
+  console.log("8. a clean miss scores");
   {
     await freeze();
     await set({ player: { y: 0 }, ball: { x: 40, y: 300, vx: -6, vy: 0 } });
@@ -151,7 +232,7 @@ const { check, report } = makeChecks();
       (await read()).player.score === 1);
   }
 
-  console.log("7. reaching WIN_SCORE ends the game");
+  console.log("9. reaching WIN_SCORE ends the game");
   {
     await freeze();
     await set({
@@ -182,7 +263,7 @@ const { check, report } = makeChecks();
       await page.textContent("#status"));
   }
 
-  console.log("8. restart clears everything");
+  console.log("10. restart clears everything");
   {
     const s = await read();
     check("preconditions: game is over with a score on the board",
@@ -196,7 +277,7 @@ const { check, report } = makeChecks();
       t.ball.x === WIDTH / 2 && t.ball.y === HEIGHT / 2);
   }
 
-  console.log("9. paddle controls");
+  console.log("11. paddle controls");
   {
     await freeze();
     await set({ player: { y: 200 } });
@@ -235,7 +316,7 @@ const { check, report } = makeChecks();
       Math.abs(got - want) < 1.5, `${got} vs ${want}`);
   }
 
-  console.log("10. known bugs, pinned - these assertions invert when the fix lands");
+  console.log("12. known bugs, pinned - these assertions invert when the fix lands");
   {
     // P2: collision is a half-plane test (ball.x <= PADDLE_WIDTH), not a crossing
     // test, so a ball that already went past the paddle is still rescued if the
@@ -246,13 +327,6 @@ const { check, report } = makeChecks();
     const s = await read();
     check("P2: a ball already past the paddle plane is still rescued (bug)",
       s.ball.vx > 0 && s.ai.score === 0, `vx=${s.ball.vx} score=${s.ai.score}`);
-
-    // P3: no speed cap - vx is multiplied by 1.05 on every hit, forever.
-    await freeze();
-    await set({ player: { y: 160 }, ball: { x: 16, y: 200, vx: -6, vy: 0 } });
-    await step(1);
-    check("P3: ball speeds up on every hit with no cap (bug)",
-      Math.abs((await read()).ball.vx) > 6, (await read()).ball.vx);
 
     // P11: #status carries standing instructions, which CLAUDE.md reserves for a
     // collapsible panel. Expected to flip to "no controls text" when P11 lands.
