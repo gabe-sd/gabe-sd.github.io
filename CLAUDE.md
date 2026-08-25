@@ -60,12 +60,13 @@ Each game page follows a contract that `shared.css` depends on:
 - Uses the ids `#board`, `#status`, `#restart`; games may add their own on top
   (Minesweeper has `#flag-count`, `#timer`, `#best-time`, `#help-toggle`,
   `#instructions`, and a gear button `#settings-toggle` opening `#settings`,
-  which holds `#reset-best`).
+  which holds `#reset-best`; Pong has `#help-toggle` and `#instructions` too).
   Game scripts look these up by id, and `shared.css` styles `.page`, `.status`,
-  `.hint`, `.btn`, `.back-link` for them.
+  `.hint`, `.btn` (with `.secondary` and `.icon`), `.controls`, `.back-link`
+  for them.
 - Treats `#status` as game state only — what just happened, or what to do next.
-  Standing instructions belong in a collapsible panel (see Minesweeper's
-  `#instructions`), not the status line. `shared.css` gives `.status` a reserved
+  Standing instructions belong in a collapsible panel (both Minesweeper and Pong
+  use `#instructions`), not the status line. `shared.css` gives `.status` a reserved
   min-height so its text can change without shifting the board.
 - Links back to `../../index.html`.
 
@@ -106,15 +107,15 @@ per-frame movement back into `loop()`. `advance()` clamps a single frame to
 `MAX_CATCHUP_MS` so a backgrounded tab does not resume by simulating minutes at
 once. Ball speed is recomputed and capped on every paddle hit by `bounce()`, which
 also derives the angle from the strike position: nothing may accumulate into
-`ball.vy` directly, which is what previously let a long rally reach ten times the
-serve speed and skip straight past a paddle. Play is a three-phase
-machine: `serve` waits for the player, `countdown` is the pause after a point,
-`play` is a live ball, and `update()` moves the paddles but returns before
-touching the ball in anything but `play` — a test that places the ball by hand
-has to set `phase` too. The loop stops itself once `gameOver` is set and `restart()` brings it back, but scheduling is guarded by
-`running` rather than by `rafId`, so a caller that has cancelled the pending
-frame — the test harness does exactly that — does not get it restarted
-underneath them. A canvas cannot use CSS custom properties, so theme colours are
+`ball.vy` directly, which is what previously let a long rally reach ten times
+the serve speed and skip straight past a paddle. Play is a three-phase machine:
+`serve` waits for the player, `countdown` is the pause after a point, `play` is
+a live ball, and `update()` moves the paddles but returns before touching the
+ball in anything but `play` — a test that places the ball by hand has to set
+`phase` too. The loop stops itself once `gameOver` is set and `restart()` brings
+it back, but scheduling is guarded by `running` rather than by `rafId`, so a
+caller that has cancelled the pending frame — the test harness does exactly
+that — does not get it restarted underneath them. A canvas cannot use CSS custom properties, so theme colours are
 copied into a plain `colors` object by `readColors()` and re-copied from a
 `prefers-color-scheme` change listener; only the background is re-read per
 frame.

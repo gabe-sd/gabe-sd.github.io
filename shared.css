@@ -101,3 +101,15 @@ button {
   border: 2px solid var(--cell-border);
   color: var(--fg);
 }
+
+/* Square rather than a pill, for a button whose label is a single glyph. */
+.btn.icon {
+  padding: 0.5rem 0.7rem;
+  line-height: 1;
+}
+
+/* A row of buttons under the board. */
+.controls {
+  display: flex;
+  gap: 0.6rem;
+}

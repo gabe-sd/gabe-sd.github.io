@@ -454,7 +454,58 @@ const { check, report } = makeChecks();
     await page.emulateMedia({ colorScheme: "light" });
   }
 
-  console.log("14. known bugs, pinned - these assertions invert when the fix lands");
+  console.log("14. the how-to-play panel");
+  {
+    await page.evaluate(() => restart());
+    check("status is game state only, with no controls in it",
+      !/W\/S|arrow|mouse/i.test(await page.textContent("#status")),
+      await page.textContent("#status"));
+
+    check("panel hidden by default", !(await page.isVisible("#instructions")));
+    check("aria-expanded starts false",
+      (await page.getAttribute("#help-toggle", "aria-expanded")) === "false");
+    check("the icon button has an accessible name",
+      (await page.getAttribute("#help-toggle", "aria-label") || "").length > 0,
+      await page.getAttribute("#help-toggle", "aria-label"));
+
+    const boardBefore = await (await page.$("#board")).boundingBox();
+    await page.click("#help-toggle");
+    await page.waitForTimeout(120);
+    check("the button reveals it", await page.isVisible("#instructions"));
+    check("aria-expanded flips to true",
+      (await page.getAttribute("#help-toggle", "aria-expanded")) === "true");
+    const boardAfter = await (await page.$("#board")).boundingBox();
+    check("opening it does not move the board",
+      Math.abs(boardAfter.y - boardBefore.y) < 0.5,
+      `${boardBefore.y} -> ${boardAfter.y}`);
+
+    const text = await page.textContent("#instructions");
+    check("it covers keyboard, mouse and serving",
+      ["W", "S", "Mouse", "Space"].every((t) => text.includes(t)), text.trim());
+    check("the win score comes from the constant, not the markup",
+      (await page.textContent("#win-score")) === String(WIN_SCORE),
+      await page.textContent("#win-score"));
+
+    // The panel button is focused after that click, so Space belongs to it.
+    const before = await page.evaluate(() => phase);
+    await page.keyboard.press("Space");
+    await page.waitForTimeout(120);
+    check("Space on a focused button does not also serve",
+      (await page.evaluate(() => phase)) === before && before === "serve",
+      `${before} -> ${await page.evaluate(() => phase)}`);
+    check("it toggles the panel shut instead",
+      !(await page.isVisible("#instructions")));
+
+    await page.click("#help-toggle");
+    await page.waitForTimeout(120);
+    await page.click("#help-toggle");
+    await page.waitForTimeout(120);
+    check("the button hides it again", !(await page.isVisible("#instructions")));
+    check("aria-expanded back to false",
+      (await page.getAttribute("#help-toggle", "aria-expanded")) === "false");
+  }
+
+  console.log("15. known bugs, pinned - these assertions invert when the fix lands");
   {
     // P2: collision is a half-plane test (ball.x <= PADDLE_WIDTH), not a crossing
     // test, so a ball that already went past the paddle is still rescued if the
@@ -465,13 +516,6 @@ const { check, report } = makeChecks();
     const s = await read();
     check("P2: a ball already past the paddle plane is still rescued (bug)",
       s.ball.vx > 0 && s.ai.score === 0, `vx=${s.ball.vx} score=${s.ai.score}`);
-
-    // P11: #status carries standing instructions, which CLAUDE.md reserves for a
-    // collapsible panel. Expected to flip to "no controls text" when P11 lands.
-    await page.evaluate(() => restart());
-    const status = await page.textContent("#status");
-    check("P11: controls are in the status line (contract violation)",
-      status.includes("W/S"), status);
   }
 
   check("no page errors", errors.length === 0, errors.join("; "));

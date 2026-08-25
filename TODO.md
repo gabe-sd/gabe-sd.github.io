@@ -106,44 +106,6 @@ base speed, and possibly `PADDLE_HEIGHT`.
 `WIN_SCORE` is hardcoded to 5, which is a short game. First to 5 / 7 / 11 belongs
 in the same settings panel as the difficulty.
 
-### P11 — Move the controls into a "?" panel
-
-`#status` starts as "First to 5 wins · W/S or ↑/↓ to move", but the page contract
-in `CLAUDE.md` reserves `#status` for game state only — standing instructions
-belong in a collapsible panel. Add a `?` icon button beside Restart that toggles a
-panel listing the controls, and leave `#status` free to report the score.
-
-Follow Minesweeper's markup, which is the established pattern: a `.controls` div
-holding the buttons, a toggle button carrying `aria-expanded` and `aria-controls`,
-and a sibling panel that starts `hidden`. The one deliberate difference is that
-Minesweeper's help toggle is a text button reading "How to play" while this one is
-an icon, so it needs the treatment Minesweeper's gear gets rather than the one its
-help button gets.
-
-- An icon-only button has no accessible name. A bare `?` is announced as
-  punctuation, so it needs `aria-label="How to play"` and a `title`, the way
-  `#settings-toggle` carries `aria-label="Advanced controls"`.
-- `.controls` and `.btn.icon` live in `games/minesweeper/style.css`, not
-  `shared.css`, so Pong does not get them for free. Either copy the rules into
-  `games/pong/style.css` or promote them to `shared.css`. Promoting is the better
-  call if P9 lands as well, since that adds a second icon button to this same row
-  — but from then on every game's button styling moves together, so it is a real
-  commitment rather than a tidy-up.
-- Put the panel after the canvas, so opening it cannot shift the board.
-- The panel toggles via the `hidden` attribute, so any `display` rule on it must be
-  scoped to `:not([hidden])` — a display value otherwise beats `hidden` and it
-  renders open on load. Keep `aria-expanded` in step with the attribute.
-- Content is the controls (W/S, arrow keys, and that the mouse steers too) plus
-  the win condition. P9 and P10 both add to this panel if they land, so do not
-  hardcode "first to 5" anywhere the win score cannot reach.
-- `#status` already carries genuine state — the score, the serve prompt, the
-  serve countdown. Only the controls hint appended to the first-serve message
-  needs to move; leave the state messages alone.
-- `tests/pong.test.js` pins the current violation in its last section, asserting
-  that `#status` contains "W/S". Rewrite that assertion as part of this: assert the
-  controls are absent from the status line and that the panel toggles, mirroring
-  `tests/instructions-panel.test.js`.
-
 ### P14 — Blurry on high-DPI displays
 
 The canvas backing store is a fixed 600x400 scaled by CSS `max-width: 100%`, so it
