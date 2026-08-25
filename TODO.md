@@ -6,6 +6,16 @@ belongs in git history, not here, so delete entries as they land.
 Keep entries actionable: enough context to start without rediscovering the
 constraints, including whatever was non-obvious the first time round.
 
+Once a section has enough entries to need them, they carry a short ID (`P1`, `P2`,
+… for Pong) so they can be named in conversation. Three rules stop those rotting:
+
+- **Assigned once, never reused or renumbered.** Deleting a landed entry leaves a
+  gap; closing the gap silently repoints every reference made before it.
+- **Kept out of commit messages and branch names.** An ID stops meaning anything
+  the moment its entry is deleted, so history has to describe itself.
+- **Grep for the ID before deleting an entry.** A cross-reference to an entry that
+  no longer exists cannot be recovered without digging through old file versions.
+
 ## Minesweeper: remember the panel open/closed state
 
 Both collapsible panels — How to play (`#instructions`) and the gear's advanced
@@ -47,14 +57,6 @@ can go in any order.
 panels — add to it rather than around it. Its last section pins known-wrong
 behaviour as passing assertions, so fixing P2 is supposed to turn a check red;
 rewrite that assertion as part of the fix rather than deleting it.
-
-Entry IDs (`P1`, `P2`, ...) are for referring to these in conversation. They are
-assigned once and never reused or renumbered — deleting a landed entry leaves a
-gap, and closing that gap would silently repoint every reference made before it.
-Keep them out of commit messages and branch names: the ID stops meaning anything
-the moment the entry is deleted, so history has to describe itself. When deleting
-a landed entry, grep the file for its ID first — a cross-reference to an entry
-that no longer exists is unrecoverable without digging through old versions.
 
 ### P2 — The paddle can rescue a ball that is already past it
 
