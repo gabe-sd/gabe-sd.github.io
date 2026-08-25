@@ -305,6 +305,17 @@ const { check, report } = makeChecks();
     check("clamped at the bottom edge", (await read()).player.y === MAX_Y,
       (await read()).player.y);
 
+    // The arrows must not scroll the document out from under the board.
+    await page.evaluate(() => { document.body.style.minHeight = "3000px"; });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.keyboard.down("ArrowDown");
+    await page.waitForTimeout(60);
+    await page.keyboard.up("ArrowDown");
+    check("arrow keys do not scroll the page",
+      (await page.evaluate(() => window.scrollY)) === 0,
+      await page.evaluate(() => window.scrollY));
+    await page.evaluate(() => { document.body.style.minHeight = ""; });
+
     const box = await (await page.$("#board")).boundingBox();
     const clientY = box.y + box.height * 0.25;
     await page.mouse.move(box.x + box.width / 2, clientY);

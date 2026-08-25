@@ -177,14 +177,30 @@ function loop(now) {
   rafId = requestAnimationFrame(loop);
 }
 
+const UP_KEYS = ["w", "W", "ArrowUp"];
+const DOWN_KEYS = ["s", "S", "ArrowDown"];
+
+// Returns which direction a key means, or null if the game does not use it.
+function keyDirection(key) {
+  if (UP_KEYS.includes(key)) return "up";
+  if (DOWN_KEYS.includes(key)) return "down";
+  return null;
+}
+
 function handleKeyDown(e) {
-  if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") keys.up = true;
-  if (e.key === "s" || e.key === "S" || e.key === "ArrowDown") keys.down = true;
+  const dir = keyDirection(e.key);
+  if (!dir) return;
+  // The arrows scroll the document by default, which drags the board out from
+  // under the player on a short window.
+  e.preventDefault();
+  keys[dir] = true;
 }
 
 function handleKeyUp(e) {
-  if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") keys.up = false;
-  if (e.key === "s" || e.key === "S" || e.key === "ArrowDown") keys.down = false;
+  const dir = keyDirection(e.key);
+  if (!dir) return;
+  e.preventDefault();
+  keys[dir] = false;
 }
 
 function handlePointerMove(e) {

@@ -61,11 +61,6 @@ registers a hit. Slow balls linger there longest, so it is most exploitable exac
 when the game is easiest. Test the crossing between the previous and current
 position, not the current position alone.
 
-### P4 — Arrow keys scroll the page
-
-`handleKeyDown` never calls `preventDefault()`, so in a short window the up/down
-arrows scroll the document out from under the canvas while you play.
-
 ### P5 — Mouse and keyboard controls fight each other
 
 The `pointermove` handler sets `player.y` absolutely while the keys move it
