@@ -61,17 +61,6 @@ registers a hit. Slow balls linger there longest, so it is most exploitable exac
 when the game is easiest. Test the crossing between the previous and current
 position, not the current position alone.
 
-### P4 — Arrow keys scroll the page
-
-`handleKeyDown` never calls `preventDefault()`, so in a short window the up/down
-arrows scroll the document out from under the canvas while you play.
-
-### P5 — Mouse and keyboard controls fight each other
-
-The `pointermove` handler sets `player.y` absolutely while the keys move it
-relatively, so brushing the mouse mid-rally teleports the paddle. Track which
-input was used last and ignore the other until it is used again.
-
 ### P6 — Round lifecycle: pause between points, sensible serve, no auto-start
 
 Three changes to the same area, best done together:
@@ -167,14 +156,6 @@ help button gets.
   controls are absent from the status line and that the panel toggles, mirroring
   `tests/instructions-panel.test.js`.
 
-### P13 — Theme changes need a reload
-
-Known limitation, documented in `CLAUDE.md`: a canvas cannot use CSS custom
-properties, so `colors` is read once at load via `getComputedStyle`. Switching the
-OS theme mid-game leaves the paddles and ball in the old palette. Re-reading them
-from a `matchMedia("(prefers-color-scheme: dark)")` change listener closes it in a
-few lines.
-
 ### P14 — Blurry on high-DPI displays
 
 The canvas backing store is a fixed 600x400 scaled by CSS `max-width: 100%`, so it
@@ -197,18 +178,6 @@ is soft on any display with `devicePixelRatio > 1`. Size the backing store by
   already local two-player.
 - **Hit feedback.** A short ball trail, a paddle flash on contact, a flash on
   score. A few lines each in `draw()`.
-
-### P16 — The loop never stops
-
-`loop()` keeps scheduling frames after `gameOver`, redrawing a frozen board
-forever. Stopping it on game over and restarting it in `restart()` is the tidy
-version.
-
-- Do **not** delete `rafId` as unused. It is never passed to
-  `cancelAnimationFrame` by the game, but it is the only handle a test has to
-  freeze the loop and step `update()` deterministically. Removing it would take
-  the Pong suite's freeze control with it — see the `freeze` helper in
-  `tests/pong.test.js`.
 
 ## Improve site design and visual appeal
 

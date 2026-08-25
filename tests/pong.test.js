@@ -261,6 +261,24 @@ const { check, report } = makeChecks();
     check("status announces the loss",
       (await page.textContent("#status")).includes("AI wins"),
       await page.textContent("#status"));
+
+    // The loop stops itself once the game is over rather than redrawing a frozen
+    // board forever. Driving loop() by hand is safe here: with gameOver set it
+    // schedules nothing, and update() returns immediately.
+    const hasStart = await page.evaluate(() => typeof start === "function");
+    check("start() owns loop scheduling", hasStart);
+    if (hasStart) {
+      const stopped = await page.evaluate(() => {
+        loop(performance.now());
+        const r = { rafId, running };
+        running = true; // keep the suite's frozen state for the cases below
+        return r;
+      });
+      check("no frame is scheduled once the game is over",
+        stopped.rafId === null, stopped.rafId);
+      check("the loop marks itself stopped", stopped.running === false,
+        stopped.running);
+    }
   }
 
   console.log("10. restart clears everything");
@@ -305,18 +323,63 @@ const { check, report } = makeChecks();
     check("clamped at the bottom edge", (await read()).player.y === MAX_Y,
       (await read()).player.y);
 
+    // The arrows must not scroll the document out from under the board.
+    await page.evaluate(() => { document.body.style.minHeight = "3000px"; });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.keyboard.down("ArrowDown");
+    await page.waitForTimeout(60);
+    await page.keyboard.up("ArrowDown");
+    check("arrow keys do not scroll the page",
+      (await page.evaluate(() => window.scrollY)) === 0,
+      await page.evaluate(() => window.scrollY));
+    await page.evaluate(() => { document.body.style.minHeight = ""; });
+
     const box = await (await page.$("#board")).boundingBox();
+
+    // A brushed mouse must not take the paddle off the keyboard mid-rally, so
+    // the pointer only takes over after moving far enough to look deliberate.
+    await set({ player: { y: 200 } });
+    const midY = box.y + box.height * 0.5;
+    await page.mouse.move(box.x + box.width / 2, midY);
+    await page.mouse.move(box.x + box.width / 2, midY + 4);
+    await page.waitForTimeout(60);
+    check("a small nudge does not steal control from the keyboard",
+      (await read()).player.y === 200, (await read()).player.y);
+
     const clientY = box.y + box.height * 0.25;
     await page.mouse.move(box.x + box.width / 2, clientY);
     await page.waitForTimeout(60);
     const scale = HEIGHT / box.height;
     const want = Math.max(0, Math.min(MAX_Y, (clientY - box.y) * scale - PADDLE_HEIGHT / 2));
     const got = (await read()).player.y;
-    check("pointer centres the paddle on the cursor",
+    check("a deliberate move does hand over to the pointer",
       Math.abs(got - want) < 1.5, `${got} vs ${want}`);
+
+    // ...and the keyboard takes it straight back on the next keypress.
+    await page.keyboard.down("w");
+    await step(3);
+    await page.keyboard.up("w");
+    check("a keypress reclaims control from the pointer",
+      (await read()).player.y < got, `${got} -> ${(await read()).player.y}`);
   }
 
-  console.log("12. known bugs, pinned - these assertions invert when the fix lands");
+  console.log("12. the canvas palette follows the OS theme");
+  {
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.waitForTimeout(80);
+    const light = await page.evaluate(() => ({ ...colors }));
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.waitForTimeout(80);
+    const dark = await page.evaluate(() => ({ ...colors }));
+    check("foreground changes with the theme, without a reload",
+      light.fg !== dark.fg, `${light.fg} -> ${dark.fg}`);
+    check("the palette is fully populated in both",
+      [light.fg, light.accent, light.border, dark.fg, dark.accent, dark.border]
+        .every((c) => typeof c === "string" && c.length > 0));
+    await page.emulateMedia({ colorScheme: "light" });
+  }
+
+  console.log("13. known bugs, pinned - these assertions invert when the fix lands");
   {
     // P2: collision is a half-plane test (ball.x <= PADDLE_WIDTH), not a crossing
     // test, so a ball that already went past the paddle is still rescued if the

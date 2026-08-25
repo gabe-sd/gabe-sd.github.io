@@ -28,12 +28,20 @@ const BALL_SPEEDUP = 1.05;
 // Steepest a paddle can send the ball, measured off the horizontal.
 const MAX_BOUNCE_ANGLE = Math.PI / 3;
 
-const style = getComputedStyle(document.documentElement);
-const colors = {
-  fg: style.getPropertyValue("--fg").trim() || "#1c1c1e",
-  accent: style.getPropertyValue("--accent").trim() || "#3b82f6",
-  border: style.getPropertyValue("--cell-border").trim() || "#c7c7cc",
-};
+// A canvas cannot read CSS custom properties, so the theme tokens are copied
+// into plain values here and re-copied whenever the OS theme flips.
+function readColors() {
+  const style = getComputedStyle(document.documentElement);
+  return {
+    fg: style.getPropertyValue("--fg").trim() || "#1c1c1e",
+    accent: style.getPropertyValue("--accent").trim() || "#3b82f6",
+    border: style.getPropertyValue("--cell-border").trim() || "#c7c7cc",
+  };
+}
+
+let colors = readColors();
+const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+darkQuery.addEventListener("change", () => { colors = readColors(); });
 
 let player = { y: HEIGHT / 2 - PADDLE_HEIGHT / 2, score: 0 };
 let ai = { y: HEIGHT / 2 - PADDLE_HEIGHT / 2, score: 0 };
@@ -43,6 +51,9 @@ let gameOver = false;
 let rafId = null;
 let accumulator = 0;
 let lastFrame = null;
+let running = false;
+let control = "keyboard"; // or "pointer" - whichever the player last used
+let pointerAnchor = null;
 
 function newBall() {
   const angle = (Math.random() * 0.6 - 0.3) * Math.PI;
@@ -73,8 +84,10 @@ function bounce(paddleY, dir) {
 function update() {
   if (gameOver) return;
 
-  if (keys.up) player.y -= PADDLE_SPEED;
-  if (keys.down) player.y += PADDLE_SPEED;
+  if (control === "keyboard") {
+    if (keys.up) player.y -= PADDLE_SPEED;
+    if (keys.down) player.y += PADDLE_SPEED;
+  }
   player.y = Math.max(0, Math.min(HEIGHT - PADDLE_HEIGHT, player.y));
 
   const aiCenter = ai.y + PADDLE_HEIGHT / 2;
@@ -174,20 +187,69 @@ function loop(now) {
   advance(now - lastFrame);
   lastFrame = now;
   draw();
+  // Nothing moves once the game is over, so stop scheduling frames rather than
+  // redrawing a frozen board forever. restart() starts it again.
+  if (gameOver) {
+    running = false;
+    rafId = null;
+    return;
+  }
   rafId = requestAnimationFrame(loop);
 }
 
+// Guarded by `running` rather than by rafId, so that a caller which has already
+// cancelled the pending frame - the test harness does exactly this - does not
+// get the loop restarted underneath it by restart().
+function start() {
+  if (running) return;
+  running = true;
+  lastFrame = null;
+  rafId = requestAnimationFrame(loop);
+}
+
+// Handing control to the pointer on *any* movement would not fix anything: the
+// problem is the mouse being brushed mid-rally, not moved on purpose. It has to
+// travel far enough to look deliberate first.
+const POINTER_TAKEOVER_PX = 12;
+
+const UP_KEYS = ["w", "W", "ArrowUp"];
+const DOWN_KEYS = ["s", "S", "ArrowDown"];
+
+// Returns which direction a key means, or null if the game does not use it.
+function keyDirection(key) {
+  if (UP_KEYS.includes(key)) return "up";
+  if (DOWN_KEYS.includes(key)) return "down";
+  return null;
+}
+
 function handleKeyDown(e) {
-  if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") keys.up = true;
-  if (e.key === "s" || e.key === "S" || e.key === "ArrowDown") keys.down = true;
+  const dir = keyDirection(e.key);
+  if (!dir) return;
+  // The arrows scroll the document by default, which drags the board out from
+  // under the player on a short window.
+  e.preventDefault();
+  control = "keyboard";
+  pointerAnchor = null;
+  keys[dir] = true;
 }
 
 function handleKeyUp(e) {
-  if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") keys.up = false;
-  if (e.key === "s" || e.key === "S" || e.key === "ArrowDown") keys.down = false;
+  const dir = keyDirection(e.key);
+  if (!dir) return;
+  e.preventDefault();
+  keys[dir] = false;
 }
 
 function handlePointerMove(e) {
+  if (control === "keyboard") {
+    if (pointerAnchor === null) {
+      pointerAnchor = { x: e.clientX, y: e.clientY };
+      return;
+    }
+    const moved = Math.hypot(e.clientX - pointerAnchor.x, e.clientY - pointerAnchor.y);
+    if (moved < POINTER_TAKEOVER_PX) return;
+    control = "pointer";
+  }
   const rect = canvas.getBoundingClientRect();
   const scale = HEIGHT / rect.height;
   const y = (e.clientY - rect.top) * scale;
@@ -200,7 +262,10 @@ function restart() {
   ball = newBall();
   gameOver = false;
   accumulator = 0;
+  control = "keyboard";
+  pointerAnchor = null;
   statusEl.textContent = "First to 5 wins · W/S or ↑/↓ to move";
+  start();
 }
 
 window.addEventListener("keydown", handleKeyDown);
@@ -208,4 +273,4 @@ window.addEventListener("keyup", handleKeyUp);
 canvas.addEventListener("pointermove", handlePointerMove);
 restartBtn.addEventListener("click", restart);
 
-rafId = requestAnimationFrame(loop);
+start();
