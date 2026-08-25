@@ -98,7 +98,17 @@ Changes to move rules belong in the pseudo-move layer; do not special-case
 legality in the click handler.
 
 **Pong** (`games/pong/script.js`) runs a `requestAnimationFrame` loop over mutable
-`player`/`ai`/`ball` objects. A canvas cannot use CSS custom properties, so theme
+`player`/`ai`/`ball` objects, but the loop only *paces* the game: `advance()`
+drains elapsed real time into whole `TICK_MS` ticks and calls `update()` once per
+tick, so play is identical at 60Hz and 144Hz. Every speed constant is therefore
+per tick, not per frame — add a new one in those units, and do not move
+per-frame movement back into `loop()`. `advance()` clamps a single frame to
+`MAX_CATCHUP_MS` so a backgrounded tab does not resume by simulating minutes at
+once. Ball speed is recomputed and capped on every paddle hit by `bounce()`, which
+also derives the angle from the strike position: nothing may accumulate into
+`ball.vy` directly, which is what previously let a long rally reach ten times the
+serve speed and skip straight past a paddle. A canvas cannot use CSS custom
+properties, so theme
 colours are read once at load via `getComputedStyle` into a `colors` object; only
 the background is re-read per frame. Consequence: switching the OS theme mid-game
 will not restyle the paddles or ball until reload.

@@ -52,20 +52,6 @@ the moment the entry is deleted, so history has to describe itself. When deletin
 a landed entry, grep the file for its ID first — a cross-reference to an entry
 that no longer exists is unrecoverable without digging through old versions.
 
-### P1 — Movement is frame-rate dependent
-
-`update()` moves everything a fixed number of pixels per *frame*, and
-`requestAnimationFrame` fires at the display refresh rate — so a 144Hz monitor
-plays the whole game 2.4x faster than a 60Hz one, ball and paddles and AI alike.
-Scale every movement by elapsed time instead.
-
-- Clamp the delta. A backgrounded tab throttles `requestAnimationFrame`, so the
-  first frame after returning can carry a delta of seconds and jump the ball clean
-  through a paddle.
-- `PADDLE_SPEED`, `AI_SPEED` and the ball's base speed all become per-second rather
-  than per-frame. The current values are per-frame at 60Hz, so multiply by 60 to
-  land on the same feel.
-
 ### P2 — The paddle can rescue a ball that is already past it
 
 Paddle collision tests `ball.x <= PADDLE_WIDTH` — a half-plane, not a band. A ball
@@ -74,20 +60,6 @@ travels out to `ball.x < 0`, so sliding the paddle down onto it afterwards still
 registers a hit. Slow balls linger there longest, so it is most exploitable exactly
 when the game is easiest. Test the crossing between the previous and current
 position, not the current position alone.
-
-### P3 — Ball velocity is unbounded and never normalized
-
-Two separate problems in the same few lines of `update()`:
-
-- `ball.vx *= -1.05` on every paddle hit, compounding with no cap. A long rally
-  ends up faster than the collision code samples reliably.
-- `ball.vy += hitPos * 4` *adds* to the existing vy rather than setting the angle,
-  so repeatedly hitting near the same paddle edge accumulates vertical speed
-  indefinitely. The ball ends up steep, fast, and barely crossing the board.
-
-Fix both at once: derive an angle from the hit position, then set `vx`/`vy` from
-`(speed, angle)` with `speed` capped. That also removes the oddity that only `vx`
-grows, which flattens the ball's trajectory as a rally goes on.
 
 ### P4 — Arrow keys scroll the page
 
