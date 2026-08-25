@@ -107,8 +107,11 @@ per-frame movement back into `loop()`. `advance()` clamps a single frame to
 once. Ball speed is recomputed and capped on every paddle hit by `bounce()`, which
 also derives the angle from the strike position: nothing may accumulate into
 `ball.vy` directly, which is what previously let a long rally reach ten times the
-serve speed and skip straight past a paddle. The loop stops itself once
-`gameOver` is set and `restart()` brings it back, but scheduling is guarded by
+serve speed and skip straight past a paddle. Play is a three-phase
+machine: `serve` waits for the player, `countdown` is the pause after a point,
+`play` is a live ball, and `update()` moves the paddles but returns before
+touching the ball in anything but `play` — a test that places the ball by hand
+has to set `phase` too. The loop stops itself once `gameOver` is set and `restart()` brings it back, but scheduling is guarded by
 `running` rather than by `rafId`, so a caller that has cancelled the pending
 frame — the test harness does exactly that — does not get it restarted
 underneath them. A canvas cannot use CSS custom properties, so theme colours are
