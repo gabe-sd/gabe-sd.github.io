@@ -2,6 +2,8 @@ const canvas = document.getElementById("board");
 const ctx = canvas.getContext("2d");
 const statusEl = document.getElementById("status");
 const restartBtn = document.getElementById("restart");
+const helpToggle = document.getElementById("help-toggle");
+const instructions = document.getElementById("instructions");
 
 const WIDTH = canvas.width;
 const HEIGHT = canvas.height;
@@ -94,7 +96,7 @@ function updateStatus() {
   } else if (phase === "serve") {
     statusEl.textContent = player.score || ai.score
       ? `${score} · press Space to serve`
-      : "Press Space to serve · W/S or ↑/↓ to move";
+      : "Press Space to serve";
   } else {
     statusEl.textContent = score;
   }
@@ -271,6 +273,9 @@ function keyDirection(key) {
 
 function handleKeyDown(e) {
   if (e.key === " ") {
+    // A focused button takes Space as its own activation; serving as well would
+    // mean opening the help panel also started the point.
+    if (e.target instanceof HTMLButtonElement) return;
     e.preventDefault(); // Space scrolls the document by default
     if (phase === "serve") serve();
     return;
@@ -308,6 +313,12 @@ function handlePointerMove(e) {
   player.y = Math.max(0, Math.min(HEIGHT - PADDLE_HEIGHT, y - PADDLE_HEIGHT / 2));
 }
 
+function toggleHelp() {
+  const opening = instructions.hidden;
+  instructions.hidden = !opening;
+  helpToggle.setAttribute("aria-expanded", String(opening));
+}
+
 function restart() {
   player = { y: HEIGHT / 2 - PADDLE_HEIGHT / 2, score: 0 };
   ai = { y: HEIGHT / 2 - PADDLE_HEIGHT / 2, score: 0 };
@@ -327,6 +338,11 @@ window.addEventListener("keyup", handleKeyUp);
 canvas.addEventListener("pointermove", handlePointerMove);
 canvas.addEventListener("pointerdown", () => { if (phase === "serve") serve(); });
 restartBtn.addEventListener("click", restart);
+helpToggle.addEventListener("click", toggleHelp);
+
+// The win score is stated in the panel, so it is filled in from the constant
+// rather than written into the markup twice.
+document.getElementById("win-score").textContent = WIN_SCORE;
 
 updateStatus();
 start();

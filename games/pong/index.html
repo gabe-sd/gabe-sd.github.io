@@ -11,9 +11,25 @@
   <main class="page">
     <a class="back-link" href="../../index.html">← All games</a>
     <h1>Pong</h1>
-    <p id="status" class="status">Press Space to serve · W/S or ↑/↓ to move</p>
+    <p id="status" class="status">Press Space to serve</p>
     <canvas id="board" width="600" height="400" aria-label="Pong game board"></canvas>
-    <button id="restart" class="btn">Restart</button>
+    <div class="controls">
+      <button id="restart" class="btn">Restart</button>
+      <button id="help-toggle" class="btn secondary icon" title="How to play"
+              aria-expanded="false" aria-controls="instructions"
+              aria-label="How to play">?</button>
+    </div>
+    <div id="instructions" class="instructions" hidden>
+      <ul>
+        <li><b>W</b>/<b>S</b> or <b>↑</b>/<b>↓</b> — move your paddle</li>
+        <li><b>Mouse</b> — move the pointer over the board to steer</li>
+        <li><b>Space</b> or <b>click the board</b> — serve</li>
+      </ul>
+      <p>
+        First to <span id="win-score">5</span> wins. After a point the ball is
+        served back at whoever conceded it.
+      </p>
+    </div>
   </main>
   <script src="script.js"></script>
 </body>

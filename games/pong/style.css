@@ -5,3 +5,29 @@
   max-width: 100%;
   touch-action: none;
 }
+
+/* No display rule here on purpose: without one the `hidden` attribute alone
+   closes the panel. Adding one would need scoping to :not([hidden]) or the panel
+   renders open on load. */
+.instructions {
+  max-width: 420px;
+  padding: 0.85rem 1rem;
+  background: var(--card-bg);
+  border: 2px solid var(--cell-border);
+  border-radius: 10px;
+  font-size: 0.85rem;
+}
+
+.instructions ul {
+  margin: 0 0 0.6rem;
+  padding-left: 1.1rem;
+}
+
+.instructions li {
+  margin-bottom: 0.2rem;
+}
+
+.instructions p {
+  margin: 0;
+  color: var(--muted);
+}

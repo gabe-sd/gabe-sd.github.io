@@ -58,8 +58,7 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
   scoring, the round lifecycle (serve prompt, the pause after a point, serving
   back at whoever conceded), the win condition, and paddle clamping. It cancels the animation frame
   and steps `update()` by hand, so it does not race a live loop or depend on frame
-  timing. Its last section pins the remaining *known* bugs (`P2`, `P11` in
-  `TODO.md`) as
+  timing. Its last section pins the remaining *known* bug (`P2` in `TODO.md`) as
   passing assertions describing the wrong behaviour — fixing one of those is
   supposed to turn its check red, which is the before/after evidence the fix
   worked. Rewrite the assertion as part of the fix so it describes the corrected
