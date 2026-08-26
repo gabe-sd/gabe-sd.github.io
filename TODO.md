@@ -137,6 +137,35 @@ whether it is wanted at all, before building it. The `?` panel already reads the
 win score from `WIN_SCORE` rather than hardcoding it, so that part will not need
 revisiting.
 
+### pong-mobile-support — Make Pong work properly on a phone (deferred)
+
+**Deferred: not designing for mobile at present.** Recorded because the findings
+below came from actually driving an emulated phone with real touch events, and
+would otherwise have to be rediscovered.
+
+It already works, which is the surprising part. Tapping the board serves, dragging
+moves the paddle, `touch-action: none` correctly stops the page scrolling under the
+drag, the layout does not overflow, and there are no errors. The canvas renders at
+342x229 inside a 390px viewport. Three things are actually wrong:
+
+- **There is no way to pause.** Escape and `p` are the only manual bindings and a
+  phone has no keyboard. Auto-pause on a hidden tab still works and tapping the
+  board resumes, so it is possible to get *out* of a pause but not into one. This
+  is a functional hole rather than polish.
+- **The `?` panel lies.** It lists W/S, the arrow keys and Space, none of which
+  exist on a phone, and never mentions dragging. Whatever fixes this has to avoid
+  showing keyboard controls to a touch device and vice versa without sniffing the
+  user agent — a pointer media query is the usual answer.
+- **Your finger covers the paddle**, since the player's paddle is on the left edge
+  exactly where you drag. Nothing to do about that without moving the control
+  somewhere else, which is a design question rather than a bug.
+
+Also worth knowing: touch teleports the paddle, because pointer control is
+deliberately not rate-limited — see the Controls section of `games/pong/DESIGN.md`
+for why that was fixed once and reverted. On a mouse it is a curiosity; on touch,
+lifting a finger and putting it down elsewhere is the normal way to move, so it
+happens constantly.
+
 ## Minesweeper
 
 ### minesweeper-panel-state — Remember the panel open/closed state
