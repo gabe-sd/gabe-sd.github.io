@@ -171,6 +171,16 @@ const { check, report } = makeChecks();
     const bot = await read();
     check("bounces off the bottom", bot.ball.vy < 0, bot.ball.vy);
     check("stays inside the bottom edge", bot.ball.y <= HEIGHT - BALL_SIZE, bot.ball.y);
+
+    // The overshoot is reflected, not clamped away. Clamping cost up to |vy| of
+    // travel per bounce, which is invisible in play but puts the ball off any
+    // straight-line prediction of where it will end up.
+    await freeze();
+    await set({ ball: { x: 300, y: HEIGHT - BALL_SIZE - 2, vx: 0, vy: 8 } });
+    await step(1);
+    const over = await read();
+    check("the overshoot past a wall is reflected, not discarded",
+      Math.abs(over.ball.y - (HEIGHT - BALL_SIZE - 6)) < 1e-6, over.ball.y);
   }
 
   console.log("6. velocity model: speed capped, angle bounded");

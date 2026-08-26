@@ -194,10 +194,19 @@ function update() {
     }
   }
 
-  if (ball.y <= 0 || ball.y >= HEIGHT - BALL_SIZE) {
+  // Reflect the overshoot rather than clamping to the wall. Clamping quietly ate
+  // up to |vy| of vertical travel at every bounce, which made the ball drift from
+  // any straight-line prediction of where it would end up - 13px out over two
+  // bounces at vy=11.
+  const floor = HEIGHT - BALL_SIZE;
+  if (ball.y < 0) {
+    ball.y = -ball.y;
     ball.vy *= -1;
-    ball.y = Math.max(0, Math.min(HEIGHT - BALL_SIZE, ball.y));
+  } else if (ball.y > floor) {
+    ball.y = 2 * floor - ball.y;
+    ball.vy *= -1;
   }
+  ball.y = Math.max(0, Math.min(floor, ball.y));
 
   if (ball.x < 0) {
     ai.score += 1;
