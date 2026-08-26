@@ -1526,21 +1526,75 @@ const { check, report } = makeChecks();
     // --- clutch ------------------------------------------------------------
     await setup("assisted");
     const clutch = await page.evaluate(() => {
-      onPlayerReturn(player.y + player.h - 1);
-      const edge = moveState.clutch.phase;
+      const steps = [];
+      for (let i = 0; i < ABILITY.clutch.segments; i++) {
+        onPlayerReturn(player.y + player.h - 1);       // caught on the very end
+        steps.push({ meter: clutchCharge, phase: moveState.clutch.phase });
+      }
       resetAbilities();
-      onPlayerReturn(player.y + player.h / 2);
-      return { edge, centre: moveState.clutch.phase };
+      const centres = [];
+      for (let i = 0; i < ABILITY.clutch.segments + 1; i++) {
+        onPlayerReturn(player.y + player.h / 2);       // dead centre
+        centres.push(clutchCharge);
+      }
+      return { steps, centres, segments: ABILITY.clutch.segments };
     });
-    check("catching it on the very end of the paddle earns a charged shot",
-      clutch.edge !== "idle", clutch.edge);
-    check("catching it dead centre does not", clutch.centre === "idle", clutch.centre);
+    check("a close call fills a segment rather than charging outright",
+      clutch.steps[0].meter === 1 && clutch.steps[0].phase === "idle",
+      JSON.stringify(clutch.steps[0]));
+    check("the meter fills one segment at a time",
+      clutch.steps.slice(0, -1).every((st, i) => st.meter === i + 1),
+      clutch.steps.map((st) => st.meter).join(","));
+    check("filling it charges the shot and empties the meter",
+      clutch.steps[clutch.steps.length - 1].phase !== "idle"
+        && clutch.steps[clutch.steps.length - 1].meter === 0,
+      JSON.stringify(clutch.steps[clutch.steps.length - 1]));
+    check("catching it dead centre never fills anything",
+      clutch.centres.every((m) => m === 0), clutch.centres.join(","));
+
+    // Read the canvas rather than the state: a meter nobody can see is the exact
+    // problem this replaced.
+    const pips = await page.evaluate(() => {
+      const at = (i) => {
+        const x = METER.x + i * (METER.w + METER.gap) + METER.w / 2;
+        const d = ctx.getImageData(Math.round(x),
+          Math.round(METER.y + METER.h / 2), 1, 1).data;
+        return `${d[0]},${d[1]},${d[2]}`;
+      };
+      const snap = () => { draw(); return [at(0), at(1), at(2)]; };
+      applyDifficulty("assisted");
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = "play";
+      const empty = snap();
+      clutchCharge = 2;
+      const two = snap();
+      clutchCharge = 0;
+      armMove("clutch");
+      const charged = snap();
+      applyDifficulty("insane");
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = "play";
+      return { empty, two, charged, absent: snap() };
+    });
+    check("an empty meter paints no filled pips",
+      new Set(pips.empty).size === 1, pips.empty.join(" | "));
+    check("two close calls light exactly two pips",
+      pips.two[0] === pips.two[1] && pips.two[2] === pips.empty[2]
+        && pips.two[0] !== pips.empty[0], pips.two.join(" | "));
+    check("a charged shot lights all three",
+      new Set(pips.charged).size === 1 && pips.charged[0] !== pips.empty[0],
+      pips.charged.join(" | "));
+    check("and no meter is drawn in a mode that has no clutch",
+      pips.absent.join() === pips.empty.join(), pips.absent.join(" | "));
 
     // Through a real collision rather than by calling onPlayerReturn: if the hook
     // ran before the bounce, the close call would spend the charge on the very
     // hit that earned it and the player would never see it.
     await setup("assisted");
     const earned = await page.evaluate(() => {
+      clutchCharge = ABILITY.clutch.segments - 1;   // one close call from full
       player.y = 150;
       ball = { x: PLAYER_PLANE + 4, y: player.y + player.h - BALL_SIZE,
                vx: -6, vy: 0 };

@@ -293,6 +293,24 @@ turning into a punishment two touches later.
 at a glowing paddle that quietly stopped meaning anything, and the glow is a
 promise the game then has to keep.
 
+**It is earned across several close calls, not one**, and the count is drawn as
+three pips on the player's side. One close call granting an instant, invisible
+charge was the version that read as "a powerup that does nothing": there was
+nothing to watch approach, and by the time anything happened it had already
+happened. Empty pips are outlined rather than absent, so a half-filled meter reads
+as *two of three* rather than as two loose marks and explains itself the first
+time it moves. Segments bank if the move is still on cooldown, so a close call is
+never silently thrown away.
+
+A test reads the canvas pixels rather than the state, because a meter nobody can
+see is precisely the failure it replaced.
+
+**A held charge pulses rather than glowing steadily**, and shakes on its own knob
+rather than a fraction of the wind-up's. A steady light reads as part of the
+paddle; a moving one reads as something waiting to go off. The pulse counts
+**ticks**, not milliseconds, or it would breathe at 144Hz twice as fast as at
+60Hz — the same rule anything that flashes here has to follow.
+
 ### Who fires, and why
 
 **The villain rolls; you earn.** Insane's moves are a random chance per approach,

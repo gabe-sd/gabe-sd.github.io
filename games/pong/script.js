@@ -73,6 +73,12 @@ const ABILITY = {
   behindBonusPerPoint: 0.18,
   resizeTicks: 20,   // ticks a paddle takes to reach a new size; 0 = instant
   vibratePx: 3,      // how hard a charging paddle shakes; 0 = perfectly still
+  activeVibratePx: 6,// ...and how hard it shakes once the charge is held. Its own
+                     // knob because a held charge has no wind-up to grow out of,
+                     // so it has to announce itself flat out; 0 = perfectly still
+  pulseTicks: 24,    // period of the held-charge glow pulse, in ticks. Ticks and
+                     // not milliseconds, or it would breathe at a different rate
+                     // on a 144Hz monitor than on a 60Hz one; 0 = a steady glow
   afterimages: 4,    // ghosts left behind by a blink; 0 = none
 
   // --- Insane's moves ------------------------------------------------------
@@ -131,6 +137,9 @@ const ABILITY = {
     durationTicks: Infinity, // the glow stays until you hit something with it
     edgePx: 12,           // the band at each end of your paddle that counts as a
                           // close call; 0 = never
+    segments: 3,          // close calls needed to fill the meter; 1 = charged by
+                          // a single one, which is how it worked before there was
+                          // anything on screen to watch fill up
     chargedMultiplier: 2.6, // deliberately far above the mode's cap: the whole
                             // point is a shot that is dramatically faster than
                             // anything Assisted otherwise produces
@@ -250,6 +259,8 @@ let keys = { up: false, down: false };
 let gameOver = false;
 let rafId = null;
 let accumulator = 0;
+// Frames are not a clock, so anything that pulses counts ticks instead.
+let tickCount = 0;
 let lastFrame = null;
 let running = false;
 let control = "keyboard"; // or "pointer" - whichever the player last used
@@ -274,6 +285,9 @@ let blinkHop = 0;
 let aiGhosts = [];
 let playerStreak = 0;
 let expandUses = 0;
+// Close calls banked towards the next charged shot. Drawn, so the reward is
+// something you watch approach rather than something that silently arrives.
+let clutchCharge = 0;
 
 function resetAbilities() {
   moveState = {};
@@ -284,6 +298,7 @@ function resetAbilities() {
   aiGhosts = [];
   playerStreak = 0;
   expandUses = 0;
+  clutchCharge = 0;
 }
 
 function moveActive(name) {
@@ -409,10 +424,13 @@ function onPlayerReturn(hitY) {
     playerStreak = 0;
   }
   const cl = ABILITY.clutch;
-  if (cl.edgePx > 0) {
-    const rel = hitY + BALL_SIZE / 2 - player.y;
-    if (rel < cl.edgePx || rel > player.h - cl.edgePx) armMove("clutch");
-  }
+  if (cl.edgePx <= 0 || moveActive("clutch")) return; // one in hand is enough
+  const rel = hitY + BALL_SIZE / 2 - player.y;
+  if (rel >= cl.edgePx && rel <= player.h - cl.edgePx) return;
+  // Banked rather than spent: the segments stay put if the move is still on
+  // cooldown, so a close call is never quietly thrown away.
+  clutchCharge = Math.min(cl.segments, clutchCharge + 1);
+  if (clutchCharge >= cl.segments && armMove("clutch")) clutchCharge = 0;
 }
 let aiVel = 0;
 let aiNextRead = 0;
@@ -710,6 +728,7 @@ function bounce(paddle, dir) {
 function update() {
   if (gameOver || paused) return;
 
+  tickCount += 1;
   // Both run in every phase: a cooldown should keep counting between points, and
   // a resize that started mid-rally should finish rather than freeze at the serve.
   tickAbilities();
@@ -818,8 +837,12 @@ function drawPaddle(p, x, tells) {
       glow = spec.telegraphTicks > 0 ? 1 - st.ticks / spec.telegraphTicks : 1;
       shake = ABILITY.vibratePx * glow;
     } else {
-      glow = 1;
-      shake = ABILITY.vibratePx * 0.35;
+      // A held charge pulses rather than glowing flat: a steady light reads as
+      // part of the paddle, and a moving one reads as something waiting to go off.
+      glow = ABILITY.pulseTicks > 0
+        ? 0.55 + 0.45 * Math.sin((tickCount / ABILITY.pulseTicks) * Math.PI * 2)
+        : 1;
+      shake = ABILITY.activeVibratePx;
     }
     tint = colors[who];
     break;
@@ -834,6 +857,36 @@ function drawPaddle(p, x, tells) {
   }
   ctx.fillRect(x, p.y + (shake > 0 ? (Math.random() * 2 - 1) * shake : 0),
     PADDLE_WIDTH, p.h);
+  ctx.restore();
+}
+
+// Three pips on the player's side of the board. Empty ones are outlined so the
+// meter reads as "two of three" rather than as two loose marks, which is what
+// makes a partly-filled one explain itself the first time you see it.
+const METER = { x: 14, y: HEIGHT - 18, w: 20, h: 7, gap: 4 };
+
+function drawClutchMeter() {
+  const spec = ABILITY.clutch;
+  if (!spec.modes.includes(difficulty) || spec.segments <= 0) return;
+  const charged = moveActive("clutch");
+  const filled = charged ? spec.segments : clutchCharge;
+  ctx.save();
+  for (let i = 0; i < spec.segments; i++) {
+    const x = METER.x + i * (METER.w + METER.gap);
+    if (i < filled) {
+      if (charged) {
+        ctx.shadowColor = colors.hero;
+        ctx.shadowBlur = 12;
+      }
+      ctx.fillStyle = colors.hero;
+      ctx.fillRect(x, METER.y, METER.w, METER.h);
+    } else {
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = colors.border;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, METER.y + 0.5, METER.w - 1, METER.h - 1);
+    }
+  }
   ctx.restore();
 }
 
@@ -862,6 +915,7 @@ function draw() {
 
   drawPaddle(player, 0, PLAYER_TELLS);
   drawPaddle(ai, WIDTH - PADDLE_WIDTH, AI_TELLS);
+  drawClutchMeter();
 
   ctx.fillStyle = colors.accent;
   ctx.fillRect(ball.x, ball.y, BALL_SIZE, BALL_SIZE);
