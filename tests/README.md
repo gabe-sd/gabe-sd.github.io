@@ -56,7 +56,8 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
   load.
 - **pong.test.js** — the physics and controls: paddle collisions, wall bounces,
   scoring, the round lifecycle (serve prompt, the pause after a point, serving
-  back at whoever conceded), the win condition, and paddle clamping. It cancels
+  back at whoever conceded), the win condition, paddle clamping, and the hidden
+  live region that carries the score to a screen reader. It cancels
   the animation frame and steps `update()` by hand, so it does not race a live
   loop or depend on frame timing. Its last section pins the one remaining *known*
   bug (`P2` in `TODO.md`) as a passing assertion describing the wrong behaviour —
