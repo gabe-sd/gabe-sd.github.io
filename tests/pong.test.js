@@ -1197,6 +1197,65 @@ const { check, report } = makeChecks();
     await page.evaluate(() => { restart(); applyDifficulty("medium"); });
   }
 
+  console.log("24. Play starts a match, including after one has ended");
+  {
+    // Nothing is frozen here on purpose. The failure this guards against was the
+    // loop having stopped itself, which a harness holding rafId hides completely.
+    await page.reload();
+    await page.waitForSelector("#board");
+    await page.click("#play");
+
+    // Win the game the way one is actually won: hand the last point to the live
+    // loop rather than setting gameOver by hand, so the loop really does stop.
+    await page.evaluate(() => {
+      player.score = WIN_SCORE - 1;
+      phase = "play";
+      ball = { x: WIDTH - 2, y: HEIGHT / 2, vx: 30, vy: 0 };
+    });
+    await page.waitForFunction(() => gameOver === true, null, { timeout: 2000 });
+    check("the menu returns when the game ends", await page.isVisible("#menu"));
+    check("with the result in its heading",
+      (await page.textContent("#menu-heading")).includes("win"),
+      await page.textContent("#menu-heading"));
+    check("and the loop has stopped scheduling frames",
+      (await page.evaluate(() => running)) === false);
+
+    await page.click("#play");
+    const s24 = await page.evaluate(() => ({
+      gameOver, phase, paused,
+      score: `${player.score}-${ai.score}`,
+      status: document.getElementById("status").textContent.trim(),
+      menuHidden: document.getElementById("menu").hidden,
+    }));
+    check("Play clears the finished game", s24.gameOver === false, s24.gameOver);
+    check("and resets the score", s24.score === "0-0", s24.score);
+    check("and hides the menu", s24.menuHidden === true);
+    check("and drops into the serve prompt", s24.phase === "serve", s24.phase);
+    check("and stops claiming somebody won",
+      !s24.status.includes("win"), s24.status);
+    check("the live region resets too",
+      (await readerText()) === "You 0, AI 0", await readerText());
+
+    // The outcome that actually matters: the board is alive again.
+    await page.keyboard.press("Space");
+    const before24 = await page.evaluate(() => ball.x);
+    await page.waitForTimeout(300);
+    const after24 = await page.evaluate(() => ball.x);
+    check("the ball is live again after Play",
+      after24 !== before24, `${before24} -> ${after24}`);
+
+    // Play from the load menu must still be a fresh match, not a reset of one
+    // already in progress - the case that was working before and is easy to break.
+    await page.reload();
+    await page.waitForSelector("#board");
+    await page.click("#play");
+    await page.keyboard.press("Space");
+    await page.waitForTimeout(200);
+    check("Play from the load menu still starts a rally",
+      (await page.evaluate(() => phase)) === "play",
+      await page.evaluate(() => phase));
+  }
+
   check("no page errors", errors.length === 0, errors.join("; "));
 
   await browser.close();

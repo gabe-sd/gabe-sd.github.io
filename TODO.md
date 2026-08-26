@@ -39,7 +39,36 @@ there, but if you knowingly leave something broken, pin it as described in
 Anything that changes how the game feels gets played before it merges. Not
 designing for mobile at this point.
 
+Each entry names the **gate** it has to pass: what Gabriel has to see, play or
+decide before it can be called done. Gates are why the order is what it is. Feel
+changes never share a gate — two of them in one playtest can be called worse
+without either of us being able to say which one did it - so they are serialised
+here rather than batched.
+
+Entries with no gate need nothing from him and can run back to back.
+
+### pong-high-dpi-canvas — Blurry on high-DPI displays
+
+**Gate: someone has to look at it.** Screen capture of the X11 root is black on
+the dev box, so "is it sharper" cannot be answered from a terminal at all.
+
+The canvas backing store is a fixed 600x400 scaled by CSS `max-width: 100%`, so it
+is soft on any display with `devicePixelRatio > 1`. Size the backing store by
+`devicePixelRatio` and scale the context to match.
+
+- `handlePointerMove` already converts client coordinates using the ratio of
+  `HEIGHT` to the element's rendered height, so it survives this change — but it is
+  the thing to check first if the paddle starts tracking the pointer incorrectly.
+- The menu is positioned against `.board-wrap` rather than the canvas itself, so it
+  should be unaffected. Worth a look regardless.
+- Nobody working on this from a terminal can see the result: screen capture of the
+  X11 root is black on the dev box. It needs someone who can look at the screen to
+  say whether it actually got sharper.
+
 ### pong-assisted-insane-modes — Assisted and Insane modes
+
+**Gate: playtest.** Is Assisted genuinely hard to lose, is Insane funny rather
+than merely annoying, and do the uneven paddles read as deliberate?
 
 Two difficulty modes outside the Easy / Medium / Hard the menu already offers:
 **Assisted**, a genuine handicap for someone who just wants to rally, and
@@ -67,34 +96,10 @@ and worth being able to tell apart.
 - Asymmetric paddle heights make the two sides visibly unequal. That is the point
   here, but confirm it does not simply look broken before committing to it.
 
-### pong-high-dpi-canvas — Blurry on high-DPI displays
-
-The canvas backing store is a fixed 600x400 scaled by CSS `max-width: 100%`, so it
-is soft on any display with `devicePixelRatio > 1`. Size the backing store by
-`devicePixelRatio` and scale the context to match.
-
-- `handlePointerMove` already converts client coordinates using the ratio of
-  `HEIGHT` to the element's rendered height, so it survives this change — but it is
-  the thing to check first if the paddle starts tracking the pointer incorrectly.
-- The menu is positioned against `.board-wrap` rather than the canvas itself, so it
-  should be unaffected. Worth a look regardless.
-- Nobody working on this from a terminal can see the result: screen capture of the
-  X11 root is black on the dev box. It needs someone who can look at the screen to
-  say whether it actually got sharper.
-
-### pong-sound — Paddle, wall and score tones
-
-Classic Pong is its blip. A WebAudio oscillator gives paddle, wall and score tones
-with no asset files and no dependency, which is what keeps it compatible with the
-no-dependencies rule.
-
-- Needs a mute toggle with the choice remembered — same namespaced key and
-  try/catch treatment as the difficulty.
-- Browsers refuse to start an AudioContext before a user gesture, and there is an
-  obvious one to hang it off: the Play button.
-- The menu has room for a mute control, or it can sit with Restart and `?`.
-
 ### pong-two-player — Two-player mode
+
+**Gate: try it.** Confirm the two sets of controls do not fight each other, and
+decide whether the difficulty row greys out or disappears in two-player.
 
 W/S for the left paddle, arrows for the right. A small change to the input
 handling, and it matches Tic Tac Toe and Chess, which are both already local
@@ -107,7 +112,24 @@ two-player.
   the left one does. The pointer takeover logic is written for one player and would
   need splitting or disabling.
 
+### pong-sound — Paddle, wall and score tones
+
+**Gate: playtest, its own.** Tones are pure feel and cannot share a session with
+another feel change.
+
+Classic Pong is its blip. A WebAudio oscillator gives paddle, wall and score tones
+with no asset files and no dependency, which is what keeps it compatible with the
+no-dependencies rule.
+
+- Needs a mute toggle with the choice remembered — same namespaced key and
+  try/catch treatment as the difficulty.
+- Browsers refuse to start an AudioContext before a user gesture, and there is an
+  obvious one to hang it off: the Play button.
+- The menu has room for a mute control, or it can sit with Restart and `?`.
+
 ### pong-hit-feedback — Visual feedback on contact
+
+**Gate: playtest, its own.** Trail length and flash intensity are pure feel.
 
 A short ball trail, a paddle flash on contact, a flash on score. A few lines each
 in `draw()`.
@@ -119,6 +141,9 @@ in `draw()`.
 
 ### pong-persisted-stats — Remembered stats
 
+**Gate: one question first, then none.** Where it displays is a design decision;
+the storage and the counting are not.
+
 Longest rally, or wins and losses, stored the same way as the Minesweeper best
 time: one namespaced key, every access wrapped in try/catch.
 
@@ -126,6 +151,9 @@ time: one namespaced key, every access wrapped in try/catch.
   currently three buttons and Play.
 
 ### pong-configurable-win-score — Configurable win score (deferred)
+
+**Gate: decide whether it is wanted.** Cheapest folded into
+`pong-assisted-insane-modes`, while the menu is already open.
 
 `WIN_SCORE` is hardcoded to 5, which is a short game. First to 5 / 7 / 11 would be
 the obvious options.
@@ -138,6 +166,8 @@ win score from `WIN_SCORE` rather than hardcoding it, so that part will not need
 revisiting.
 
 ### pong-mobile-support — Make Pong work properly on a phone (deferred)
+
+**Gate: none — deferred by decision, not by difficulty.**
 
 **Deferred: not designing for mobile at present.** Recorded because the findings
 below came from actually driving an emulated phone with real touch events, and

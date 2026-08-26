@@ -563,7 +563,12 @@ function toggleHelp() {
   helpToggle.setAttribute("aria-expanded", String(opening));
 }
 
-function restart() {
+// Clear a match back to nothing. Deliberately does not set `phase` or touch the
+// menu: the two ways *into* a match differ only in where they land, and both go
+// through here first. Play used to skip this entirely, which was invisible from
+// the load menu - nothing to clear, loop already running - and left a finished
+// game finished when the same menu returned at the end of one.
+function resetMatch() {
   player = { y: HEIGHT / 2 - PADDLE_HEIGHT / 2, score: 0 };
   ai = { y: HEIGHT / 2 - PADDLE_HEIGHT / 2, score: 0 };
   ball = centredBall();
@@ -571,7 +576,6 @@ function restart() {
   accumulator = 0;
   control = "keyboard";
   pointerAnchor = null;
-  phase = "serve";
   serveTo = Math.random() < 0.5 ? 1 : -1;
   paused = false;
   aiApproaching = false;
@@ -579,6 +583,10 @@ function restart() {
   aiVel = 0;
   aiNextRead = 0;
   aiTarget = (HEIGHT - PADDLE_HEIGHT) / 2;
+}
+
+function restart() {
+  resetMatch();
   showMenu();
   start();
 }
@@ -608,10 +616,14 @@ for (const b of difficultyBtns) {
 }
 
 playBtn.addEventListener("click", () => {
+  resetMatch();
   menu.hidden = true;
   phase = "serve";
-  paused = false;
   updateStatus();
+  // loop() stops scheduling frames once a game is over, so coming back through
+  // the end-of-game menu has to wind it up again. Guarded by `running`, so this
+  // is a no-op on the load menu and cannot restart a loop a test has frozen.
+  start();
   // Otherwise focus stays on Play and the first Space re-activates it instead of
   // serving.
   playBtn.blur();

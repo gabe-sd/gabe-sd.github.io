@@ -184,8 +184,16 @@ of a game, never mid-match — pause is a separate thing and does not surface it
 
 Play drops into the existing `serve` phase rather than starting a rally, so the
 player still serves the first ball. Restart returns to the menu rather than
-restarting silently, so there is one path into a match and the difficulty can be
-changed on the way.
+restarting silently, so the difficulty can be changed on the way.
+
+**Every entry into a match clears the match first.** Play and Restart both run
+`resetMatch()`, and anything that adds a third way in must too. This is not
+theoretical: Play originally only hid the menu, which was correct for the load
+menu — nothing to clear, loop already running — and wrong the moment the same
+menu came back at the end of a game. It hid itself, left `gameOver` latched and
+the loop stopped, and handed the player a frozen board showing the final score
+with Restart as the only way out. The doc claimed one path into a match; the
+code had two, and only one of them worked.
 
 ### What actually changes difficulty
 
