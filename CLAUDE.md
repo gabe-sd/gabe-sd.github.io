@@ -96,7 +96,10 @@ Each game page follows a contract that `shared.css` depends on:
 - Uses the ids `#board`, `#status`, `#restart`; games may add their own on top
   (Minesweeper has `#flag-count`, `#timer`, `#best-time`, `#help-toggle`,
   `#instructions`, and a gear button `#settings-toggle` opening `#settings`,
-  which holds `#reset-best`; Pong has `#help-toggle` and `#instructions` too).
+  which holds `#reset-best`; Pong has `#help-toggle` and `#instructions` too,
+  plus a `#menu` over the board holding `#menu-heading`, a `#difficulty`
+  radiogroup, a `#win-score-choice` radiogroup and `#play`, and a hidden
+  `#score-reader`).
   Game scripts look these up by id, and `shared.css` styles `.page`, `.status`,
   `.hint`, `.btn` (with `.secondary` and `.icon`), `.controls`, `.back-link`
   for them.
@@ -149,7 +152,7 @@ legality in the click handler.
 
 **Pong** (`games/pong/script.js`) keeps its model, its measurements and its
 rejected alternatives in `games/pong/DESIGN.md` — read that before changing how it
-plays. Four things will bite you without it:
+plays. Five things will bite you without it:
 
 - The loop only *paces*: `advance()` drains real time into whole `TICK_MS` ticks
   and calls `update()` once per tick, so every speed constant is per tick. Nothing
@@ -160,9 +163,13 @@ plays. Four things will bite you without it:
   cancelled the pending frame does not get it restarted underneath them.
 - Pointer control is deliberately *not* rate-limited, which makes a mouse faster
   than the keys. That was fixed once and reverted on play. It looks like a bug.
-- Every knob in the `AI` object documents the value that switches its feature off,
-  and a test asserts that all of them off reproduces the old direct mover. Keep
-  that true: it is all tuned by feel, and feel changes.
+- `PADDLE_HEIGHT` is the size a paddle *starts* at, not its size. Each paddle
+  carries its own `h`, which the abilities stretch and shrink, so anything reading
+  a live paddle reads `.h` — collision, drawing and the ai's own target included.
+- Every knob in the `AI` and `ABILITY` objects documents the value that switches
+  its feature off. Two tests hold that up: all of `AI` off reproduces the old
+  direct mover, and all of `ABILITY` off gives back the plain game. Keep both
+  true — it is all tuned by feel, and feel changes.
 
 **Minesweeper** (`games/minesweeper/script.js`) places mines lazily on the first
 reveal, excluding the 3x3 around that cell, so the first click is always safe —
