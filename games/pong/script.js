@@ -146,8 +146,14 @@ const ABILITY = {
     cooldownTicks: 120,
     telegraphTicks: 0,    // earned by a save that has already happened
     durationTicks: Infinity, // the glow stays until you hit something with it
-    edgePx: 12,           // the band at each end of your paddle that counts as a
-                          // close call; 0 = never
+    // The band at each end of your paddle that counts as a close call, as a
+    // fraction of the paddle's *base* size rather than a pixel count. Absolute
+    // silently drifted: raising Assisted's base paddle from 80 to 120 turned the
+    // old 12px into a fifth of the paddle where it had been nearly a third, and
+    // made charging one noticeably harder without anyone touching this. Measured
+    // against the base and not the current size, so an active Expand does not
+    // widen its own follow-up. 0 = never.
+    edgeFraction: 0.15,
     segments: 3,          // close calls needed to fill the meter; 1 = charged by
                           // a single one, which is how it worked before there was
                           // anything on screen to watch fill up
@@ -449,9 +455,10 @@ function syncExpand() {
 // the meter. Returning it well is *not* rewarded here - see the design doc.
 function onPlayerReturn(hitY) {
   const cl = ABILITY.clutch;
-  if (cl.edgePx <= 0 || moveActive("clutch")) return; // one in hand is enough
+  if (cl.edgeFraction <= 0 || moveActive("clutch")) return; // one in hand is enough
+  const edge = baseHeight(player) * cl.edgeFraction;
   const rel = hitY + BALL_SIZE / 2 - player.y;
-  if (rel >= cl.edgePx && rel <= player.h - cl.edgePx) return;
+  if (rel >= edge && rel <= player.h - edge) return;
   // Banked rather than spent: the segments stay put if the move is still on
   // cooldown, so a close call is never quietly thrown away.
   clutchCharge = Math.min(cl.segments, clutchCharge + 1);

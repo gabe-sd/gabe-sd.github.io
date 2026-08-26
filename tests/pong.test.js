@@ -1655,6 +1655,38 @@ const { check, report } = makeChecks();
     check("catching it dead centre never fills anything",
       clutch.centres.every((m) => m === 0), clutch.centres.join(","));
 
+    // The band is a fraction of the paddle's BASE size, not its current one, so
+    // an active Expand must not widen the band that earns the next charge.
+    await setup("assisted");
+    const band = await page.evaluate(() => {
+      // rel is how far down the paddle the ball's centre landed.
+      const hitAt = (rel) => {
+        resetAbilities();
+        onPlayerReturn(player.y + rel - BALL_SIZE / 2);
+        return clutchCharge;
+      };
+      const base = baseHeight(player);
+      const edge = base * ABILITY.clutch.edgeFraction;
+      const inside = hitAt(edge - 2);
+      const outside = hitAt(edge + 2);
+      // Now grow the paddle and retest a point that only counts if the band grew
+      // with it.
+      resetAbilities();
+      armMove("expand");
+      for (let i = 0; i < 120; i++) update();
+      const grownEdge = player.h * ABILITY.clutch.edgeFraction;
+      const betweenTheTwo = hitAt((edge + grownEdge) / 2);
+      return { base, edge, grown: player.h, grownEdge, inside, outside,
+               betweenTheTwo };
+    });
+    check("a hit inside the band fills a segment", band.inside === 1,
+      `${band.edge.toFixed(1)}px band, got ${band.inside}`);
+    check("and a hit just outside it does not", band.outside === 0, band.outside);
+    check("the band does not grow when the paddle does",
+      band.betweenTheTwo === 0,
+      `base band ${band.edge.toFixed(1)}px, paddle ${band.grown.toFixed(0)}px ` +
+      `would give ${band.grownEdge.toFixed(1)}px`);
+
     // Read the canvas rather than the state: a meter nobody can see is the exact
     // problem this replaced.
     const pips = await page.evaluate(() => {
