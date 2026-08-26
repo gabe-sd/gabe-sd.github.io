@@ -51,22 +51,20 @@ the best time.
 Remaining work on `games/pong/`. Entries stay in ID order so a reference is easy to
 find; priority is stated here rather than encoded in the ordering.
 
-Order of work. The first two are dependencies, not preference:
+Order of work:
 
-1. **P18**, before P8 and P9. It changes the player's own top speed, so any
-   difficulty tuned ahead of it is tuned against a baseline about to move.
-2. **P8** on its own rather than bundled with P9, so the AI can be judged without
+1. **P8** on its own rather than bundled with P9, so the AI can be judged without
    difficulty presets confusing the signal.
-3. **P9 and P10** together — same panel, same stored settings, and P10 is nearly
+2. **P9 and P10** together — same panel, same stored settings, and P10 is nearly
    free once the panel exists.
-4. `games/pong/DESIGN.md`. The AI model is the content it has been waiting for,
+3. `games/pong/DESIGN.md`. The AI model is the content it has been waiting for,
    and `CLAUDE.md` is already past the paragraph it allows a game there.
-5. **P14** and **P15**, whenever. P14 needs someone who can see the canvas; P15
+4. **P14** and **P15**, whenever. P14 needs someone who can see the canvas; P15
    wants splitting into separate entries before any of it starts.
 
-Steps 1 to 3 all change how the game feels, so each gets played before it merges,
-one at a time. Three feel changes reviewed together can be called worse without
-anyone being able to say which one did it.
+Steps 1 and 2 change how the game feels, so each gets played before it merges, one
+at a time. Two feel changes reviewed together can be called worse without anyone
+being able to say which one did it.
 
 `tests/pong.test.js` covers the physics, the round lifecycle, the controls and the
 panels — add to it rather than around it. Nothing is currently pinned there, but
@@ -133,39 +131,6 @@ is soft on any display with `devicePixelRatio > 1`. Size the backing store by
   already local two-player.
 - **Hit feedback.** A short ball trail, a paddle flash on contact, a flash on
   score. A few lines each in `draw()`.
-
-### P18 — Pausing lets a mouse player reposition for free
-
-Pause, move the pointer to where the ball is heading, unpause: the paddle is
-already there. It reads as cheating because it is — a keyboard player cannot do
-it, since `update()` does not run while paused and the keys only move the paddle
-`PADDLE_SPEED` per tick.
-
-That asymmetry is the real bug, and it is not actually about pausing. Pointer
-control sets `player.y` absolutely from an event handler that runs outside
-`update()`, so nothing rate-limits it. Even unpaused, a mouse crosses the whole
-board in one frame where the keyboard needs over fifty ticks.
-
-Worth trying before removing the mouse:
-
-- Give the pointer a *target* instead of a position. `handlePointerMove` records
-  where the player wants the paddle; `update()` moves `player.y` towards it by at
-  most `PADDLE_SPEED` per tick. Repositioning while paused then only sets a target
-  the paddle still has to travel to at normal speed, so the exploit disappears —
-  and mouse and keyboard get the same top speed for the first time. Try this one
-  first.
-- Failing that, ignore pointer input while paused and re-apply the
-  `POINTER_TAKEOVER_PX` threshold on resume. Weaker: it delays the snap by one
-  event rather than preventing it.
-- Failing that, allow pausing only between points. Kills the exploit but takes
-  most of the value out of being able to pause at all.
-- Last resort, drop mouse control. Simplest fix, and the game is playable without
-  it, but it is a real loss for anyone who prefers a mouse — exhaust the above
-  first.
-
-Whichever lands, the pause cases in `tests/pong.test.js` should gain one that
-moves the pointer while paused and asserts the paddle does not end up somewhere it
-could not have travelled to.
 
 ## Improve site design and visual appeal
 
