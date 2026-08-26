@@ -133,7 +133,6 @@ const ABILITY = {
     durationTicks: 1200,
     usesToExpire: 2,      // returns made with the big paddle; 0 = time only
     scale: 1.7,           // what your paddle grows to; 1 = no growth
-    streakToTrigger: 3,   // returns in a row that earn it; 0 = never from a streak
     behindToTrigger: 2,   // points behind that earn it; 0 = never from the score
     concededToTrigger: 3, // points lost in a row that earn it, however the match
                           // stands overall; 0 = never from a losing run
@@ -293,7 +292,6 @@ function clampPaddle(p) {
 let moveState = {};
 let blinkHop = 0;
 let aiGhosts = [];
-let playerStreak = 0;
 let expandUses = 0;
 // Close calls banked towards the next charged shot. Drawn, so the reward is
 // something you watch approach rather than something that silently arrives.
@@ -309,7 +307,6 @@ function resetAbilities() {
   }
   blinkHop = 0;
   aiGhosts = [];
-  playerStreak = 0;
   expandUses = 0;
   clutchCharge = 0;
   concededStreak = 0;
@@ -425,18 +422,12 @@ function blinkTeleport() {
   aiVel = 0;
 }
 
-// Returning the ball at all extends the streak; catching it on the very end of
-// the paddle is the close call that earns a charged shot back.
+// Catching the ball on the very end of the paddle is the close call that fills
+// the meter. Returning it well is *not* rewarded here - see the design doc.
 function onPlayerReturn(hitY) {
-  playerStreak += 1;
   // A big paddle is spent by being used, not by waiting.
   const uses = ABILITY.expand.usesToExpire;
   if (uses > 0 && moveActive("expand") && ++expandUses >= uses) endMove("expand");
-  const ex = ABILITY.expand;
-  if (ex.streakToTrigger > 0 && playerStreak >= ex.streakToTrigger
-      && armMove("expand")) {
-    playerStreak = 0;
-  }
   const cl = ABILITY.clutch;
   if (cl.edgePx <= 0 || moveActive("clutch")) return; // one in hand is enough
   const rel = hitY + BALL_SIZE / 2 - player.y;
@@ -823,7 +814,6 @@ function onScore(scorer) {
     showMenu(player.score > ai.score ? "You win! 🎉" : "AI wins!");
     return;
   }
-  playerStreak = 0;
   concededStreak = scorer === "ai" ? concededStreak + 1 : 0;
   const ex = ABILITY.expand;
   // Two separate kinds of trouble: a losing run, and being behind overall. Either

@@ -339,15 +339,35 @@ raised by however many points it is behind — it stops playing around exactly w
 you start winning, which is both the drama and a self-balancing property: it
 cannot bully you while you are already losing.
 
-Yours are never random. Three returns in a row, three close calls, falling behind
-on the scoreboard, or losing three points on the trot — the handout arrives
-attached to something you did, or to being in genuine trouble. A random gift would
-feel like the game pitying you at moments you had not earned and did not need.
+Yours are never random, and the two of them mean **different things**:
+
+- **Clutch is a reward.** Three close calls fill the meter; it exists to pay out
+  for playing well.
+- **Expand is mercy.** Falling behind on the scoreboard, or losing three points on
+  the trot. It exists to help when the game is going badly, and for no other
+  reason.
+
+Keeping those apart is the whole design. A handout that arrives while you are
+winning is not a handicap, it is noise.
 
 The losing run and the score gap are **separate triggers on purpose**. Dropping
 three in a row while still level is a different kind of trouble from being two
 points down after trading evenly, and only one of them is visible in the score.
 Winning a point wipes the run, so it measures a slide rather than a total.
+
+**Rejected: earning the bigger paddle with a run of three returns.** It shipped
+and was wrong, in a way only measurement showed. Simulated across 302 points, a
+competent player — one winning every game — got **100% of their activations from
+that trigger and none at all from the other two**, because they never fell behind
+and never lost three straight. The mode's handicap was reaching only the players
+who did not need it, mid-rally, while they were comfortably winning the point.
+Worse, the streak reset when it fired, so a long rally handed the paddle over
+twice: 15 of those 302 points activated it more than once while 218 activated
+nothing. With the trigger gone a winning player sees the paddle **zero** times a
+game and a struggling one still sees it, which is what the mode was for.
+
+If a run of good returns should be rewarded at all, it belongs to Clutch, which is
+already the half of this that pays out for skill.
 
 **A timed effect cannot guarantee you ever get to use it.** The bigger paddle
 originally ran on a timer, and at Assisted's ball speed one round trip is longer

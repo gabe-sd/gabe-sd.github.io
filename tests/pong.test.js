@@ -1501,16 +1501,22 @@ const { check, report } = makeChecks();
     await setup("assisted");
     const ex = await page.evaluate(() => {
       const base = player.h;
-      for (let i = 0; i < ABILITY.expand.streakToTrigger; i++) {
+      // Returning the ball well must NOT earn it: the paddle is mercy, not a
+      // reward. A long rally used to hand it over twice while the player was
+      // comfortably winning the point.
+      const rallied = [];
+      for (let i = 0; i < 8; i++) {
         onPlayerReturn(player.y + player.h / 2);
+        rallied.push(moveState.expand.phase);
       }
-      const armed = moveState.expand.phase;
+      const fromRallying = rallied.every((ph) => ph === "idle");
+      armMove("expand");
       for (let i = 0; i < 120; i++) update();
-      return { base, armed, grown: player.h,
+      return { base, fromRallying, grown: player.h,
                target: PADDLE_HEIGHT * ABILITY.expand.scale };
     });
-    check("a streak of returns earns a bigger paddle", ex.armed !== "idle", ex.armed);
-    check("and it actually grows", ex.grown > ex.base,
+    check("rallying well never earns a bigger paddle", ex.fromRallying);
+    check("and it actually grows when it is earned", ex.grown > ex.base,
       `${ex.base} -> ${ex.grown.toFixed(1)}`);
 
     await setup("assisted");
@@ -1784,9 +1790,7 @@ const { check, report } = makeChecks();
     await setup("assisted");
     const lasted = await page.evaluate(() => {
       const base = player.h;
-      for (let i = 0; i < ABILITY.expand.streakToTrigger; i++) {
-        onPlayerReturn(player.y + player.h / 2);
-      }
+      armMove("expand");
       for (let i = 0; i < 60; i++) update();
       const grown = player.h;
       // Comfortably longer than a round trip at this mode's ball speed.
