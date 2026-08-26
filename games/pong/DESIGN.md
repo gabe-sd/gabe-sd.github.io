@@ -392,13 +392,27 @@ game and a struggling one still sees it, which is what the mode was for.
 If a run of good returns should be rewarded at all, it belongs to Clutch, which is
 already the half of this that pays out for skill.
 
-**A timed effect cannot guarantee you ever get to use it.** The bigger paddle
-originally ran on a timer, and at Assisted's ball speed one round trip is longer
-than that timer was: earn it on a return and it could expire before the ball came
-back, so the reward was routinely never touched. It ends after `usesToExpire`
-returns instead, with the timer left only as a backstop for a point that ends
-before you touch the ball again. Any future effect the player *earns* wants the
-same treatment — the unit is opportunities, not seconds.
+**Expand is a state, not an event.** You have the big paddle for exactly as long
+as you are in trouble: it appears when the gap or the losing run reaches its
+threshold and goes when it does not. `syncExpand()` holds the move to the
+condition at every point, and both halves of it are no-ops when the state already
+matches. `durationTicks` and `cooldownTicks` are neutral, because nothing about it
+expires.
+
+It took two wrong answers to get there, and both are worth knowing because they
+are the obvious ones:
+
+1. **A timer.** At Assisted's ball speed one round trip is longer than the timer
+   was, so a paddle earned on a return could expire before the ball came back and
+   never be used at all.
+2. **A number of uses.** Better — it guaranteed you got to hit something with it —
+   but it still ended in the middle of a match you were losing, which is precisely
+   when it was supposed to be helping. Handing the paddle back while the player is
+   still three points down is the timer's failure wearing a different hat.
+
+The lesson generalises: an effect that exists to answer a *situation* has to be
+bound to that situation, not to a duration or a budget. Ask what makes it stop
+being needed, and end it on that.
 
 ### Paddle sizes
 

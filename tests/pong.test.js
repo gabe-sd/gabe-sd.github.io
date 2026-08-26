@@ -1519,15 +1519,55 @@ const { check, report } = makeChecks();
     check("and it actually grows when it is earned", ex.grown > ex.base,
       `${ex.base} -> ${ex.grown.toFixed(1)}`);
 
+    // The score gap holds the paddle rather than firing it once: it comes at the
+    // configured gap and goes when the gap is smaller, however long that takes.
     await setup("assisted");
     const behind = await page.evaluate(() => {
-      ai.score = ABILITY.expand.behindToTrigger;
-      player.score = 0;
-      ball = { x: -1, y: 200, vx: -5, vy: 0 };
-      update();
-      return moveState.expand.phase;
+      const gap = ABILITY.expand.behindToTrigger;
+      const concede = () => {
+        phase = "play";
+        ball = { x: -1, y: 200, vx: -5, vy: 0 };
+        update();
+      };
+      const win = () => {
+        phase = "play";
+        ball = { x: WIDTH + 1, y: 200, vx: 5, vy: 0 };
+        update();
+      };
+      const seen = [];
+      player.score = 0; ai.score = 0;
+      for (let i = 0; i < gap; i++) {
+        concede();
+        seen.push({ gap: ai.score - player.score, phase: moveState.expand.phase });
+      }
+      // Survives a long wait at the same gap - nothing about it is timed. The
+      // phase is parked so the wait does not play the rest of the match out.
+      phase = "serve";
+      for (let i = 0; i < 2000; i++) update();
+      const afterAges = moveState.expand.phase;
+      const sizeWhileBehind = player.h;
+      win();                       // gap closes to one short of the threshold
+      const afterClosing = { gap: ai.score - player.score,
+                             phase: moveState.expand.phase };
+      for (let i = 0; i < 120; i++) update();
+      return { seen, afterAges, sizeWhileBehind, afterClosing,
+               sizeAfter: player.h, base: baseHeight(player), gap };
     });
-    check("falling behind earns it too", behind !== "idle", behind);
+    check("a gap one short of the threshold does nothing",
+      behind.seen.slice(0, -1).every((st) => st.phase === "idle"),
+      behind.seen.map((st) => `${st.gap}:${st.phase}`).join(" "));
+    check("reaching it brings the paddle out",
+      behind.seen[behind.seen.length - 1].phase !== "idle",
+      behind.seen.map((st) => `${st.gap}:${st.phase}`).join(" "));
+    check("and it does not time out while the gap stands",
+      behind.afterAges !== "idle", behind.afterAges);
+    check("closing the gap takes it away",
+      behind.afterClosing.phase === "idle",
+      `gap ${behind.afterClosing.gap}, ${behind.afterClosing.phase}`);
+    check("and the paddle actually returns to normal",
+      behind.sizeWhileBehind > behind.base
+        && Math.abs(behind.sizeAfter - behind.base) < 0.5,
+      `${behind.sizeWhileBehind.toFixed(1)} -> ${behind.sizeAfter.toFixed(1)}`);
 
     // A losing run earns it independently of the score gap, so the test zeroes the
     // behind trigger - otherwise either one passing would look like both working.
@@ -1559,9 +1599,18 @@ const { check, report } = makeChecks();
       player.score = 0; ai.score = 0;
       concede(); concede(); concede();
       const afterThree = moveState.expand.phase;
-      const streakLeft = concededStreak;
+      // It holds while the run stands rather than paying out and clearing.
+      phase = "serve";
+      for (let i = 0; i < 2000; i++) update();
+      const afterAges = moveState.expand.phase;
+      const runStanding = concededStreak;
+      concede();
+      const afterFourth = moveState.expand.phase;
+      win();
+      const afterWinning = moveState.expand.phase;
       ABILITY.expand.behindToTrigger = savedBehind;
-      return { afterTwo, afterBreak, afterThree, streakLeft };
+      return { afterTwo, afterBreak, afterThree, afterAges, runStanding,
+               afterFourth, afterWinning };
     });
     check("two points lost on the trot is not enough",
       run.afterTwo === "idle", run.afterTwo);
@@ -1569,8 +1618,13 @@ const { check, report } = makeChecks();
       run.afterBreak);
     check("three lost in a row earns a bigger paddle",
       run.afterThree !== "idle", run.afterThree);
-    check("and the run resets once it has paid out",
-      run.streakLeft === 0, run.streakLeft);
+    check("and the run is not cleared by paying out",
+      run.runStanding >= 3, run.runStanding);
+    check("the paddle holds while the run stands",
+      run.afterAges !== "idle" && run.afterFourth !== "idle",
+      `${run.afterAges}/${run.afterFourth}`);
+    check("and winning a point takes it away",
+      run.afterWinning === "idle", run.afterWinning);
 
     // --- clutch ------------------------------------------------------------
     await setup("assisted");
@@ -1785,30 +1839,29 @@ const { check, report } = makeChecks();
     check("and is spent the moment you hit something with it",
       held.afterHitting === "idle", held.afterHitting);
 
-    // Expand used to expire before a single use: at Assisted's ball speed one
-    // round trip is longer than the effect lasted.
+    // Expand is a state, so using it must not wear it out. An earlier version
+    // ended after two returns, which meant a long rally handed it back mid-point.
     await setup("assisted");
     const lasted = await page.evaluate(() => {
       const base = player.h;
       armMove("expand");
       for (let i = 0; i < 60; i++) update();
       const grown = player.h;
-      // Comfortably longer than a round trip at this mode's ball speed.
-      for (let i = 0; i < 600; i++) update();
-      const stillBig = player.h;
       const phases = [];
-      for (let i = 0; i < ABILITY.expand.usesToExpire; i++) {
+      for (let i = 0; i < 10; i++) {
         onPlayerReturn(player.y + player.h / 2);
         phases.push(moveState.expand.phase);
       }
-      return { base, grown, stillBig, phases };
+      phase = "serve";
+      for (let i = 0; i < 2000; i++) update();
+      return { base, grown, stillBig: player.h, phases };
     });
-    check("a big paddle outlasts a whole round trip",
-      lasted.stillBig > lasted.base + 1 && lasted.stillBig === lasted.grown,
-      `${lasted.base} -> ${lasted.grown.toFixed(1)}, still ${lasted.stillBig.toFixed(1)}`);
-    check("and ends by being used, not by running out",
-      lasted.phases[lasted.phases.length - 1] === "idle",
+    check("hitting the ball with the big paddle does not use it up",
+      lasted.phases.every((ph) => ph !== "idle"),
       lasted.phases.join(","));
+    check("and it is still there long after any timer would have run",
+      lasted.stillBig > lasted.base + 1,
+      `${lasted.base} -> ${lasted.stillBig.toFixed(1)}`);
 
     // --- cooldowns ---------------------------------------------------------
     await setup("insane");

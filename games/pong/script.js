@@ -126,19 +126,18 @@ const ABILITY = {
     // charge treatment on top read as a second, different thing happening.
     tell: "tint",
     chance: 0,            // never random: it is earned, not rolled
-    cooldownTicks: 150,
     telegraphTicks: 10,
-    // A pure timer could not do this job: at Assisted's ball speed one round trip
-    // is longer than the effect used to last, so a paddle earned on a return
-    // routinely expired before the ball came back and you never hit anything with
-    // it. It ends after being *used* instead, with the timer only as a backstop
-    // for a point that ends before you touch the ball again.
-    durationTicks: 1200,
-    usesToExpire: 2,      // returns made with the big paddle; 0 = time only
+    // Expand is not an event with a duration - it is a *state*. You have the big
+    // paddle for exactly as long as you are in trouble, and it goes away when you
+    // are not. Nothing here expires: durationTicks and cooldownTicks are neutral
+    // because the conditions below start and end it.
+    durationTicks: Infinity,
+    cooldownTicks: 0,
     scale: 1.35,          // multiple of your paddle's *base* size; 1 = no growth
-    behindToTrigger: 2,   // points behind that earn it; 0 = never from the score
-    concededToTrigger: 3, // points lost in a row that earn it, however the match
-                          // stands overall; 0 = never from a losing run
+    behindToTrigger: 3,   // held while this many points behind, and dropped once
+                          // the gap is smaller; 0 = never from the score
+    concededToTrigger: 3, // held after this many points lost in a row, and
+                          // dropped the moment you win one; 0 = never from a run
   },
   clutch: {
     modes: ["assisted"],
@@ -299,7 +298,6 @@ function clampPaddle(p) {
 let moveState = {};
 let blinkHop = 0;
 let aiGhosts = [];
-let expandUses = 0;
 // Close calls banked towards the next charged shot. Drawn, so the reward is
 // something you watch approach rather than something that silently arrives.
 let clutchCharge = 0;
@@ -314,7 +312,6 @@ function resetAbilities() {
   }
   blinkHop = 0;
   aiGhosts = [];
-  expandUses = 0;
   clutchCharge = 0;
   concededStreak = 0;
 }
@@ -357,7 +354,6 @@ function startMove(name) {
   if (name === "squeeze" || name === "expand") {
     player.hTarget = baseHeight(player) * spec.scale;
   }
-  if (name === "expand") expandUses = 0;
 }
 
 function endMove(name) {
@@ -429,12 +425,29 @@ function blinkTeleport() {
   aiVel = 0;
 }
 
+// Are you in trouble right now? Two separate kinds of it: a losing run, and a
+// gap on the scoreboard. Only checked when a point is scored, because neither can
+// change at any other time.
+function expandWanted() {
+  const ex = ABILITY.expand;
+  if (!ex.modes.includes(difficulty)) return false;
+  if (ex.behindToTrigger > 0 && ai.score - player.score >= ex.behindToTrigger) {
+    return true;
+  }
+  return ex.concededToTrigger > 0 && concededStreak >= ex.concededToTrigger;
+}
+
+// Hold the paddle to the condition rather than firing it off and hoping. Both
+// calls are no-ops when the state already matches, so this is safe to run at
+// every point.
+function syncExpand() {
+  if (expandWanted()) armMove("expand");
+  else if (moveState.expand && moveState.expand.phase !== "idle") endMove("expand");
+}
+
 // Catching the ball on the very end of the paddle is the close call that fills
 // the meter. Returning it well is *not* rewarded here - see the design doc.
 function onPlayerReturn(hitY) {
-  // A big paddle is spent by being used, not by waiting.
-  const uses = ABILITY.expand.usesToExpire;
-  if (uses > 0 && moveActive("expand") && ++expandUses >= uses) endMove("expand");
   const cl = ABILITY.clutch;
   if (cl.edgePx <= 0 || moveActive("clutch")) return; // one in hand is enough
   const rel = hitY + BALL_SIZE / 2 - player.y;
@@ -822,16 +835,7 @@ function onScore(scorer) {
     return;
   }
   concededStreak = scorer === "ai" ? concededStreak + 1 : 0;
-  const ex = ABILITY.expand;
-  // Two separate kinds of trouble: a losing run, and being behind overall. Either
-  // earns a hand. Both bank rather than firing into a cooldown and vanishing.
-  if (ex.concededToTrigger > 0 && concededStreak >= ex.concededToTrigger
-      && armMove("expand")) {
-    concededStreak = 0;
-  }
-  if (ex.behindToTrigger > 0 && ai.score - player.score >= ex.behindToTrigger) {
-    armMove("expand");
-  }
+  syncExpand();
   ball = centredBall();
   phase = "countdown";
   serveTicks = SERVE_DELAY_TICKS;
