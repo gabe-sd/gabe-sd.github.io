@@ -172,8 +172,27 @@ play the identical game — same ball speed, same paddle sizes — which is the 
 reason the share of shots the ai saves is a fair measure of the gap between them.
 Nothing may be added to these three that changes the game itself.
 
-**Assisted and Insane deliberately break that**, which is why they are a separate
-kind rather than two more entries in the same list. They move ball speed as well
+**Assisted is for someone who has barely played, and what makes that fun is
+rallies — not a scoreline.** Its ai is therefore *competent*, and deliberately
+stronger than Easy's. That looks backwards and is the most important thing on this
+page to not undo.
+
+A crippled opponent does not play gently. It ends the point by **missing**, and a
+point that ends is a rally that did not happen. Measured against a beginner —
+wide aim error, slow paddle — the old weak-ai Assisted produced the **shortest
+rallies of any mode in the game**: 2.3 contacts per point against Easy's 2.6 and
+Medium's 3.1, with 23% of points ending without either side touching the ball.
+The mode meant to be the friendliest was the one where the ball came back least.
+
+The handicap lives on the player's side instead: a slow ball, and a paddle half as
+large again as the opponent's. That combination is what lets both things be true
+at once — the same beginner now sees **6.0 contacts per point, 13% untouched, and
+still takes 79% of the points**. Strengthening the ai alone drops them to winning
+half their points; enlarging the paddle alone leaves a quarter of points untouched.
+Neither lever works without the other.
+
+**Insane deliberately breaks the fair-preset rule too**, which is why both are a
+separate kind rather than two more entries in the same list. They move ball speed as well
 as the ai, so each is measured against its own ball and their percentages are not
 on the same scale as the middle three. A preset therefore has an `ai` half and an
 optional `game` half, and the menu colours these two differently — green and red
@@ -226,12 +245,21 @@ and re-running it is how any new preset gets a comparable figure:
 | after the human-feel work, before tuning | **100%** |
 | untuned defaults | ~92% |
 | Easy / Medium / Hard | ~72% / ~86% / ~96% |
-| Assisted / Insane, each against its own ball | ~60% / ~99% |
+| Assisted / Insane, each against its own ball | ~80% / ~98% |
+
+Assisted's ai saving *more* than Easy's is not a mistake — see above. It is
+supposed to return the ball; the help is the player's paddle and the slow ball,
+neither of which this number can see.
 
 The last row is not comparable with the others and the sweep marks it so. Those
 two modes also change how hard the ball is for the **player**, which this harness
-does not measure at all — it only ever asks whether the ai saved. Half of what
-makes Insane hard is invisible to the number.
+does not measure at all — it only ever asks whether the ai saved.
+
+Since the abilities landed the number understates Insane badly, and it is worth
+knowing why rather than trusting it. Two of its three moves — the charged shot and
+the paddle squeeze — do not touch whether the ai saves anything; they make the
+ball harder for *you*. The sweep cannot see them. Insane measures a shade **lower**
+than it did before the moves existed, and is much harder to play.
 
 That 100% is the entry worth remembering. Making the AI feel human made it
 **unbeatable**, and nothing but playing it revealed that. The cause: a read that
@@ -249,6 +277,212 @@ because it only moves an AI between perfect and useless.
 shots at the AI and asserts it misses some and saves most. The band is wide on
 purpose, because these are meant to be tuned by feel and the test exists to catch
 "unbeatable" and "hopeless", not to pin a setting.
+
+## Abilities
+
+Assisted and Insane are **characters, not points on a scale**. Tuning numbers
+harder and softer produced two more difficulties; what makes these two worth
+having is that the opponent has *moves* — Insane blinks up and down the board
+like a cartoon villain, charges a shot that comes back faster than the game
+normally permits, and squeezes your paddle. Assisted hands the same kind of thing
+to you.
+
+### Two kinds of tell
+
+A move either **charges** — glowing, pulsing and shaking — or merely **tints** the
+paddle, and `tell` in its config says which.
+
+The distinction is not decoration. A charge tell is a *warning*: something is
+about to happen that you should brace for, or a thing you are holding that you
+have to remember to spend. A tint is a *statement*: this is what you have now.
+Expand grows the paddle to nearly twice its size, which announces itself without
+help, and — unlike Squeeze, which shrinks you and genuinely is a threat — there is
+nothing to brace for. Given the charge treatment as well, it read as a second,
+different thing happening on top of the growth.
+
+`PLAYER_TELLS` checks Clutch **before** Expand, because Expand's real tell is the
+paddle's own size and survives being drawn over, while a held charge has nothing
+but its pulse. In the other order, a charge earned during an active Expand was
+invisible.
+
+A test separates the two by sampling a pixel just outside the paddle: a glow
+bleeds past the rect and a tint does not.
+
+### Lean into it
+
+A standing instruction for anything in this section: **these are supposed to be
+chaotic, exciting and loud.** The moves are the reason the two joke modes exist,
+and a restrained powerup is a wasted one. When a choice is between tasteful and
+obvious, take obvious — flash white, throw a ring, shake the paddle, stack the
+effects up. The rest of the game is two rectangles and a square, so there is
+plenty of quiet to spend.
+
+This is a design instruction, not licence to skip the rules above it: a move still
+telegraphs, and still says whose it is. Loud and unreadable is worse than quiet.
+
+**Every move telegraphs before it does anything.** A move is `idle`, then
+`telegraph` — a visible wind-up with no effect yet — then `active`. That order is
+the whole reason the moves feel fair: you see the paddle shaking and glowing, so
+losing to one is something that happened rather than something the game did behind
+your back. A test asserts the ball is untouched throughout the wind-up, because a
+telegraph that already applied its effect would be decoration rather than a
+warning.
+
+A cooldown runs in every phase, so nothing chains into itself.
+
+### Charged shots
+
+A charged shot leaves at a flat multiple of **the mode's own speed cap**, not a
+multiple of whatever arrived. Scaling off the incoming ball meant a charge earned
+during a slow rally fired a slow shot — the same move measured 5.2 or 9.7
+depending on nothing the player did, which is the opposite of drama. It is now the
+same every time, and far enough above the cap that it is unmistakable.
+
+**Nothing lifts the cap for the return of it.** If the opponent gets a paddle to a
+charged shot, the ball comes back at ordinary speed, because the outgoing branch
+of `bounce()` is the only one that reads `chargedMultiplier`. The charge is one
+shot, not a lasting change to the rally — which is what keeps a reward from
+turning into a punishment two touches later.
+
+**The charge is held until it is spent, not until it expires.**
+`durationTicks: Infinity` says so. A charge that timed out left the player looking
+at a glowing paddle that quietly stopped meaning anything, and the glow is a
+promise the game then has to keep.
+
+**It is earned across several close calls, not one**, and the count is drawn as
+three pips on the player's side. One close call granting an instant, invisible
+charge was the version that read as "a powerup that does nothing": there was
+nothing to watch approach, and by the time anything happened it had already
+happened. Empty pips are outlined rather than absent, so a half-filled meter reads
+as *two of three* rather than as two loose marks and explains itself the first
+time it moves. Segments bank if the move is still on cooldown, so a close call is
+never silently thrown away.
+
+A test reads the canvas pixels rather than the state, because a meter nobody can
+see is precisely the failure it replaced.
+
+**Filling a pip is an event, and it happens where you are not looking.** The meter
+sits in a corner while the close call happens on your paddle in the middle of the
+board, with your eye on the ball — so the paddle bursts white at the exact point of
+contact as well. Two channels for one event, because the informative one is the
+one nobody is watching.
+
+**Completing the meter runs a sequence, and the paddle waits for it.** The third
+pip pops on its own, then the pips sweep left to right, then all three flare
+together, and only when that finishes does the paddle start its charged pulse. The
+charge itself arms at the first instant — nothing about gameplay is delayed, only
+the telling of it — so the sweep reads as a wind-up with the paddle lighting up as
+the payoff. Hitting the ball during the sequence cancels it: there is nothing left
+to celebrate once the charge is spent, and a celebration still playing for
+something you no longer have is a lie.
+
+The whole thing is a timeline counted in ticks, in one function, rather than
+nested timers. That is what makes it possible to cancel in one line and to assert
+against tick by tick.
+
+**A held charge pulses rather than glowing steadily**, and shakes on its own knob
+rather than a fraction of the wind-up's. A steady light reads as part of the
+paddle; a moving one reads as something waiting to go off. The pulse counts
+**ticks**, not milliseconds, or it would breathe at 144Hz twice as fast as at
+60Hz — the same rule anything that flashes here has to follow.
+
+### Who fires, and why
+
+**The villain rolls; you earn.** Insane's moves are a random chance per approach,
+raised by however many points it is behind — it stops playing around exactly when
+you start winning, which is both the drama and a self-balancing property: it
+cannot bully you while you are already losing.
+
+Yours are never random, and the two of them mean **different things**:
+
+- **Clutch is a reward.** Three close calls fill the meter; it exists to pay out
+  for playing well.
+- **Expand is mercy.** Falling behind on the scoreboard, or losing three points on
+  the trot. It exists to help when the game is going badly, and for no other
+  reason.
+
+Keeping those apart is the whole design. A handout that arrives while you are
+winning is not a handicap, it is noise.
+
+The losing run and the score gap are **separate triggers on purpose**. Dropping
+three in a row while still level is a different kind of trouble from being two
+points down after trading evenly, and only one of them is visible in the score.
+Winning a point wipes the run, so it measures a slide rather than a total.
+
+**Rejected: earning the bigger paddle with a run of three returns.** It shipped
+and was wrong, in a way only measurement showed. Simulated across 302 points, a
+competent player — one winning every game — got **100% of their activations from
+that trigger and none at all from the other two**, because they never fell behind
+and never lost three straight. The mode's handicap was reaching only the players
+who did not need it, mid-rally, while they were comfortably winning the point.
+Worse, the streak reset when it fired, so a long rally handed the paddle over
+twice: 15 of those 302 points activated it more than once while 218 activated
+nothing. With the trigger gone a winning player sees the paddle **zero** times a
+game and a struggling one still sees it, which is what the mode was for.
+
+If a run of good returns should be rewarded at all, it belongs to Clutch, which is
+already the half of this that pays out for skill.
+
+**Expand is a state, not an event.** You have the big paddle for exactly as long
+as you are in trouble: it appears when the gap or the losing run reaches its
+threshold and goes when it does not. `syncExpand()` holds the move to the
+condition at every point, and both halves of it are no-ops when the state already
+matches. `durationTicks` and `cooldownTicks` are neutral, because nothing about it
+expires.
+
+It took two wrong answers to get there, and both are worth knowing because they
+are the obvious ones:
+
+1. **A timer.** At Assisted's ball speed one round trip is longer than the timer
+   was, so a paddle earned on a return could expire before the ball came back and
+   never be used at all.
+2. **A number of uses.** Better — it guaranteed you got to hit something with it —
+   but it still ended in the middle of a match you were losing, which is precisely
+   when it was supposed to be helping. Handing the paddle back while the player is
+   still three points down is the timer's failure wearing a different hat.
+
+The lesson generalises: an effect that exists to answer a *situation* has to be
+bound to that situation, not to a duration or a budget. Ask what makes it stop
+being needed, and end it on that.
+
+### Paddle sizes
+
+Each paddle carries its own `h`, eased towards `hTarget` over `resizeTicks` about
+its own centre. It is animated because an instant resize reads as a rendering
+glitch rather than as something happening — the paddle appears to *pop*, and the
+eye reports a bug. `resizeTicks: 0` gives the instant version back if that is ever
+wanted, and a test pins the eased behaviour.
+
+`PLAYER_PADDLE_SCALE` and `AI_PADDLE_SCALE` are the size a paddle settles back to
+and are part of a preset's `game` half — Insane starts you shorter, Assisted much
+taller. The two sides being visibly unequal in those modes is the point, not a
+bug.
+
+**Expand and Squeeze scale a paddle's own base size, not `PADDLE_HEIGHT`.** An
+absolute target silently means different things in different modes: with Assisted's
+base at 120px, growing to "1.7 × 80" would have been a 13% bump the player could
+barely see, while the same number in a mode with a normal base is a near-doubling.
+Relative keeps the *effect* constant where the absolute kept only the number.
+
+### Two traps
+
+`onPlayerReturn()` runs **after** `bounce()`, not before. A close call arms a
+charged shot and `bounce()` spends charged shots, so hooking it first meant the
+save that earned the charge immediately consumed it and the player never saw it.
+A test drives a real edge collision rather than calling the hook, because calling
+the hook directly cannot catch this.
+
+`applyDifficulty()` resets paddle sizes and disarms everything. Without it,
+choosing Insane and then Easy left you playing Easy with Insane's short paddle —
+the same class of bug as a preset leaking through `AI`, and invisible until
+somebody wonders why Easy felt wrong.
+
+### Everything is switchable
+
+Same contract as the `AI` object: every knob in `ABILITY` names the value that
+turns its feature off, `modes: []` disables a move outright, and a test asserts
+that with all of them off the game is the plain one — no move ever fires and no
+paddle ever changes size. All of this is tuned by feel, and feel changes.
 
 ## The win score
 

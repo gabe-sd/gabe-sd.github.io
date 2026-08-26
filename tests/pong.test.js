@@ -1389,6 +1389,639 @@ const { check, report } = makeChecks();
     });
   }
 
+  console.log("26. abilities");
+  {
+    await page.reload();
+    await page.waitForSelector("#board");
+    // Every case sets up its own position, so the loop stays frozen throughout.
+    const setup = (level) => page.evaluate((l) => {
+      cancelAnimationFrame(rafId);
+      applyDifficulty(l);
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = "play";
+    }, level);
+
+    // The fair presets must stay fair: no move may exist outside its own mode.
+    await setup("medium");
+    const fairArmed = await page.evaluate(() => {
+      let armed = 0;
+      for (const name of MOVES) if (armMove(name)) armed++;
+      return armed;
+    });
+    check("no move can be armed in the fair presets", fairArmed === 0, fairArmed);
+
+    // --- blink -------------------------------------------------------------
+    await setup("insane");
+    const blink = await page.evaluate(() => {
+      ball = { x: 200, y: 200, vx: 6, vy: 0 };
+      ai.y = 160;
+      armMove("blink");
+      const seen = [];
+      for (let i = 0; i < 60; i++) { update(); seen.push(ai.y); }
+      const jumps = seen.slice(1).map((v, i) => Math.abs(v - seen[i]));
+      return { biggest: Math.max(...jumps), reachable: AI.panicSpeed,
+               onBoard: seen.every((y) => y >= 0 && y <= HEIGHT - ai.h) };
+    });
+    check("blink moves the paddle further than it could ever travel",
+      blink.biggest > blink.reachable * 3, `${blink.biggest.toFixed(0)}px/tick`);
+    check("and never leaves the board", blink.onBoard);
+
+    // It is supposed to be nearly unbeatable while it lasts - that is the joke.
+    const blinkSaves = await page.evaluate((n) => {
+      let saved = 0;
+      for (let i = 0; i < n; i++) {
+        restart();
+        document.getElementById("menu").hidden = true;
+        phase = "play";
+        const a = (Math.random() * 2 - 1) * MAX_BOUNCE_ANGLE;
+        const sp = BALL_SPEED + Math.random() * (BALL_SPEED_MAX - BALL_SPEED);
+        ball = { x: PLAYER_PLANE, y: Math.random() * (HEIGHT - BALL_SIZE),
+                 vx: sp * Math.cos(a), vy: sp * Math.sin(a) };
+        moveState.blink.cooldown = 0;
+        armMove("blink");
+        let g = 0;
+        while (ball.vx > 0 && player.score === 0 && g++ < 800) update();
+        if (player.score === 0) saved++;
+      }
+      return (100 * saved) / n;
+    }, 120);
+    check("blink saves nearly everything it is used on", blinkSaves > 90,
+      `${blinkSaves.toFixed(0)}%`);
+
+    // --- overdrive ---------------------------------------------------------
+    await setup("insane");
+    const od = await page.evaluate(() => {
+      ball = { x: AI_PLANE - 5, y: 200, vx: 8, vy: 0 };
+      ai.y = 200 - ai.h / 2;
+      armMove("overdrive");
+      const effectDuringTelegraph = [];
+      while (moveState.overdrive.phase === "telegraph") {
+        effectDuringTelegraph.push(Math.hypot(ball.vx, ball.vy));
+        tickAbilities();
+      }
+      const before = Math.hypot(ball.vx, ball.vy);
+      update();
+      return { before, after: Math.hypot(ball.vx, ball.vy), cap: BALL_SPEED_MAX,
+               spent: moveState.overdrive.phase,
+               telegraphTicks: effectDuringTelegraph.length,
+               unchangedWhileCharging:
+                 effectDuringTelegraph.every((v) => v === effectDuringTelegraph[0]) };
+    });
+    check("overdrive returns the ball above the normal speed cap",
+      od.after > od.cap, `${od.after.toFixed(1)} vs cap ${od.cap}`);
+    check("and it is faster than the shot that arrived", od.after > od.before);
+    check("it is spent on contact rather than lingering", od.spent === "idle", od.spent);
+    check("and the telegraph is a warning, not an effect",
+      od.telegraphTicks > 0 && od.unchangedWhileCharging, od.telegraphTicks);
+
+    // --- squeeze -----------------------------------------------------------
+    await setup("insane");
+    const sq = await page.evaluate(() => {
+      const base = player.h;
+      armMove("squeeze");
+      while (moveState.squeeze.phase === "telegraph") update();
+      const first = player.h;
+      for (let i = 0; i < 80; i++) update();
+      const settled = player.h;
+      while (moveState.squeeze.phase === "active") update();
+      for (let i = 0; i < 120; i++) update();
+      return { base, first, settled, restored: player.h,
+               target: PADDLE_HEIGHT * ABILITY.squeeze.scale };
+    });
+    check("squeeze shrinks your paddle", sq.settled < sq.base,
+      `${sq.base} -> ${sq.settled.toFixed(1)}`);
+    check("it eases rather than snapping to the new size",
+      sq.first > sq.settled && sq.first < sq.base,
+      `first tick ${sq.first.toFixed(1)} of ${sq.base} -> ${sq.target}`);
+    check("and it wears off", Math.abs(sq.restored - sq.base) < 0.5,
+      sq.restored.toFixed(1));
+
+    // --- expand ------------------------------------------------------------
+    await setup("assisted");
+    const ex = await page.evaluate(() => {
+      const base = player.h;
+      // Returning the ball well must NOT earn it: the paddle is mercy, not a
+      // reward. A long rally used to hand it over twice while the player was
+      // comfortably winning the point.
+      const rallied = [];
+      for (let i = 0; i < 8; i++) {
+        onPlayerReturn(player.y + player.h / 2);
+        rallied.push(moveState.expand.phase);
+      }
+      const fromRallying = rallied.every((ph) => ph === "idle");
+      armMove("expand");
+      for (let i = 0; i < 120; i++) update();
+      return { base, fromRallying, grown: player.h,
+               target: PADDLE_HEIGHT * ABILITY.expand.scale };
+    });
+    check("rallying well never earns a bigger paddle", ex.fromRallying);
+    check("and it actually grows when it is earned", ex.grown > ex.base,
+      `${ex.base} -> ${ex.grown.toFixed(1)}`);
+
+    // The score gap holds the paddle rather than firing it once: it comes at the
+    // configured gap and goes when the gap is smaller, however long that takes.
+    await setup("assisted");
+    const behind = await page.evaluate(() => {
+      const gap = ABILITY.expand.behindToTrigger;
+      const concede = () => {
+        phase = "play";
+        ball = { x: -1, y: 200, vx: -5, vy: 0 };
+        update();
+      };
+      const win = () => {
+        phase = "play";
+        ball = { x: WIDTH + 1, y: 200, vx: 5, vy: 0 };
+        update();
+      };
+      const seen = [];
+      player.score = 0; ai.score = 0;
+      for (let i = 0; i < gap; i++) {
+        concede();
+        seen.push({ gap: ai.score - player.score, phase: moveState.expand.phase });
+      }
+      // Survives a long wait at the same gap - nothing about it is timed. The
+      // phase is parked so the wait does not play the rest of the match out.
+      phase = "serve";
+      for (let i = 0; i < 2000; i++) update();
+      const afterAges = moveState.expand.phase;
+      const sizeWhileBehind = player.h;
+      win();                       // gap closes to one short of the threshold
+      const afterClosing = { gap: ai.score - player.score,
+                             phase: moveState.expand.phase };
+      for (let i = 0; i < 120; i++) update();
+      return { seen, afterAges, sizeWhileBehind, afterClosing,
+               sizeAfter: player.h, base: baseHeight(player), gap };
+    });
+    check("a gap one short of the threshold does nothing",
+      behind.seen.slice(0, -1).every((st) => st.phase === "idle"),
+      behind.seen.map((st) => `${st.gap}:${st.phase}`).join(" "));
+    check("reaching it brings the paddle out",
+      behind.seen[behind.seen.length - 1].phase !== "idle",
+      behind.seen.map((st) => `${st.gap}:${st.phase}`).join(" "));
+    check("and it does not time out while the gap stands",
+      behind.afterAges !== "idle", behind.afterAges);
+    check("closing the gap takes it away",
+      behind.afterClosing.phase === "idle",
+      `gap ${behind.afterClosing.gap}, ${behind.afterClosing.phase}`);
+    check("and the paddle actually returns to normal",
+      behind.sizeWhileBehind > behind.base
+        && Math.abs(behind.sizeAfter - behind.base) < 0.5,
+      `${behind.sizeWhileBehind.toFixed(1)} -> ${behind.sizeAfter.toFixed(1)}`);
+
+    // A losing run earns it independently of the score gap, so the test zeroes the
+    // behind trigger - otherwise either one passing would look like both working.
+    await setup("assisted");
+    const run = await page.evaluate(() => {
+      const savedBehind = ABILITY.expand.behindToTrigger;
+      ABILITY.expand.behindToTrigger = 0;
+      const concede = () => {
+        phase = "play";
+        ball = { x: -1, y: 200, vx: -5, vy: 0 };
+        update();
+      };
+      const win = () => {
+        phase = "play";
+        ball = { x: WIDTH + 1, y: 200, vx: 5, vy: 0 };
+        update();
+      };
+      // Two on the trot is not enough.
+      resetAbilities();
+      player.score = 0; ai.score = 0;
+      concede(); concede();
+      const afterTwo = moveState.expand.phase;
+      // A point of your own wipes the run.
+      win();
+      concede(); concede();
+      const afterBreak = moveState.expand.phase;
+      // Three in a row does it.
+      resetAbilities();
+      player.score = 0; ai.score = 0;
+      concede(); concede(); concede();
+      const afterThree = moveState.expand.phase;
+      // It holds while the run stands rather than paying out and clearing.
+      phase = "serve";
+      for (let i = 0; i < 2000; i++) update();
+      const afterAges = moveState.expand.phase;
+      const runStanding = concededStreak;
+      concede();
+      const afterFourth = moveState.expand.phase;
+      win();
+      const afterWinning = moveState.expand.phase;
+      ABILITY.expand.behindToTrigger = savedBehind;
+      return { afterTwo, afterBreak, afterThree, afterAges, runStanding,
+               afterFourth, afterWinning };
+    });
+    check("two points lost on the trot is not enough",
+      run.afterTwo === "idle", run.afterTwo);
+    check("and winning one wipes the run", run.afterBreak === "idle",
+      run.afterBreak);
+    check("three lost in a row earns a bigger paddle",
+      run.afterThree !== "idle", run.afterThree);
+    check("and the run is not cleared by paying out",
+      run.runStanding >= 3, run.runStanding);
+    check("the paddle holds while the run stands",
+      run.afterAges !== "idle" && run.afterFourth !== "idle",
+      `${run.afterAges}/${run.afterFourth}`);
+    check("and winning a point takes it away",
+      run.afterWinning === "idle", run.afterWinning);
+
+    // --- clutch ------------------------------------------------------------
+    await setup("assisted");
+    const clutch = await page.evaluate(() => {
+      const steps = [];
+      for (let i = 0; i < ABILITY.clutch.segments; i++) {
+        onPlayerReturn(player.y + player.h - 1);       // caught on the very end
+        steps.push({ meter: clutchCharge, phase: moveState.clutch.phase });
+      }
+      resetAbilities();
+      const centres = [];
+      for (let i = 0; i < ABILITY.clutch.segments + 1; i++) {
+        onPlayerReturn(player.y + player.h / 2);       // dead centre
+        centres.push(clutchCharge);
+      }
+      return { steps, centres, segments: ABILITY.clutch.segments };
+    });
+    check("a close call fills a segment rather than charging outright",
+      clutch.steps[0].meter === 1 && clutch.steps[0].phase === "idle",
+      JSON.stringify(clutch.steps[0]));
+    check("the meter fills one segment at a time",
+      clutch.steps.slice(0, -1).every((st, i) => st.meter === i + 1),
+      clutch.steps.map((st) => st.meter).join(","));
+    check("filling it charges the shot and empties the meter",
+      clutch.steps[clutch.steps.length - 1].phase !== "idle"
+        && clutch.steps[clutch.steps.length - 1].meter === 0,
+      JSON.stringify(clutch.steps[clutch.steps.length - 1]));
+    check("catching it dead centre never fills anything",
+      clutch.centres.every((m) => m === 0), clutch.centres.join(","));
+
+    // The band is a fraction of the paddle's BASE size, not its current one, so
+    // an active Expand must not widen the band that earns the next charge.
+    await setup("assisted");
+    const band = await page.evaluate(() => {
+      // rel is how far down the paddle the ball's centre landed.
+      const hitAt = (rel) => {
+        resetAbilities();
+        onPlayerReturn(player.y + rel - BALL_SIZE / 2);
+        return clutchCharge;
+      };
+      const base = baseHeight(player);
+      const edge = base * ABILITY.clutch.edgeFraction;
+      const inside = hitAt(edge - 2);
+      const outside = hitAt(edge + 2);
+      // Now grow the paddle and retest a point that only counts if the band grew
+      // with it.
+      resetAbilities();
+      armMove("expand");
+      for (let i = 0; i < 120; i++) update();
+      const grownEdge = player.h * ABILITY.clutch.edgeFraction;
+      const betweenTheTwo = hitAt((edge + grownEdge) / 2);
+      return { base, edge, grown: player.h, grownEdge, inside, outside,
+               betweenTheTwo };
+    });
+    check("a hit inside the band fills a segment", band.inside === 1,
+      `${band.edge.toFixed(1)}px band, got ${band.inside}`);
+    check("and a hit just outside it does not", band.outside === 0, band.outside);
+    check("the band does not grow when the paddle does",
+      band.betweenTheTwo === 0,
+      `base band ${band.edge.toFixed(1)}px, paddle ${band.grown.toFixed(0)}px ` +
+      `would give ${band.grownEdge.toFixed(1)}px`);
+
+    // Filling a pip has to be visible where the player is looking, and completing
+    // the meter runs a sequence the paddle waits for.
+    await setup("assisted");
+    const fx = await page.evaluate(() => {
+      phase = "serve";                       // park the ball; only time passes
+      player.y = 150;
+      const pipPx = (i) => {
+        const x = METER.x + i * (METER.w + METER.gap) + METER.w / 2;
+        const d = ctx.getImageData(Math.round(x),
+          Math.round(METER.y + METER.h / 2), 1, 1).data;
+        return [d[0], d[1], d[2]];
+      };
+      const paddleGlows = () => {
+        const d = ctx.getImageData(PADDLE_WIDTH + 5,
+          Math.round(player.y + player.h / 2), 1, 1).data;
+        return `${d[0]},${d[1]},${d[2]}` !== "255,255,255";
+      };
+      const edgeHit = () => onPlayerReturn(player.y + 2 - BALL_SIZE / 2);
+
+      // One close call.
+      resetAbilities();
+      edgeHit();
+      draw();
+      const atFill = pipPx(0);
+      const burst = paddleFlash.t;
+      for (let i = 0; i < ABILITY.pop.pipTicks + 2; i++) update();
+      draw();
+      const settled = pipPx(0);
+
+      // Complete it, and watch when the paddle owns up.
+      resetAbilities();
+      clutchCharge = ABILITY.clutch.segments - 1;
+      edgeHit();
+      const armedAtOnce = moveState.clutch.phase;
+      const during = [];
+      let guard = 0;
+      while (meterSeq >= 0 && guard++ < 400) {
+        draw();
+        during.push(paddleGlows());
+        update();
+      }
+      draw();
+      const afterSeq = paddleGlows();
+
+      // Spending it mid-sequence must call the celebration off.
+      resetAbilities();
+      clutchCharge = ABILITY.clutch.segments - 1;
+      edgeHit();
+      const seqRunning = meterSeq >= 0;
+      phase = "play";
+      ball = { x: PLAYER_PLANE + 1, y: player.y + player.h / 2,
+               vx: -BALL_SPEED, vy: 0 };
+      update();
+      return { atFill, settled, burst, armedAtOnce, during, afterSeq,
+               seqRunning, seqAfterSpend: meterSeq,
+               spentPhase: moveState.clutch.phase, guard };
+    });
+    const white = (c) => c[0] > 230 && c[1] > 230 && c[2] > 230;
+    check("a filling pip flashes white rather than just turning green",
+      white(fx.atFill) && !white(fx.settled),
+      `${fx.atFill.join(",")} -> ${fx.settled.join(",")}`);
+    check("and the paddle bursts at the point of contact", fx.burst > 0, fx.burst);
+    check("completing the meter arms the charge immediately",
+      fx.armedAtOnce === "active", fx.armedAtOnce);
+    check("but the paddle stays quiet for the whole celebration",
+      fx.during.length > 10 && fx.during.every((g) => g === false),
+      `${fx.during.length} ticks, ${fx.during.filter(Boolean).length} glowing`);
+    check("and lights up the moment it ends", fx.afterSeq === true, fx.afterSeq);
+    check("spending the charge mid-celebration calls it off",
+      fx.seqRunning && fx.seqAfterSpend === -1 && fx.spentPhase === "idle",
+      `${fx.seqAfterSpend}, ${fx.spentPhase}`);
+
+    // Read the canvas rather than the state: a meter nobody can see is the exact
+    // problem this replaced.
+    const pips = await page.evaluate(() => {
+      const at = (i) => {
+        const x = METER.x + i * (METER.w + METER.gap) + METER.w / 2;
+        const d = ctx.getImageData(Math.round(x),
+          Math.round(METER.y + METER.h / 2), 1, 1).data;
+        return `${d[0]},${d[1]},${d[2]}`;
+      };
+      const snap = () => { draw(); return [at(0), at(1), at(2)]; };
+      applyDifficulty("assisted");
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = "play";
+      const empty = snap();
+      clutchCharge = 2;
+      const two = snap();
+      clutchCharge = 0;
+      armMove("clutch");
+      const charged = snap();
+      applyDifficulty("insane");
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = "play";
+      return { empty, two, charged, absent: snap() };
+    });
+    check("an empty meter paints no filled pips",
+      new Set(pips.empty).size === 1, pips.empty.join(" | "));
+    check("two close calls light exactly two pips",
+      pips.two[0] === pips.two[1] && pips.two[2] === pips.empty[2]
+        && pips.two[0] !== pips.empty[0], pips.two.join(" | "));
+    check("a charged shot lights all three",
+      new Set(pips.charged).size === 1 && pips.charged[0] !== pips.empty[0],
+      pips.charged.join(" | "));
+    check("and no meter is drawn in a mode that has no clutch",
+      pips.absent.join() === pips.empty.join(), pips.absent.join(" | "));
+
+    // Expand recolours the paddle and does nothing else. A glow bleeds outside the
+    // paddle rect, so sampling just past its edge is what separates the two tells.
+    const tells = await page.evaluate(() => {
+      applyDifficulty("assisted");
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = "play";
+      player.y = 150;
+      const inside = () => {
+        const d = ctx.getImageData(PADDLE_WIDTH - 3,
+          Math.round(player.y + player.h / 2), 1, 1).data;
+        return `${d[0]},${d[1]},${d[2]}`;
+      };
+      const justOutside = () => {
+        const d = ctx.getImageData(PADDLE_WIDTH + 5,
+          Math.round(player.y + player.h / 2), 1, 1).data;
+        return `${d[0]},${d[1]},${d[2]}`;
+      };
+      const topEdgeOver = (n) => {
+        const seen = new Set();
+        for (let i = 0; i < n; i++) { update(); draw(); seen.add(inside()); }
+        return seen.size;
+      };
+
+      draw();
+      const plain = { in: inside(), out: justOutside() };
+
+      armMove("expand");
+      while (moveState.expand.phase !== "active") update();
+      for (let i = 0; i < 60; i++) update();
+      draw();
+      const grown = player.h;
+      const ex = { in: inside(), out: justOutside(), steady: topEdgeOver(20) };
+
+      resetAbilities();
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = "play";
+      player.y = 150;
+      armMove("clutch");
+      update();
+      draw();
+      const cl = { in: inside(), out: justOutside() };
+
+      // Both at once: the charge must still be the thing you see.
+      resetAbilities();
+      armMove("expand");
+      while (moveState.expand.phase !== "active") update();
+      armMove("clutch");
+      for (let i = 0; i < 40; i++) update();
+      draw();
+      const both = justOutside();
+      return { plain, ex, cl, both, grown, base: PADDLE_HEIGHT };
+    });
+    check("expand recolours the paddle", tells.ex.in !== tells.plain.in,
+      `${tells.plain.in} -> ${tells.ex.in}`);
+    check("and grows it", tells.grown > tells.base,
+      `${tells.base} -> ${tells.grown.toFixed(1)}`);
+    check("but casts no glow past its own edge",
+      tells.ex.out === tells.plain.out,
+      `${tells.ex.out} vs plain ${tells.plain.out}`);
+    check("and does not twitch", tells.ex.steady === 1, tells.ex.steady);
+    check("a held charge still glows past the edge",
+      tells.cl.out !== tells.plain.out,
+      `${tells.cl.out} vs plain ${tells.plain.out}`);
+    check("and is not masked by an active expand",
+      tells.both !== tells.plain.out, tells.both);
+
+    // Through a real collision rather than by calling onPlayerReturn: if the hook
+    // ran before the bounce, the close call would spend the charge on the very
+    // hit that earned it and the player would never see it.
+    await setup("assisted");
+    const earned = await page.evaluate(() => {
+      clutchCharge = ABILITY.clutch.segments - 1;   // one close call from full
+      player.y = 150;
+      ball = { x: PLAYER_PLANE + 4, y: player.y + player.h - BALL_SIZE,
+               vx: -6, vy: 0 };
+      update();
+      return { phase: moveState.clutch.phase, bounced: ball.vx > 0 };
+    });
+    check("a real edge save leaves the charge in hand, not spent on itself",
+      earned.bounced && earned.phase !== "idle", JSON.stringify(earned));
+
+    // The charged shot is the drama, so it must not depend on what arrived: it
+    // used to scale off the incoming ball, which meant a charge earned on a slow
+    // rally fired a slow "dramatic" shot.
+    const charged = await page.evaluate(() => {
+      const fire = (incoming) => {
+        restart();
+        document.getElementById("menu").hidden = true;
+        phase = "play";
+        moveState.clutch.cooldown = 0;
+        armMove("clutch");
+        ball = { x: PLAYER_PLANE + 1, y: player.y + player.h / 2,
+                 vx: -incoming, vy: 0 };
+        update();
+        return Math.hypot(ball.vx, ball.vy);
+      };
+      const slow = fire(BALL_SPEED);
+      const fast = fire(BALL_SPEED_MAX);
+      return { slow, fast, cap: BALL_SPEED_MAX,
+               expected: BALL_SPEED_MAX * ABILITY.clutch.chargedMultiplier };
+    });
+    check("a charged shot leaves far above the mode's own speed cap",
+      charged.slow > charged.cap * 2,
+      `${charged.slow.toFixed(1)} vs cap ${charged.cap}`);
+    check("and at the same speed however slowly the ball arrived",
+      Math.abs(charged.slow - charged.fast) < 1e-9,
+      `${charged.slow.toFixed(1)} / ${charged.fast.toFixed(1)}`);
+
+    // One shot, not a lasting change to the rally.
+    await setup("assisted");
+    const decayed = await page.evaluate(() => {
+      armMove("clutch");
+      ball = { x: PLAYER_PLANE + 1, y: player.y + player.h / 2,
+               vx: -BALL_SPEED, vy: 0 };
+      update();
+      const outgoing = Math.hypot(ball.vx, ball.vy);
+      let guard = 0;
+      while (ball.vx > 0 && guard++ < 400) {
+        ai.y = ball.y - ai.h / 2;      // make sure the opponent gets to it
+        clampPaddle(ai);
+        update();
+      }
+      return { outgoing, returned: Math.hypot(ball.vx, ball.vy),
+               cap: BALL_SPEED_MAX };
+    });
+    check("if the opponent returns it the ball comes back at ordinary speed",
+      decayed.returned <= decayed.cap + 1e-9 && decayed.outgoing > decayed.cap,
+      `${decayed.outgoing.toFixed(1)} out, ${decayed.returned.toFixed(1)} back`);
+
+    // The glow is a promise, and it has to wait for you to cash it.
+    await setup("assisted");
+    const held = await page.evaluate(() => {
+      armMove("clutch");
+      for (let i = 0; i < 3000; i++) tickAbilities();
+      const afterAges = moveState.clutch.phase;
+      ball = { x: PLAYER_PLANE + 1, y: player.y + player.h / 2,
+               vx: -BALL_SPEED, vy: 0 };
+      update();
+      return { afterAges, afterHitting: moveState.clutch.phase };
+    });
+    check("the charge waits indefinitely rather than timing out",
+      held.afterAges === "active", held.afterAges);
+    check("and is spent the moment you hit something with it",
+      held.afterHitting === "idle", held.afterHitting);
+
+    // Expand is a state, so using it must not wear it out. An earlier version
+    // ended after two returns, which meant a long rally handed it back mid-point.
+    await setup("assisted");
+    const lasted = await page.evaluate(() => {
+      const base = player.h;
+      armMove("expand");
+      for (let i = 0; i < 60; i++) update();
+      const grown = player.h;
+      const phases = [];
+      for (let i = 0; i < 10; i++) {
+        onPlayerReturn(player.y + player.h / 2);
+        phases.push(moveState.expand.phase);
+      }
+      phase = "serve";
+      for (let i = 0; i < 2000; i++) update();
+      return { base, grown, stillBig: player.h, phases };
+    });
+    check("hitting the ball with the big paddle does not use it up",
+      lasted.phases.every((ph) => ph !== "idle"),
+      lasted.phases.join(","));
+    check("and it is still there long after any timer would have run",
+      lasted.stillBig > lasted.base + 1,
+      `${lasted.base} -> ${lasted.stillBig.toFixed(1)}`);
+
+    // --- cooldowns ---------------------------------------------------------
+    await setup("insane");
+    const chain = await page.evaluate(() => {
+      armMove("squeeze");
+      while (moveState.squeeze.phase !== "idle") update();
+      return { immediately: armMove("squeeze"),
+               cooldown: moveState.squeeze.cooldown };
+    });
+    check("a move cannot chain straight into itself",
+      chain.immediately === false && chain.cooldown > 0, JSON.stringify(chain));
+
+    // --- switching modes ---------------------------------------------------
+    const sizes = await page.evaluate(() => {
+      applyDifficulty("insane");
+      armMove("squeeze");
+      const shrunk = player.hTarget;
+      applyDifficulty("easy");
+      return { shrunk, afterSwitch: player.h, armed: moveState.squeeze.phase };
+    });
+    check("switching mode restores the paddle", sizes.afterSwitch === 80,
+      sizes.afterSwitch);
+    check("and disarms whatever was pending", sizes.armed === "idle", sizes.armed);
+
+    // --- everything off ----------------------------------------------------
+    // The same contract the AI object carries: turning it all off has to give
+    // back the plain game, so any of this can be isolated by setting numbers.
+    const off = await page.evaluate(() => {
+      const saved = {};
+      for (const name of MOVES) { saved[name] = ABILITY[name].modes; ABILITY[name].modes = []; }
+      applyDifficulty("insane");
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = "play";
+      let armed = 0;
+      const heights = new Set();
+      for (let i = 0; i < 400; i++) {
+        ball = { x: 200, y: 200, vx: 6, vy: 2 };
+        update();
+        heights.add(player.h);
+        for (const name of MOVES) if (moveState[name].phase !== "idle") armed++;
+      }
+      for (const name of MOVES) ABILITY[name].modes = saved[name];
+      return { armed, heights: [...heights] };
+    });
+    check("with every move disabled, none ever fires", off.armed === 0, off.armed);
+    check("and the paddle never changes size", off.heights.length === 1,
+      off.heights.join(","));
+
+    await page.evaluate(() => {
+      applyDifficulty("medium");
+      localStorage.removeItem("pong.difficulty");
+      restart();
+    });
+  }
+
   check("no page errors", errors.length === 0, errors.join("; "));
 
   await browser.close();

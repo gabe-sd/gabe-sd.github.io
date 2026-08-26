@@ -65,27 +65,30 @@ is soft on any display with `devicePixelRatio > 1`. Size the backing store by
   X11 root is black on the dev box. It needs someone who can look at the screen to
   say whether it actually got sharper.
 
-### pong-assisted-insane-modes — Should the joke modes change paddle sizes too
+### pong-visual-overhaul — Real art, and a menu that feels right
 
-**Gate: playtest — this entry *is* the question.** Play Assisted. If it is already
-hard to lose, delete this entry; the modes are done.
+**Gate: yours throughout — this is entirely a look-and-feel entry.**
 
-Assisted and Insane ship handicapping ball speed and the ai, and **not** paddle
-height, which the original entry also called for. That half was held back on
-purpose: a taller player paddle against a normal ai one is visibly asymmetric, and
-whether that reads as deliberate or as a rendering bug is not answerable from a
-terminal.
+Three things have accumulated here, all of them placeholder-by-agreement rather
+than oversights:
 
-- The measured save rates are ~60% for Assisted and ~99% for Insane, each against
-  its own ball — see `games/pong/DESIGN.md`, and note those two are not on the same
-  scale as Easy/Medium/Hard.
-- If paddle height is wanted, `PADDLE_HEIGHT` has to split into a player and an ai
-  value, which is ~18 references in `script.js` and ~14 in `tests/pong.test.js`.
-  `applyGame()` is already the place it would be reset from, and already writes
-  every field on every call, so the reset discipline comes free.
-- Insane must keep saving less than 100%. Section 25 of the suite asserts it, and
-  `games/pong/DESIGN.md` says why: an ai that never concedes cannot be beaten, only
-  survived, which is a softlock rather than a difficulty.
+- **The menu does not feel right.** Called functional-for-now when the three-row
+  version shipped. It is a heading, five difficulty buttons, a "first to" row and
+  Play, stacked centred over the board.
+- **The ability colours are placeholders.** Assisted is green and Insane red,
+  taken from `--win` and `--lose`. Blue was asked for and could not be used:
+  `--accent` is blue and already means "this button is selected", so a blue
+  Assisted reads as chosen before you touch it. Changing that means deciding what
+  selected looks like first.
+- **Real art assets**, which the game has never had — everything is `fillRect`
+  against theme tokens.
+
+`games/pong/DESIGN.md` explains why the menu is DOM buttons over the canvas rather
+than shapes painted on it. That reasoning survives an art pass; the styling does
+not depend on it.
+
+Worth doing after `pong-high-dpi-canvas` rather than before — there is no point
+art-directing against a backing store that is about to change resolution.
 
 ### pong-two-player — Two-player mode
 
