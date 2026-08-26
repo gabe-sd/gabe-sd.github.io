@@ -17,6 +17,24 @@ Known gaps and unscheduled work live in `TODO.md`. Check it before starting
 something new, and delete entries there as they land rather than marking them
 done — git history is the record of what happened.
 
+## As simple as possible, but as complex as it needs to be
+
+The guiding principle here, and the reason this repo has no build step, no
+framework and one dependency.
+
+Both halves do work. The first rejects machinery whose cost outruns its benefit at
+this size: continuous integration was considered and dropped because the whole
+suite runs in fourteen seconds and can simply be run, and a file of completed
+`TODO.md` entries was dropped because the deletion diff already is one. The second
+is what stops that becoming an excuse to under-build: Pong's fixed timestep is more
+machinery than scaling movement by a frame delta, and earns it by keeping the
+simulation deterministic and `update()` free of any notion of time; its loop guards
+scheduling on a `running` flag rather than on `rafId` being null because the
+simpler version silently restarted the loop underneath the test harness.
+
+The test is the same in both directions: **name what breaks if this were simpler.**
+A concrete answer justifies the complexity. No answer means take it out.
+
 ## Work on a branch, never on main
 
 Any new feature or fix starts with a branch — `git checkout -b <short-name>`
