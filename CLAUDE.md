@@ -69,8 +69,14 @@ stale-base cost.
 npm run serve                   # http.server on 8934, the port the tests expect
 npm test                        # all browser suites; non-zero exit on failure
 node tests/chording.test.js     # one suite on its own
+node tests/ai-sweep.js          # how often Pong's ai saves; a ruler, not a test
 node --check games/<name>/script.js   # syntax only - proves nothing about behaviour
 ```
+
+`tests/ai-sweep.js` is deliberately outside `npm test`: it measures rather than
+asserts, and every difficulty claim in `games/pong/DESIGN.md` came out of it.
+Extend it rather than writing a second one — a figure from a differently shaped
+harness cannot be set against the ones already recorded.
 
 `npm install` first (once) for the tests; see `tests/README.md`. Serve rather than
 opening `file://`; relative paths work either way, but a server matches how it is
@@ -98,8 +104,10 @@ Each game page follows a contract that `shared.css` depends on:
   `#instructions`, and a gear button `#settings-toggle` opening `#settings`,
   which holds `#reset-best`; Pong has `#help-toggle` and `#instructions` too,
   plus a `#menu` over the board holding `#menu-heading`, a `#difficulty`
-  radiogroup, a `#win-score-choice` radiogroup and `#play`, and a hidden
-  `#score-reader`).
+  radiogroup labelled by `#difficulty-label`, a `#win-score-choice` radiogroup
+  labelled by `#win-score-label` and `#play`; a hidden `#score-reader`; and
+  `#win-score` inside the instructions panel, which the script rewrites whenever
+  the chosen win score changes).
   Game scripts look these up by id, and `shared.css` styles `.page`, `.status`,
   `.hint`, `.btn` (with `.secondary` and `.icon`), `.controls`, `.back-link`
   for them.
@@ -180,17 +188,20 @@ the bomb icon means an actual revealed mine.
 
 ### Persisted state
 
-The Minesweeper best time is the only stored data: one `localStorage` key,
-namespaced by board configuration (`minesweeper.bestTime.9x9-10`) so adding a
-difficulty later cannot compare records across board sizes. Keep it local — no
-network, no accounts.
+Two games store data, both in `localStorage` and both under namespaced keys.
+Minesweeper's best time is keyed by board configuration
+(`minesweeper.bestTime.9x9-10`) so adding a difficulty later cannot compare
+records across board sizes; Pong remembers the chosen difficulty and win score
+(`pong.difficulty`, `pong.winScore`). Keep it local — no network, no accounts.
 
 Wrap every `localStorage` access. It does not merely return `null` when
 unavailable, it *throws* — in private windows, with site data blocked, and from
 `file://` in some browsers — so an unguarded read at load time takes the whole
-game down. `loadBestTime`/`saveBestTime`/`clearBestTime` degrade to "no record"
-instead, and
-`tests/best-time.test.js` covers that path by making storage throw.
+game down. Every reader degrades to a default instead:
+`loadBestTime`/`saveBestTime`/`clearBestTime` in Minesweeper, and
+`loadDifficulty`/`saveDifficulty`/`loadWinScore`/`saveWinScore` in Pong.
+`tests/best-time.test.js` covers that path by making storage throw, and
+`tests/pong.test.js` does the same for the win score.
 
 The gear panel's Reset best time button clears the key. It is disabled whenever
 `loadBestTime()` returns `null`, which covers both "no record yet" and "storage
