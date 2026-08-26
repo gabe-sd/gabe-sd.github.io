@@ -1550,6 +1550,97 @@ const { check, report } = makeChecks();
     check("a real edge save leaves the charge in hand, not spent on itself",
       earned.bounced && earned.phase !== "idle", JSON.stringify(earned));
 
+    // The charged shot is the drama, so it must not depend on what arrived: it
+    // used to scale off the incoming ball, which meant a charge earned on a slow
+    // rally fired a slow "dramatic" shot.
+    const charged = await page.evaluate(() => {
+      const fire = (incoming) => {
+        restart();
+        document.getElementById("menu").hidden = true;
+        phase = "play";
+        moveState.clutch.cooldown = 0;
+        armMove("clutch");
+        ball = { x: PLAYER_PLANE + 1, y: player.y + player.h / 2,
+                 vx: -incoming, vy: 0 };
+        update();
+        return Math.hypot(ball.vx, ball.vy);
+      };
+      const slow = fire(BALL_SPEED);
+      const fast = fire(BALL_SPEED_MAX);
+      return { slow, fast, cap: BALL_SPEED_MAX,
+               expected: BALL_SPEED_MAX * ABILITY.clutch.chargedMultiplier };
+    });
+    check("a charged shot leaves far above the mode's own speed cap",
+      charged.slow > charged.cap * 2,
+      `${charged.slow.toFixed(1)} vs cap ${charged.cap}`);
+    check("and at the same speed however slowly the ball arrived",
+      Math.abs(charged.slow - charged.fast) < 1e-9,
+      `${charged.slow.toFixed(1)} / ${charged.fast.toFixed(1)}`);
+
+    // One shot, not a lasting change to the rally.
+    await setup("assisted");
+    const decayed = await page.evaluate(() => {
+      armMove("clutch");
+      ball = { x: PLAYER_PLANE + 1, y: player.y + player.h / 2,
+               vx: -BALL_SPEED, vy: 0 };
+      update();
+      const outgoing = Math.hypot(ball.vx, ball.vy);
+      let guard = 0;
+      while (ball.vx > 0 && guard++ < 400) {
+        ai.y = ball.y - ai.h / 2;      // make sure the opponent gets to it
+        clampPaddle(ai);
+        update();
+      }
+      return { outgoing, returned: Math.hypot(ball.vx, ball.vy),
+               cap: BALL_SPEED_MAX };
+    });
+    check("if the opponent returns it the ball comes back at ordinary speed",
+      decayed.returned <= decayed.cap + 1e-9 && decayed.outgoing > decayed.cap,
+      `${decayed.outgoing.toFixed(1)} out, ${decayed.returned.toFixed(1)} back`);
+
+    // The glow is a promise, and it has to wait for you to cash it.
+    await setup("assisted");
+    const held = await page.evaluate(() => {
+      armMove("clutch");
+      for (let i = 0; i < 3000; i++) tickAbilities();
+      const afterAges = moveState.clutch.phase;
+      ball = { x: PLAYER_PLANE + 1, y: player.y + player.h / 2,
+               vx: -BALL_SPEED, vy: 0 };
+      update();
+      return { afterAges, afterHitting: moveState.clutch.phase };
+    });
+    check("the charge waits indefinitely rather than timing out",
+      held.afterAges === "active", held.afterAges);
+    check("and is spent the moment you hit something with it",
+      held.afterHitting === "idle", held.afterHitting);
+
+    // Expand used to expire before a single use: at Assisted's ball speed one
+    // round trip is longer than the effect lasted.
+    await setup("assisted");
+    const lasted = await page.evaluate(() => {
+      const base = player.h;
+      for (let i = 0; i < ABILITY.expand.streakToTrigger; i++) {
+        onPlayerReturn(player.y + player.h / 2);
+      }
+      for (let i = 0; i < 60; i++) update();
+      const grown = player.h;
+      // Comfortably longer than a round trip at this mode's ball speed.
+      for (let i = 0; i < 600; i++) update();
+      const stillBig = player.h;
+      const phases = [];
+      for (let i = 0; i < ABILITY.expand.usesToExpire; i++) {
+        onPlayerReturn(player.y + player.h / 2);
+        phases.push(moveState.expand.phase);
+      }
+      return { base, grown, stillBig, phases };
+    });
+    check("a big paddle outlasts a whole round trip",
+      lasted.stillBig > lasted.base + 1 && lasted.stillBig === lasted.grown,
+      `${lasted.base} -> ${lasted.grown.toFixed(1)}, still ${lasted.stillBig.toFixed(1)}`);
+    check("and ends by being used, not by running out",
+      lasted.phases[lasted.phases.length - 1] === "idle",
+      lasted.phases.join(","));
+
     // --- cooldowns ---------------------------------------------------------
     await setup("insane");
     const chain = await page.evaluate(() => {

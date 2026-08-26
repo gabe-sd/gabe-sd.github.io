@@ -92,9 +92,10 @@ const ABILITY = {
     chance: 0.3,
     cooldownTicks: 260,
     telegraphTicks: 45,   // long on purpose: the charge is the whole show
-    durationTicks: 150,   // how long the charge stays available once lit
-    speedMultiplier: 1.9, // 1 = an ordinary return
-    maxMultiplier: 1.8,   // lifts the speed cap for this shot only; 1 = capped
+    durationTicks: Infinity, // held until it is spent on a shot; a number expires it
+    chargedMultiplier: 1.1,  // the charged shot leaves at this multiple of the
+                             // mode's own speed cap, whatever arrived; 1 = an
+                             // ordinary shot at full pace
   },
   squeeze: {
     modes: ["insane"],
@@ -111,7 +112,13 @@ const ABILITY = {
     chance: 0,            // never random: it is earned, not rolled
     cooldownTicks: 150,
     telegraphTicks: 10,
-    durationTicks: 320,
+    // A pure timer could not do this job: at Assisted's ball speed one round trip
+    // is longer than the effect used to last, so a paddle earned on a return
+    // routinely expired before the ball came back and you never hit anything with
+    // it. It ends after being *used* instead, with the timer only as a backstop
+    // for a point that ends before you touch the ball again.
+    durationTicks: 1200,
+    usesToExpire: 2,      // returns made with the big paddle; 0 = time only
     scale: 1.7,           // what your paddle grows to; 1 = no growth
     streakToTrigger: 3,   // returns in a row that earn it; 0 = never from a streak
     behindToTrigger: 2,   // points behind that earn it; 0 = never from the score
@@ -121,11 +128,12 @@ const ABILITY = {
     chance: 0,
     cooldownTicks: 120,
     telegraphTicks: 0,    // earned by a save that has already happened
-    durationTicks: 260,   // how long the charged shot stays available
+    durationTicks: Infinity, // the glow stays until you hit something with it
     edgePx: 12,           // the band at each end of your paddle that counts as a
                           // close call; 0 = never
-    speedMultiplier: 1.5,
-    maxMultiplier: 1.5,
+    chargedMultiplier: 2.6, // deliberately far above the mode's cap: the whole
+                            // point is a shot that is dramatically faster than
+                            // anything Assisted otherwise produces
   },
 };
 
@@ -265,6 +273,7 @@ let moveState = {};
 let blinkHop = 0;
 let aiGhosts = [];
 let playerStreak = 0;
+let expandUses = 0;
 
 function resetAbilities() {
   moveState = {};
@@ -274,6 +283,7 @@ function resetAbilities() {
   blinkHop = 0;
   aiGhosts = [];
   playerStreak = 0;
+  expandUses = 0;
 }
 
 function moveActive(name) {
@@ -314,6 +324,7 @@ function startMove(name) {
   if (name === "squeeze" || name === "expand") {
     player.hTarget = PADDLE_HEIGHT * spec.scale;
   }
+  if (name === "expand") expandUses = 0;
 }
 
 function endMove(name) {
@@ -389,6 +400,9 @@ function blinkTeleport() {
 // the paddle is the close call that earns a charged shot back.
 function onPlayerReturn(hitY) {
   playerStreak += 1;
+  // A big paddle is spent by being used, not by waiting.
+  const uses = ABILITY.expand.usesToExpire;
+  if (uses > 0 && moveActive("expand") && ++expandUses >= uses) endMove("expand");
   const ex = ABILITY.expand;
   if (ex.streakToTrigger > 0 && playerStreak >= ex.streakToTrigger
       && armMove("expand")) {
@@ -677,14 +691,17 @@ function bounce(paddle, dir) {
   const offset = ball.y + BALL_SIZE / 2 - (paddle.y + paddle.h / 2);
   const hit = Math.max(-1, Math.min(1, offset / (paddle.h / 2)));
   const angle = hit * MAX_BOUNCE_ANGLE;
-  // A charged shot is spent here, and lifts the speed cap for this one return -
-  // the whole threat of it is that it comes back faster than the game normally
-  // allows. maxMultiplier of 1 keeps it inside the usual cap.
+  // A charged shot is spent here and leaves at a flat multiple of the mode's own
+  // speed cap rather than a multiple of whatever arrived: scaling off the
+  // incoming ball meant a charge earned on a slow rally fired a slow shot, which
+  // is no drama at all. Nothing lifts the cap for the *return* of it, so if the
+  // opponent gets a paddle to it the ball comes back at ordinary speed - the
+  // charge is one shot, not a lasting change to the rally.
   const charge = paddle === ai ? "overdrive" : "clutch";
   const spec = ABILITY[charge];
   const carried = Math.hypot(ball.vx, ball.vy);
   const speed = consumeMove(charge)
-    ? Math.min(carried * spec.speedMultiplier, BALL_SPEED_MAX * spec.maxMultiplier)
+    ? BALL_SPEED_MAX * spec.chargedMultiplier
     : Math.min(carried * BALL_SPEEDUP, BALL_SPEED_MAX);
   ball.vx = dir * speed * Math.cos(angle);
   ball.vy = speed * Math.sin(angle);

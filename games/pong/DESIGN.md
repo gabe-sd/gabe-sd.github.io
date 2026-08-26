@@ -274,6 +274,25 @@ warning.
 
 A cooldown runs in every phase, so nothing chains into itself.
 
+### Charged shots
+
+A charged shot leaves at a flat multiple of **the mode's own speed cap**, not a
+multiple of whatever arrived. Scaling off the incoming ball meant a charge earned
+during a slow rally fired a slow shot — the same move measured 5.2 or 9.7
+depending on nothing the player did, which is the opposite of drama. It is now the
+same every time, and far enough above the cap that it is unmistakable.
+
+**Nothing lifts the cap for the return of it.** If the opponent gets a paddle to a
+charged shot, the ball comes back at ordinary speed, because the outgoing branch
+of `bounce()` is the only one that reads `chargedMultiplier`. The charge is one
+shot, not a lasting change to the rally — which is what keeps a reward from
+turning into a punishment two touches later.
+
+**The charge is held until it is spent, not until it expires.**
+`durationTicks: Infinity` says so. A charge that timed out left the player looking
+at a glowing paddle that quietly stopped meaning anything, and the glow is a
+promise the game then has to keep.
+
 ### Who fires, and why
 
 **The villain rolls; you earn.** Insane's moves are a random chance per approach,
@@ -285,6 +304,14 @@ Yours are never random. Three returns in a row, a save caught on the very end of
 the paddle, or falling behind by a couple of points — the handout arrives attached
 to something you did, or to being in genuine trouble. A random gift would feel
 like the game pitying you at moments you had not earned and did not need.
+
+**A timed effect cannot guarantee you ever get to use it.** The bigger paddle
+originally ran on a timer, and at Assisted's ball speed one round trip is longer
+than that timer was: earn it on a return and it could expire before the ball came
+back, so the reward was routinely never touched. It ends after `usesToExpire`
+returns instead, with the timer left only as a backstop for a point that ends
+before you touch the ball again. Any future effect the player *earns* wants the
+same treatment — the unit is opportunities, not seconds.
 
 ### Paddle sizes
 
