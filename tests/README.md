@@ -65,6 +65,25 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
   evidence arrives without anyone having to remember to look for it. Rewrite such
   an assertion as part of the fix rather than deleting it.
 
+## Tuning, not testing
+
+`ai-sweep.js` is not part of `npm test`. It measures how often Pong's ai saves a
+shot, which is the number every claim about difficulty in `games/pong/DESIGN.md`
+rests on. The suite guards the *range* — beatable, not hopeless — and this tells
+you where inside it a change actually landed.
+
+```bash
+node tests/ai-sweep.js                       # every entry in DIFFICULTY
+N=2000 node tests/ai-sweep.js                # more samples, tighter figure
+node tests/ai-sweep.js '{"speed":3.5}'       # a one-off override
+```
+
+Change this rather than writing a second one. A figure produced by a differently
+shaped harness cannot be compared with the ones already recorded, and comparing
+them is the entire point.
+
+## Notes
+
 These drive input through Playwright, which is enough for ordinary clicks. For a
 *new* pointer bug, reproduce with real OS-level input first — see
 `CLAUDE.md` for why and how.
