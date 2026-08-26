@@ -59,11 +59,11 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
   back at whoever conceded), the win condition, paddle clamping, and the hidden
   live region that carries the score to a screen reader. It cancels
   the animation frame and steps `update()` by hand, so it does not race a live
-  loop or depend on frame timing. Its last section pins the one remaining *known*
-  bug (`P2` in `TODO.md`) as a passing assertion describing the wrong behaviour —
-  fixing it is supposed to turn that check red, which is the before/after evidence
-  the fix worked. Rewrite the assertion as part of the fix so it describes the
-  corrected behaviour; do not just delete it.
+  loop or depend on frame timing. Nothing is pinned in it at the moment — when
+  something is knowingly left broken it goes in as a passing assertion describing
+  the wrong behaviour, so that fixing it turns a check red and the before/after
+  evidence arrives without anyone having to remember to look for it. Rewrite such
+  an assertion as part of the fix rather than deleting it.
 
 These drive input through Playwright, which is enough for ordinary clicks. For a
 *new* pointer bug, reproduce with real OS-level input first — see
