@@ -81,6 +81,20 @@ const ABILITY = {
                      // on a 144Hz monitor than on a 60Hz one; 0 = a steady glow
   afterimages: 4,    // ghosts left behind by a blink; 0 = none
 
+  // The meter's celebration, all counted in ticks so it plays at the same rate on
+  // any monitor. Filling the third pip runs: that pip's own pop, then a sweep
+  // left to right, then all three flaring together - and only when that finishes
+  // does the paddle admit it is charged.
+  pop: {
+    pipTicks: 12,       // one pip's flash; 0 = no pop at all
+    ringPx: 22,         // how far the ring expands out of a pip; 0 = flash only
+    pipGrowPx: 5,       // how far the pip itself swells and springs back; 0 = flat
+    sweepTicks: 4,      // gap between pips in the completion sweep; 0 = no sweep
+    flareTicks: 16,     // the closing all-three flare; 0 = none
+    paddleTicks: 14,    // flash on the paddle where the ball landed; 0 = none
+    paddleSpreadPx: 28, // how far that flash spreads from the contact point
+  },
+
   // --- Insane's moves ------------------------------------------------------
   blink: {
     modes: ["insane"],
@@ -307,6 +321,11 @@ let aiGhosts = [];
 // Close calls banked towards the next charged shot. Drawn, so the reward is
 // something you watch approach rather than something that silently arrives.
 let clutchCharge = 0;
+// Purely visual, and deliberately separate from the move state: the charge arms
+// the instant the meter fills, and only the *telling* of it is delayed.
+let pips = [];                 // { t, max } per segment, counting down
+let meterSeq = -1;             // ticks into the completion sequence; -1 = idle
+let paddleFlash = { t: 0, y: 0 };
 // Points conceded back to back. Separate from the score gap: losing three on the
 // trot while still level is its own kind of trouble.
 let concededStreak = 0;
@@ -320,6 +339,33 @@ function resetAbilities() {
   aiGhosts = [];
   clutchCharge = 0;
   concededStreak = 0;
+  pips = ABILITY.clutch.segments > 0
+    ? Array.from({ length: ABILITY.clutch.segments }, () => ({ t: 0, max: 1 }))
+    : [];
+  meterSeq = -1;
+  paddleFlash = { t: 0, y: 0 };
+}
+
+function popPip(i, ticks) {
+  if (ticks > 0 && pips[i]) pips[i] = { t: ticks, max: ticks };
+}
+
+// The whole sequence is a timeline in ticks rather than nested timers, so it can
+// be reasoned about - and cancelled - in one place.
+function tickMeterFx() {
+  for (const pip of pips) if (pip.t > 0) pip.t -= 1;
+  if (paddleFlash.t > 0) paddleFlash.t -= 1;
+  if (meterSeq < 0) return;
+  const P = ABILITY.pop;
+  const n = pips.length;
+  const sweepAt = P.pipTicks;
+  const flareAt = sweepAt + n * P.sweepTicks;
+  for (let i = 0; i < n; i++) {
+    if (meterSeq === sweepAt + i * P.sweepTicks) popPip(i, P.pipTicks);
+  }
+  if (meterSeq === flareAt) for (let i = 0; i < n; i++) popPip(i, P.flareTicks);
+  meterSeq += 1;
+  if (meterSeq >= flareAt + P.flareTicks) meterSeq = -1;
 }
 
 function moveActive(name) {
@@ -375,6 +421,7 @@ function endMove(name) {
 // glowing the instant it lands one.
 function consumeMove(name) {
   if (!moveActive(name)) return false;
+  if (name === "clutch") meterSeq = -1;   // nothing left to celebrate
   endMove(name);
   return true;
 }
@@ -461,8 +508,17 @@ function onPlayerReturn(hitY) {
   if (rel >= edge && rel <= player.h - edge) return;
   // Banked rather than spent: the segments stay put if the move is still on
   // cooldown, so a close call is never quietly thrown away.
+  const was = clutchCharge;
   clutchCharge = Math.min(cl.segments, clutchCharge + 1);
-  if (clutchCharge >= cl.segments && armMove("clutch")) clutchCharge = 0;
+  if (clutchCharge === was) return;      // already full and waiting on a cooldown
+  popPip(clutchCharge - 1, ABILITY.pop.pipTicks);
+  // The meter is in the corner and your eye is on the ball, so the paddle says it
+  // too, at the exact spot the ball landed.
+  paddleFlash = { t: ABILITY.pop.paddleTicks, y: hitY + BALL_SIZE / 2 };
+  if (clutchCharge >= cl.segments && armMove("clutch")) {
+    clutchCharge = 0;
+    meterSeq = 0;
+  }
 }
 let aiVel = 0;
 let aiNextRead = 0;
@@ -761,6 +817,7 @@ function update() {
   if (gameOver || paused) return;
 
   tickCount += 1;
+  tickMeterFx();
   // Both run in every phase: a cooldown should keep counting between points, and
   // a resize that started mid-rally should finish rather than freeze at the serve.
   tickAbilities();
@@ -865,6 +922,9 @@ function drawPaddle(p, x, tells) {
   for (const [name, who] of tells) {
     const st = moveState[name];
     if (!st || st.phase === "idle") continue;
+    // Armed, but the meter is still celebrating: the paddle lights up as the
+    // payoff at the end of the sweep rather than halfway through it.
+    if (name === "clutch" && meterSeq >= 0) continue;
     const spec = ABILITY[name];
     tint = colors[who];
     if (spec.tell === "tint") break;   // the colour is the whole tell
@@ -902,28 +962,70 @@ function drawPaddle(p, x, tells) {
 // makes a partly-filled one explain itself the first time you see it.
 const METER = { x: 14, y: HEIGHT - 18, w: 20, h: 7, gap: 4 };
 
+// One segment. A popping pip throws a ring outward, swells past its own size and
+// burns white at the core before settling back to green.
+function drawPip(i, lit, charged) {
+  const P = ABILITY.pop;
+  const x = METER.x + i * (METER.w + METER.gap);
+  const pip = pips[i];
+  const p = pip && pip.t > 0 ? pip.t / pip.max : 0;   // 1 at the flash, 0 at rest
+
+  if (p > 0 && P.ringPx > 0) {
+    const g = (1 - p) * P.ringPx;
+    ctx.save();
+    ctx.globalAlpha = p;
+    ctx.strokeStyle = colors.hero;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x - g, METER.y - g, METER.w + 2 * g, METER.h + 2 * g);
+    ctx.restore();
+  }
+
+  ctx.save();
+  if (!lit) {
+    ctx.strokeStyle = colors.border;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, METER.y + 0.5, METER.w - 1, METER.h - 1);
+    ctx.restore();
+    return;
+  }
+  const g = p * P.pipGrowPx;
+  const box = [x - g, METER.y - g, METER.w + 2 * g, METER.h + 2 * g];
+  if (charged || p > 0) {
+    ctx.shadowColor = colors.hero;
+    ctx.shadowBlur = 12 + 20 * p;
+  }
+  ctx.fillStyle = colors.hero;
+  ctx.fillRect(...box);
+  if (p > 0) {
+    ctx.globalAlpha = p;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(...box);
+  }
+  ctx.restore();
+}
+
 function drawClutchMeter() {
   const spec = ABILITY.clutch;
   if (!spec.modes.includes(difficulty) || spec.segments <= 0) return;
   const charged = moveActive("clutch");
   const filled = charged ? spec.segments : clutchCharge;
+  for (let i = 0; i < spec.segments; i++) drawPip(i, i < filled, charged);
+}
+
+// The meter is in the corner and your eye is on the ball, so the paddle says it
+// too - a white burst at the exact point of contact, spreading as it fades.
+function drawPaddleFlash() {
+  const P = ABILITY.pop;
+  if (paddleFlash.t <= 0 || P.paddleTicks <= 0) return;
+  const p = paddleFlash.t / P.paddleTicks;
+  const spread = (1 - p) * P.paddleSpreadPx;
   ctx.save();
-  for (let i = 0; i < spec.segments; i++) {
-    const x = METER.x + i * (METER.w + METER.gap);
-    if (i < filled) {
-      if (charged) {
-        ctx.shadowColor = colors.hero;
-        ctx.shadowBlur = 12;
-      }
-      ctx.fillStyle = colors.hero;
-      ctx.fillRect(x, METER.y, METER.w, METER.h);
-    } else {
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = colors.border;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x + 0.5, METER.y + 0.5, METER.w - 1, METER.h - 1);
-    }
-  }
+  ctx.globalAlpha = p;
+  ctx.shadowColor = colors.hero;
+  ctx.shadowBlur = 24 * p;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, paddleFlash.y - 3 - spread,
+    PADDLE_WIDTH + spread * 0.5, 6 + spread * 2);
   ctx.restore();
 }
 
@@ -952,6 +1054,7 @@ function draw() {
 
   drawPaddle(player, 0, PLAYER_TELLS);
   drawPaddle(ai, WIDTH - PADDLE_WIDTH, AI_TELLS);
+  drawPaddleFlash();
   drawClutchMeter();
 
   ctx.fillStyle = colors.accent;

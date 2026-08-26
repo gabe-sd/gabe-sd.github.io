@@ -1687,6 +1687,78 @@ const { check, report } = makeChecks();
       `base band ${band.edge.toFixed(1)}px, paddle ${band.grown.toFixed(0)}px ` +
       `would give ${band.grownEdge.toFixed(1)}px`);
 
+    // Filling a pip has to be visible where the player is looking, and completing
+    // the meter runs a sequence the paddle waits for.
+    await setup("assisted");
+    const fx = await page.evaluate(() => {
+      phase = "serve";                       // park the ball; only time passes
+      player.y = 150;
+      const pipPx = (i) => {
+        const x = METER.x + i * (METER.w + METER.gap) + METER.w / 2;
+        const d = ctx.getImageData(Math.round(x),
+          Math.round(METER.y + METER.h / 2), 1, 1).data;
+        return [d[0], d[1], d[2]];
+      };
+      const paddleGlows = () => {
+        const d = ctx.getImageData(PADDLE_WIDTH + 5,
+          Math.round(player.y + player.h / 2), 1, 1).data;
+        return `${d[0]},${d[1]},${d[2]}` !== "255,255,255";
+      };
+      const edgeHit = () => onPlayerReturn(player.y + 2 - BALL_SIZE / 2);
+
+      // One close call.
+      resetAbilities();
+      edgeHit();
+      draw();
+      const atFill = pipPx(0);
+      const burst = paddleFlash.t;
+      for (let i = 0; i < ABILITY.pop.pipTicks + 2; i++) update();
+      draw();
+      const settled = pipPx(0);
+
+      // Complete it, and watch when the paddle owns up.
+      resetAbilities();
+      clutchCharge = ABILITY.clutch.segments - 1;
+      edgeHit();
+      const armedAtOnce = moveState.clutch.phase;
+      const during = [];
+      let guard = 0;
+      while (meterSeq >= 0 && guard++ < 400) {
+        draw();
+        during.push(paddleGlows());
+        update();
+      }
+      draw();
+      const afterSeq = paddleGlows();
+
+      // Spending it mid-sequence must call the celebration off.
+      resetAbilities();
+      clutchCharge = ABILITY.clutch.segments - 1;
+      edgeHit();
+      const seqRunning = meterSeq >= 0;
+      phase = "play";
+      ball = { x: PLAYER_PLANE + 1, y: player.y + player.h / 2,
+               vx: -BALL_SPEED, vy: 0 };
+      update();
+      return { atFill, settled, burst, armedAtOnce, during, afterSeq,
+               seqRunning, seqAfterSpend: meterSeq,
+               spentPhase: moveState.clutch.phase, guard };
+    });
+    const white = (c) => c[0] > 230 && c[1] > 230 && c[2] > 230;
+    check("a filling pip flashes white rather than just turning green",
+      white(fx.atFill) && !white(fx.settled),
+      `${fx.atFill.join(",")} -> ${fx.settled.join(",")}`);
+    check("and the paddle bursts at the point of contact", fx.burst > 0, fx.burst);
+    check("completing the meter arms the charge immediately",
+      fx.armedAtOnce === "active", fx.armedAtOnce);
+    check("but the paddle stays quiet for the whole celebration",
+      fx.during.length > 10 && fx.during.every((g) => g === false),
+      `${fx.during.length} ticks, ${fx.during.filter(Boolean).length} glowing`);
+    check("and lights up the moment it ends", fx.afterSeq === true, fx.afterSeq);
+    check("spending the charge mid-celebration calls it off",
+      fx.seqRunning && fx.seqAfterSpend === -1 && fx.spentPhase === "idle",
+      `${fx.seqAfterSpend}, ${fx.spentPhase}`);
+
     // Read the canvas rather than the state: a meter nobody can see is the exact
     // problem this replaced.
     const pips = await page.evaluate(() => {

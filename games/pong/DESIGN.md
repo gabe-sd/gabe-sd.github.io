@@ -308,6 +308,18 @@ invisible.
 A test separates the two by sampling a pixel just outside the paddle: a glow
 bleeds past the rect and a tint does not.
 
+### Lean into it
+
+A standing instruction for anything in this section: **these are supposed to be
+chaotic, exciting and loud.** The moves are the reason the two joke modes exist,
+and a restrained powerup is a wasted one. When a choice is between tasteful and
+obvious, take obvious — flash white, throw a ring, shake the paddle, stack the
+effects up. The rest of the game is two rectangles and a square, so there is
+plenty of quiet to spend.
+
+This is a design instruction, not licence to skip the rules above it: a move still
+telegraphs, and still says whose it is. Loud and unreadable is worse than quiet.
+
 **Every move telegraphs before it does anything.** A move is `idle`, then
 `telegraph` — a visible wind-up with no effect yet — then `active`. That order is
 the whole reason the moves feel fair: you see the paddle shaking and glowing, so
@@ -348,6 +360,25 @@ never silently thrown away.
 
 A test reads the canvas pixels rather than the state, because a meter nobody can
 see is precisely the failure it replaced.
+
+**Filling a pip is an event, and it happens where you are not looking.** The meter
+sits in a corner while the close call happens on your paddle in the middle of the
+board, with your eye on the ball — so the paddle bursts white at the exact point of
+contact as well. Two channels for one event, because the informative one is the
+one nobody is watching.
+
+**Completing the meter runs a sequence, and the paddle waits for it.** The third
+pip pops on its own, then the pips sweep left to right, then all three flare
+together, and only when that finishes does the paddle start its charged pulse. The
+charge itself arms at the first instant — nothing about gameplay is delayed, only
+the telling of it — so the sweep reads as a wind-up with the paddle lighting up as
+the payoff. Hitting the ball during the sequence cancels it: there is nothing left
+to celebrate once the charge is spent, and a celebration still playing for
+something you no longer have is a lie.
+
+The whole thing is a timeline counted in ticks, in one function, rather than
+nested timers. That is what makes it possible to cancel in one line and to assert
+against tick by tick.
 
 **A held charge pulses rather than glowing steadily**, and shakes on its own knob
 rather than a fraction of the wind-up's. A steady light reads as part of the
