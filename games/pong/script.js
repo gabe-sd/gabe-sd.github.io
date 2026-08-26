@@ -11,13 +11,37 @@ const HEIGHT = canvas.height;
 const PADDLE_WIDTH = 10;
 const PADDLE_HEIGHT = 80;
 const PADDLE_SPEED = 6;
-const AI_SPEED = 4.5;
-// The ai predicts the intercept exactly and is then deliberately degraded, which
-// is what makes it beatable in a way that reads as an opponent rather than as a
-// speed limit. These three are the difficulty levers.
-const AI_REACTION_TICKS = 12; // stands still this long after the ball turns
-const AI_ERROR_PX = 40;       // how far its read of the intercept can be out
-const AI_AIM_SPREAD = 0.6;    // how far off its own centre it tries to hit
+// Everything the ai does, in one place. The point of the numbers is that its
+// mistakes emerge from reading the ball badly rather than from deciding up front
+// how much to miss by — it must not solve the whole trajectory the moment the
+// ball is struck. Every knob names the value that switches its feature off, so
+// any of this can be isolated or removed without unpicking the rest.
+const AI = {
+  speed: 4.5,             // normal top speed, px per tick
+  reactionTicks: 12,      // stands still this long after the ball turns; 0 = instant
+
+  // Reading the ball.
+  lookaheadBounces: 1,    // wall bounces it can see coming; Infinity = perfect read
+  resampleTicks: 9,       // ticks between glances at the ball; 1 = watches constantly
+  resampleJitter: 4,      // +/- ticks of variation in that; 0 = metronomic
+  readErrorFarPx: 70,     // how far out its read is at the far end of the board
+  readErrorNearPx: 30,    // ...and by the time the ball arrives. Never 0: nobody
+                          // is certain, and an ai that ends up certain never misses
+  readConvergence: 0.55,  // <1 keeps it wrong for most of the flight and realises
+                          // late, which is what stops it committing early; 1 = the
+                          // read tightens evenly all the way in
+  readJitterPx: 5,        // fresh wobble on each glance; 0 = none
+  aimSpread: 0.6,         // how far off its own centre it tries to hit; 0 = dead centre
+
+  // Moving the paddle. accelTicks 0 with brakeTicks 1 is the old behaviour
+  // exactly: full speed instantly, dead stop on arrival.
+  accelTicks: 7,          // ticks to wind up to full speed; 0 = no easing
+  brakeTicks: 2,          // how early it starts slowing. Below about 4 it brakes
+                          // later than it can stop and overshoots by a few px,
+                          // then corrects; 4 or more glides straight in
+  panicSpeed: 7,          // speed when badly out of position; = speed disables it
+  panicDistancePx: 90,    // how far behind it must be to lunge; Infinity = never
+};
 const BALL_SIZE = 10;
 const WIN_SCORE = 5;
 
@@ -76,9 +100,10 @@ let phase = "serve";
 let serveTicks = 0;
 let serveTo = Math.random() < 0.5 ? 1 : -1; // -1 travels left, towards the player
 let paused = false;
-// Re-rolled each time the ball turns towards the ai, so its mistake for a given
-// shot is committed to rather than jittering every tick.
-let aiError = 0;
+let aiTarget = (HEIGHT - PADDLE_HEIGHT) / 2;
+let aiVel = 0;
+let aiNextRead = 0;
+let aiErrorSign = 0; // which way this approach's misread leans, rolled once
 let aiAim = 0;
 let aiReactionLeft = 0;
 let aiApproaching = false;
@@ -142,47 +167,87 @@ function updateStatus() {
 // the end of the tick is what stops a paddle catching a ball that is already
 // past it: `ball.x <= PADDLE_WIDTH` stays true for several ticks as a missed
 // ball travels off the board, so a late-arriving paddle used to rescue it.
-// Where the ball will meet the ai's plane, walls included. Folding the straight
-// path into the board with a triangle wave gives the same answer as simulating
-// the bounces, without a loop.
-function predictInterceptY() {
+// Where the ball will meet the ai's plane. Walking the bounces rather than
+// folding the path means the walk can be cut short: an ai that can only see one
+// bounce ahead genuinely misreads a ball that is going to bounce three times,
+// which is the case that most exposed the old one as a machine. The returned y
+// can fall outside the board when the lookahead runs out — that is the misread,
+// and the paddle clamp turns it into "parked against a wall, lost it".
+function predictInterceptY(maxBounces = Infinity) {
   if (ball.vx <= 0) return null;
   const dist = AI_PLANE - ball.x;
   if (dist <= 0) return null;
-  const y = ball.y + ball.vy * (dist / ball.vx);
   const span = HEIGHT - BALL_SIZE;
-  const folded = ((y % (span * 2)) + span * 2) % (span * 2);
-  return folded > span ? span * 2 - folded : folded;
+  let y = ball.y;
+  let vy = ball.vy;
+  let left = dist / ball.vx; // ticks until it arrives
+  let bounces = 0;
+  while (left > 0) {
+    const toWall = vy > 0 ? (span - y) / vy : vy < 0 ? -y / vy : Infinity;
+    if (!(toWall < left) || bounces >= maxBounces) {
+      y += vy * left;
+      break;
+    }
+    y += vy * toWall;
+    left -= toWall;
+    vy = -vy;
+    bounces += 1;
+  }
+  return y;
 }
 
-// Everything the ai does. It only reacts to a ball coming at it, and drifts back
-// to the middle between shots the way a player waiting for a serve does.
+// Take a fresh look at the ball and decide where to stand. Called on a timer
+// rather than every tick, so the paddle is always acting on a slightly old read.
+function aiGlance() {
+  const hit = predictInterceptY(AI.lookaheadBounces);
+  if (hit === null) return;
+  // Its read tightens as the ball gets closer: a long way out it is guessing,
+  // and by the time the ball arrives it mostly knows. This is what stops it
+  // walking straight to the answer the instant the ball is struck.
+  const far = (AI_PLANE - ball.x) / (AI_PLANE - PLAYER_PLANE);
+  const t = Math.max(0, Math.min(1, far));
+  const spread = AI.readErrorNearPx
+    + (AI.readErrorFarPx - AI.readErrorNearPx) * Math.pow(t, AI.readConvergence);
+  const wobble = (Math.random() * 2 - 1) * AI.readJitterPx;
+  aiTarget = hit + aiErrorSign * spread + wobble + BALL_SIZE / 2
+    - aiAim * (PADDLE_HEIGHT / 2) - PADDLE_HEIGHT / 2;
+}
+
+// It only reacts to a ball coming at it, and drifts back to the middle between
+// shots the way a player waiting for a serve does.
 function updateAi() {
   const approaching = phase === "play" && ball.vx > 0;
   if (approaching && !aiApproaching) {
-    aiError = (Math.random() * 2 - 1) * AI_ERROR_PX;
-    aiAim = (Math.random() * 2 - 1) * AI_AIM_SPREAD;
-    aiReactionLeft = AI_REACTION_TICKS;
+    aiErrorSign = Math.random() * 2 - 1;
+    aiAim = (Math.random() * 2 - 1) * AI.aimSpread;
+    aiReactionLeft = AI.reactionTicks;
+    aiNextRead = 0;
   }
   aiApproaching = approaching;
 
-  let target;
   if (!approaching) {
-    target = (HEIGHT - PADDLE_HEIGHT) / 2;
+    aiTarget = (HEIGHT - PADDLE_HEIGHT) / 2;
   } else if (aiReactionLeft > 0) {
     aiReactionLeft -= 1;
+    aiVel = 0;
     return; // has not reacted yet
+  } else if (aiNextRead > 0) {
+    aiNextRead -= 1;
   } else {
-    const hit = predictInterceptY();
-    if (hit === null) return;
-    // Line the paddle up so the ball lands aiAim of the way from its centre,
-    // which is what varies the angle it returns at.
-    target = hit + aiError + BALL_SIZE / 2
-      - aiAim * (PADDLE_HEIGHT / 2) - PADDLE_HEIGHT / 2;
+    aiGlance();
+    aiNextRead = Math.max(0, Math.round(
+      AI.resampleTicks + (Math.random() * 2 - 1) * AI.resampleJitter));
   }
 
-  const delta = target - ai.y;
-  ai.y += Math.max(-AI_SPEED, Math.min(AI_SPEED, delta));
+  // Aim for a speed proportional to how far it has to go, then change speed by a
+  // limited amount per tick. The overshoot-and-correct is not bolted on: it falls
+  // out of not being able to stop instantly, the same way a hand does not.
+  const delta = aiTarget - ai.y;
+  const top = Math.abs(delta) > AI.panicDistancePx ? AI.panicSpeed : AI.speed;
+  const accel = AI.accelTicks > 0 ? top / AI.accelTicks : Infinity;
+  const wanted = Math.max(-top, Math.min(top, delta / Math.max(0.5, AI.brakeTicks)));
+  aiVel += Math.max(-accel, Math.min(accel, wanted - aiVel));
+  ai.y += aiVel;
   ai.y = Math.max(0, Math.min(HEIGHT - PADDLE_HEIGHT, ai.y));
 }
 
@@ -437,6 +502,9 @@ function restart() {
   paused = false;
   aiApproaching = false;
   aiReactionLeft = 0;
+  aiVel = 0;
+  aiNextRead = 0;
+  aiTarget = (HEIGHT - PADDLE_HEIGHT) / 2;
   updateStatus();
   start();
 }

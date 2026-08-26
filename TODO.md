@@ -53,44 +53,26 @@ find; priority is stated here rather than encoded in the ordering.
 
 Order of work:
 
-1. **P8** on its own rather than bundled with P9, so the AI can be judged without
-   difficulty presets confusing the signal.
-2. **P9 and P10** together — same panel, same stored settings, and P10 is nearly
+1. **P9 and P10** together — same panel, same stored settings, and P10 is nearly
    free once the panel exists.
-3. `games/pong/DESIGN.md`. The AI model is the content it has been waiting for,
+2. `games/pong/DESIGN.md`. The AI model is the content it has been waiting for,
    and `CLAUDE.md` is already past the paragraph it allows a game there.
-4. **P14** and **P15**, whenever. P14 needs someone who can see the canvas; P15
+3. **P14** and **P15**, whenever. P14 needs someone who can see the canvas; P15
    wants splitting into separate entries before any of it starts.
 
-Steps 1 and 2 change how the game feels, so each gets played before it merges, one
-at a time. Two feel changes reviewed together can be called worse without anyone
-being able to say which one did it.
+Step 1 changes how the game feels, so it gets played before it merges.
 
 `tests/pong.test.js` covers the physics, the round lifecycle, the controls and the
 panels — add to it rather than around it. Nothing is currently pinned there, but
 if you knowingly leave something broken, pin it as described in `CLAUDE.md`.
 
-### P8 — The AI is an omniscient tracker
-
-The AI chases the ball's *current* y at all times, even while the ball travels away
-from it. It is beatable only because `AI_SPEED` is slower than the ball, which
-means it plays perfectly in the early game and hopelessly once the ball speeds up,
-and never reads as an opponent making decisions.
-
-Replace with a predictive AI, which is also what makes real difficulty settings
-possible:
-
-- react only once the ball is heading toward it,
-- predict the intercept y by simulating the ball's path including wall bounces,
-- add a deliberate error term to that prediction,
-- add a reaction delay before it starts moving,
-- aim at a chosen point on its paddle rather than always the centre, so its
-  returns vary.
-
 ### P9 — Difficulty settings
 
-Depends on the predictive AI above. The honest knobs are AI *error* and *reaction
-delay* — speed alone only moves the AI between perfect and useless. An Easy /
+The levers already exist as the `AI` object in `games/pong/script.js`; a preset is
+a set of overrides on it. The ones that actually change difficulty are
+`readErrorNearPx` (how wrong it still is when the ball arrives — the single
+strongest lever, since an ai that ends up certain never misses at all),
+`reactionTicks`, `lookaheadBounces` and `speed`. An Easy /
 Normal / Hard preset would vary error magnitude, reaction delay, AI max speed, ball
 base speed, and possibly `PADDLE_HEIGHT`.
 
