@@ -193,6 +193,10 @@ const { check, report } = makeChecks();
     const rally = await page.evaluate((n) => {
       let maxSpeed = 0, maxSteep = 0, minAbsVx = Infinity, hits = 0;
       const clamp = (v) => Math.max(0, Math.min(HEIGHT - PADDLE_HEIGHT, v));
+      // This case places both paddles itself; leave the ai out of it, or it drags
+      // ai.y a few pixels a tick and the ball starts clipping the paddle ends.
+      const realUpdateAi = typeof updateAi === "function" ? updateAi : null;
+      if (realUpdateAi) updateAi = () => {};
       for (let i = 0; i < n; i++) {
         const was = Math.sign(ball.vx);
         update();
@@ -204,6 +208,7 @@ const { check, report } = makeChecks();
         maxSteep = Math.max(maxSteep, Math.abs(ball.vy) / Math.max(1e-9, Math.abs(ball.vx)));
         minAbsVx = Math.min(minAbsVx, Math.abs(ball.vx));
       }
+      if (realUpdateAi) updateAi = realUpdateAi;
       return { maxSpeed, maxSteep, minAbsVx, hits, points: player.score + ai.score };
     }, 5000);
 
@@ -621,7 +626,127 @@ const { check, report } = makeChecks();
     check("restart clears the pause", !(await page.evaluate(() => paused)));
   }
 
-  console.log("16. paddle collision is a crossing, not a position");
+  console.log("16. how the ai behaves");
+  {
+    // These two describe the old chasing ai's behaviour by contradiction, so they
+    // are the before/after evidence for this change.
+    await freeze();
+    await set({ ai: { y: 0 }, ball: { x: 300, y: 30, vx: -5, vy: 0 } });
+    await step(45); // enough to recentre, short of conceding the point
+    const idle = (await read()).ai.y;
+    check("it returns to the centre while the ball is away",
+      Math.abs(idle - MAX_Y / 2) < 1, idle);
+    check("rather than following a ball not being sent to it",
+      Math.abs(idle - 30) > 100, idle);
+
+    await freeze();
+    await set({ ai: { y: 0 }, ball: { x: 100, y: 380, vx: 5, vy: 0 } });
+    const react = await page.evaluate((n) => {
+      const before = ai.y;
+      for (let i = 0; i < n; i++) update();
+      const during = ai.y;
+      update();
+      return { before, during, after: ai.y };
+    }, 12);
+    check("it holds still through a reaction delay",
+      react.during === react.before, `${react.before} -> ${react.during}`);
+    check("then starts moving", react.after !== react.during,
+      `${react.during} -> ${react.after}`);
+  }
+
+  console.log("17. the ai's intercept prediction");
+  {
+    const hasAi = await page.evaluate(() => typeof predictInterceptY === "function");
+    check("there is an intercept prediction to test", hasAi);
+
+    // Check it against the game's own physics, not against arithmetic done here:
+    // park the paddle off the board, run the ball to the ai's plane, compare. vx
+    // divides the distance exactly so the ball lands on the plane, not past it.
+    for (const vy of hasAi ? [0, 5, 11] : []) {
+      const r = await page.evaluate((v) => {
+        cancelAnimationFrame(rafId);
+        restart();
+        phase = "play";
+        ball = { x: 100, y: 100, vx: 5, vy: v };
+        const predicted = predictInterceptY();
+        const realUpdateAi = updateAi;
+        updateAi = () => {};
+        ai.y = 10000; // parked where it cannot interfere
+        let guard = 0;
+        while (ball.x < AI_PLANE && guard++ < 10000) update();
+        const out = { predicted, actual: ball.y, ticks: guard, x: ball.x };
+        updateAi = realUpdateAi;
+        return out;
+      }, vy);
+      check(`prediction matches the simulated path (vy=${vy})`,
+        Math.abs(r.predicted - r.actual) < 2,
+        `predicted ${r.predicted.toFixed(1)}, landed ${r.actual.toFixed(1)}`);
+    }
+
+    check("no prediction for a ball travelling away", hasAi && await page.evaluate(
+      () => {
+        ball = { x: 300, y: 200, vx: -5, vy: 0 };
+        return typeof predictInterceptY === "function" ? predictInterceptY() : 0;
+      }) === null);
+
+    // The rest reads the ai's own state, so it can only run against an ai that
+    // has some. Guarded so a run against an older script reports rather than
+    // throwing halfway down the file.
+    const aiRun = (fn, arg) => hasAi ? page.evaluate(fn, arg) : null;
+
+    // With its read of the intercept made perfect, it saves.
+    const saved = await aiRun(() => {
+      cancelAnimationFrame(rafId);
+      restart();
+      phase = "play";
+      ai.y = 0;
+      ball = { x: 100, y: 380, vx: 5, vy: 0 };
+      update();                       // rolls the error for this approach
+      aiError = 0; aiAim = 0; aiReactionLeft = 0;
+      let guard = 0;
+      while (ball.vx > 0 && guard++ < 500) update();
+      return { vx: ball.vx, conceded: player.score };
+    });
+    check("a perfect read intercepts the ball",
+      !!saved && saved.vx < 0 && saved.conceded === 0, saved && `vx=${saved.vx.toFixed(2)}`);
+
+    // And with a bad enough read, it misses - the error term is real, not decorative.
+    const missed = await aiRun(() => {
+      cancelAnimationFrame(rafId);
+      restart();
+      phase = "play";
+      ai.y = 0;
+      ball = { x: 100, y: 380, vx: 5, vy: 0 };
+      update();
+      aiError = -300; aiAim = 0; aiReactionLeft = 0;
+      let guard = 0;
+      while (player.score === 0 && guard++ < 500) update();
+      return { scored: player.score };
+    });
+    check("a bad read misses it", !!missed && missed.scored === 1,
+      missed && missed.scored);
+
+    // Where on its paddle it aims is what varies the angle it returns at.
+    const angles = {};
+    for (const aim of [0.9, -0.9]) {
+      angles[aim] = await aiRun((a) => {
+        cancelAnimationFrame(rafId);
+        restart();
+        phase = "play";
+        ai.y = 0;
+        ball = { x: 100, y: 200, vx: 5, vy: 0 };
+        update();
+        aiError = 0; aiAim = a; aiReactionLeft = 0;
+        let guard = 0;
+        while (ball.vx > 0 && guard++ < 500) update();
+        return ball.vy;
+      }, aim);
+    }
+    check("aiming low returns the ball downward", angles[0.9] > 0, angles[0.9]);
+    check("aiming high returns it upward", angles[-0.9] < 0, angles[-0.9]);
+  }
+
+  console.log("18. paddle collision is a crossing, not a position");
   {
     // Already past the plane when the paddle arrives. The old half-plane test
     // rescued this, because ball.x <= PADDLE_WIDTH stays true on the way out.

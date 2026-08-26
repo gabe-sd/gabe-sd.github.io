@@ -12,6 +12,12 @@ const PADDLE_WIDTH = 10;
 const PADDLE_HEIGHT = 80;
 const PADDLE_SPEED = 6;
 const AI_SPEED = 4.5;
+// The ai predicts the intercept exactly and is then deliberately degraded, which
+// is what makes it beatable in a way that reads as an opponent rather than as a
+// speed limit. These three are the difficulty levers.
+const AI_REACTION_TICKS = 12; // stands still this long after the ball turns
+const AI_ERROR_PX = 40;       // how far its read of the intercept can be out
+const AI_AIM_SPREAD = 0.6;    // how far off its own centre it tries to hit
 const BALL_SIZE = 10;
 const WIN_SCORE = 5;
 
@@ -70,6 +76,12 @@ let phase = "serve";
 let serveTicks = 0;
 let serveTo = Math.random() < 0.5 ? 1 : -1; // -1 travels left, towards the player
 let paused = false;
+// Re-rolled each time the ball turns towards the ai, so its mistake for a given
+// shot is committed to rather than jittering every tick.
+let aiError = 0;
+let aiAim = 0;
+let aiReactionLeft = 0;
+let aiApproaching = false;
 
 function centredBall() {
   return { x: WIDTH / 2, y: HEIGHT / 2, vx: 0, vy: 0 };
@@ -130,6 +142,50 @@ function updateStatus() {
 // the end of the tick is what stops a paddle catching a ball that is already
 // past it: `ball.x <= PADDLE_WIDTH` stays true for several ticks as a missed
 // ball travels off the board, so a late-arriving paddle used to rescue it.
+// Where the ball will meet the ai's plane, walls included. Folding the straight
+// path into the board with a triangle wave gives the same answer as simulating
+// the bounces, without a loop.
+function predictInterceptY() {
+  if (ball.vx <= 0) return null;
+  const dist = AI_PLANE - ball.x;
+  if (dist <= 0) return null;
+  const y = ball.y + ball.vy * (dist / ball.vx);
+  const span = HEIGHT - BALL_SIZE;
+  const folded = ((y % (span * 2)) + span * 2) % (span * 2);
+  return folded > span ? span * 2 - folded : folded;
+}
+
+// Everything the ai does. It only reacts to a ball coming at it, and drifts back
+// to the middle between shots the way a player waiting for a serve does.
+function updateAi() {
+  const approaching = phase === "play" && ball.vx > 0;
+  if (approaching && !aiApproaching) {
+    aiError = (Math.random() * 2 - 1) * AI_ERROR_PX;
+    aiAim = (Math.random() * 2 - 1) * AI_AIM_SPREAD;
+    aiReactionLeft = AI_REACTION_TICKS;
+  }
+  aiApproaching = approaching;
+
+  let target;
+  if (!approaching) {
+    target = (HEIGHT - PADDLE_HEIGHT) / 2;
+  } else if (aiReactionLeft > 0) {
+    aiReactionLeft -= 1;
+    return; // has not reacted yet
+  } else {
+    const hit = predictInterceptY();
+    if (hit === null) return;
+    // Line the paddle up so the ball lands aiAim of the way from its centre,
+    // which is what varies the angle it returns at.
+    target = hit + aiError + BALL_SIZE / 2
+      - aiAim * (PADDLE_HEIGHT / 2) - PADDLE_HEIGHT / 2;
+  }
+
+  const delta = target - ai.y;
+  ai.y += Math.max(-AI_SPEED, Math.min(AI_SPEED, delta));
+  ai.y = Math.max(0, Math.min(HEIGHT - PADDLE_HEIGHT, ai.y));
+}
+
 function crossingY(prevX, prevY, planeX) {
   const crossed = ball.vx < 0
     ? prevX > planeX && ball.x <= planeX
@@ -157,10 +213,7 @@ function update() {
   }
   player.y = Math.max(0, Math.min(HEIGHT - PADDLE_HEIGHT, player.y));
 
-  const aiCenter = ai.y + PADDLE_HEIGHT / 2;
-  if (aiCenter < ball.y - 10) ai.y += AI_SPEED;
-  else if (aiCenter > ball.y + 10) ai.y -= AI_SPEED;
-  ai.y = Math.max(0, Math.min(HEIGHT - PADDLE_HEIGHT, ai.y));
+  updateAi();
 
   // Paddles keep moving between points so both sides can get into position, but
   // the ball waits.
@@ -382,6 +435,8 @@ function restart() {
   phase = "serve";
   serveTo = Math.random() < 0.5 ? 1 : -1;
   paused = false;
+  aiApproaching = false;
+  aiReactionLeft = 0;
   updateStatus();
   start();
 }
