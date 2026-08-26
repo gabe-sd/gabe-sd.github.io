@@ -30,7 +30,10 @@ const AI = {
   readConvergence: 0.55,  // <1 keeps it wrong for most of the flight and realises
                           // late, which is what stops it committing early; 1 = the
                           // read tightens evenly all the way in
-  readJitterPx: 5,        // fresh wobble on each glance; 0 = none
+  readJitterPx: 5,        // fresh wobble on each glance at full ball speed; 0 = none
+  jitterAtSlowBall: 0.15, // fraction of that wobble at serve speed. A slow ball is
+                          // easy to follow and the paddle should look settled on
+                          // it; 1 = wobble the same however fast the ball is
   aimSpread: 0.6,         // how far off its own centre it tries to hit; 0 = dead centre
 
   // Moving the paddle. accelTicks 0 with brakeTicks 1 is the old behaviour
@@ -198,6 +201,15 @@ function predictInterceptY(maxBounces = Infinity) {
 
 // Take a fresh look at the ball and decide where to stand. Called on a timer
 // rather than every tick, so the paddle is always acting on a slightly old read.
+// 0 at serve speed, 1 at the speed cap. The ai reads a slow ball comfortably and
+// a fast one badly, so what it is watching scales its wobble rather than every
+// shot being equally hard to follow.
+function ballSpeedFraction() {
+  const speed = Math.hypot(ball.vx, ball.vy);
+  const range = Math.max(1e-9, BALL_SPEED_MAX - BALL_SPEED);
+  return Math.max(0, Math.min(1, (speed - BALL_SPEED) / range));
+}
+
 function aiGlance() {
   const hit = predictInterceptY(AI.lookaheadBounces);
   if (hit === null) return;
@@ -208,7 +220,9 @@ function aiGlance() {
   const t = Math.max(0, Math.min(1, far));
   const spread = AI.readErrorNearPx
     + (AI.readErrorFarPx - AI.readErrorNearPx) * Math.pow(t, AI.readConvergence);
-  const wobble = (Math.random() * 2 - 1) * AI.readJitterPx;
+  const jitter = AI.readJitterPx
+    * (AI.jitterAtSlowBall + (1 - AI.jitterAtSlowBall) * ballSpeedFraction());
+  const wobble = (Math.random() * 2 - 1) * jitter;
   aiTarget = hit + aiErrorSign * spread + wobble + BALL_SIZE / 2
     - aiAim * (PADDLE_HEIGHT / 2) - PADDLE_HEIGHT / 2;
 }

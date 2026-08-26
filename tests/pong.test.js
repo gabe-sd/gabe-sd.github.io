@@ -840,6 +840,37 @@ const { check, report } = makeChecks();
     check("but never becomes certain",
       !!conv && conv.near > 1, conv && conv.near.toFixed(1));
 
+    // A slow ball is easy to follow; the paddle should look settled on it rather
+    // than fidgeting the way it does under a fast one.
+    const twitch = await aiRun(() => {
+      const saved = { ...AI };
+      Object.assign(AI, {
+        readErrorFarPx: 0, readErrorNearPx: 0, lookaheadBounces: Infinity,
+        aimSpread: 0,
+      });
+      cancelAnimationFrame(rafId);
+      restart();
+      phase = "play";
+      const spreadAt = (speed) => {
+        const seen = [];
+        for (let i = 0; i < 300; i++) {
+          ball = { x: 300, y: 200, vx: speed, vy: 0 };
+          aiErrorSign = 0; // isolate the per-glance wobble
+          aiGlance();
+          seen.push(aiTarget);
+        }
+        return Math.max(...seen) - Math.min(...seen);
+      };
+      const out = { slow: spreadAt(BALL_SPEED), fast: spreadAt(BALL_SPEED_MAX) };
+      Object.assign(AI, saved);
+      return out;
+    });
+    check("it wobbles far less following a slow ball",
+      !!twitch && twitch.slow < twitch.fast * 0.5,
+      twitch && `${twitch.slow.toFixed(1)}px slow vs ${twitch.fast.toFixed(1)}px fast`);
+    check("but still wobbles under a fast one", !!twitch && twitch.fast > 2,
+      twitch && twitch.fast.toFixed(1));
+
     // Where on its paddle it aims is what varies the angle it returns at.
     const angles = {};
     for (const aim of hasAi ? [0.9, -0.9] : []) {

@@ -55,12 +55,13 @@ Order of work:
 
 1. **P9 and P10** together — same panel, same stored settings, and P10 is nearly
    free once the panel exists.
-2. `games/pong/DESIGN.md`. The AI model is the content it has been waiting for,
-   and `CLAUDE.md` is already past the paragraph it allows a game there.
-3. **P14** and **P15**, whenever. P14 needs someone who can see the canvas; P15
+2. **P14** and **P15**, whenever. P14 needs someone who can see the canvas; P15
    wants splitting into separate entries before any of it starts.
 
 Step 1 changes how the game feels, so it gets played before it merges.
+
+`games/pong/DESIGN.md` has the model and what was tried and rejected; keep it in
+step with the code, in the same commit as the change.
 
 `tests/pong.test.js` covers the physics, the round lifecycle, the controls and the
 panels — add to it rather than around it. Nothing is currently pinned there, but
