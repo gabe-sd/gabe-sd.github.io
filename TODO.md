@@ -53,14 +53,13 @@ find; priority is stated here rather than encoded in the ordering.
 
 Order of work:
 
-1. **P9** — the difficulty menu.
-2. **P19**, once that menu exists; it is two more buttons in the same row.
-3. **P14** and **P15**, whenever. P14 needs someone who can see the canvas; P15
+1. **P19** — Assisted and Insane, two more buttons in the menu's difficulty row.
+2. **P14** and **P15**, whenever. P14 needs someone who can see the canvas; P15
    wants splitting into separate entries before any of it starts.
 
 **P10 is deferred** and deliberately not in that list. It was going to ride along
-with P9 on the grounds that a settings panel would have room for it, and the menu
-that was actually specified — three difficulty buttons and Play — does not. It
+with the difficulty work on the grounds that a settings panel would have room for
+it; the menu that was built — three difficulty buttons and Play — does not. It
 needs somewhere to live before it needs building, and it may not be wanted at all.
 
 Step 1 changes how the game feels, so it gets played before it merges. Not
@@ -72,26 +71,6 @@ step with the code, in the same commit as the change.
 `tests/pong.test.js` covers the physics, the round lifecycle, the controls and the
 panels — add to it rather than around it. Nothing is currently pinned there, but
 if you knowingly leave something broken, pin it as described in `CLAUDE.md`.
-
-### P9 — Difficulty settings
-
-The levers already exist as the `AI` object in `games/pong/script.js`; a preset is
-a set of overrides on it. The ones that actually change difficulty are
-`readErrorNearPx` (how wrong it still is when the ball arrives — the single
-strongest lever, since an ai that ends up certain never misses at all),
-`reactionTicks`, `lookaheadBounces` and `speed`. An Easy /
-Normal / Hard preset would vary error magnitude, reaction delay, AI max speed, ball
-base speed, and possibly `PADDLE_HEIGHT`.
-
-- Minesweeper's gear button (`#settings-toggle` opening `#settings`) is the
-  established pattern for a panel like this; follow it rather than inventing a
-  second one.
-- Any panel with a `display` rule needs it scoped to `:not([hidden])`, or the
-  display value beats `hidden` and it renders open on load.
-- Persist the choice in one namespaced `localStorage` key alongside the Minesweeper
-  keys, and wrap every access in try/catch — `localStorage` throws rather than
-  returning null when unavailable, and an unguarded read at load takes the page
-  down. Treat "cannot read" as the default difficulty.
 
 ### P10 — Configurable win score (deferred)
 
@@ -143,8 +122,11 @@ distinguishable.
   well below Easy. It should be very hard to lose.
 - Insane: faster ball, shorter player paddle, and an ai near the top of what the
   levers allow. It should be close to unwinnable and obviously a joke.
-- Needs P9's menu to exist first; these are two more buttons in the same row, or a
-  second row if five across is too wide at 600px.
+- Two more buttons in the menu's `#difficulty` row, or a second row if five across
+  is too wide at 600px. `applyDifficulty()` already layers a preset over a pristine
+  copy of the defaults, so adding entries to `DIFFICULTY` is most of the work — but
+  these two also need to reset whatever they change *outside* the `AI` object,
+  which nothing does yet.
 - The save-rate figure in `games/pong/DESIGN.md` stops being comparable across
   modes once the ball and paddle change, since it measures the ai against a fixed
   game. Either measure these separately or say plainly that the number only

@@ -5,6 +5,10 @@ const restartBtn = document.getElementById("restart");
 const helpToggle = document.getElementById("help-toggle");
 const instructions = document.getElementById("instructions");
 const scoreReader = document.getElementById("score-reader");
+const menu = document.getElementById("menu");
+const menuHeading = document.getElementById("menu-heading");
+const playBtn = document.getElementById("play");
+const difficultyBtns = [...document.querySelectorAll("#difficulty [data-level]")];
 
 const WIDTH = canvas.width;
 const HEIGHT = canvas.height;
@@ -45,6 +49,21 @@ const AI = {
   panicSpeed: 7,          // speed when badly out of position; = speed disables it
   panicDistancePx: 90,    // how far behind it must be to lunge; Infinity = never
 };
+
+// Difficulty is a set of overrides on AI and nothing else — both sides play the
+// same game, so the share of shots the ai saves measures the difference honestly.
+// The figures are what each preset measured at; they are starting points to tune
+// by feel, not settings to preserve.
+const DIFFICULTY = {
+  easy: { readErrorNearPx: 60, reactionTicks: 24, lookaheadBounces: 0 }, // ~73%
+  medium: { readErrorNearPx: 45, reactionTicks: 18 },                    // ~87%
+  hard: { readErrorNearPx: 22, reactionTicks: 8 },                       // ~95%
+};
+// Applied over a pristine copy each time, or switching down from a preset would
+// leave whatever the previous one had overridden.
+const AI_DEFAULTS = { ...AI };
+const DIFFICULTY_KEY = "pong.difficulty";
+let difficulty = "medium";
 const BALL_SIZE = 10;
 const WIN_SCORE = 5;
 
@@ -104,7 +123,7 @@ let control = "keyboard"; // or "pointer" - whichever the player last used
 let pointerAnchor = null;
 // "serve" waits for the player, "countdown" is the pause after a point, "play" is
 // a live ball. The ball sits still at the centre in everything but "play".
-let phase = "serve";
+let phase = "menu";
 let serveTicks = 0;
 let serveTo = Math.random() < 0.5 ? 1 : -1; // -1 travels left, towards the player
 let paused = false;
@@ -115,6 +134,40 @@ let aiErrorSign = 0; // which way this approach's misread leans, rolled once
 let aiAim = 0;
 let aiReactionLeft = 0;
 let aiApproaching = false;
+
+// localStorage throws rather than returning null when it is unavailable, so every
+// access is wrapped and "cannot read" falls back to the default.
+function loadDifficulty() {
+  try {
+    const raw = localStorage.getItem(DIFFICULTY_KEY);
+    return DIFFICULTY[raw] ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveDifficulty(level) {
+  try {
+    localStorage.setItem(DIFFICULTY_KEY, level);
+  } catch {
+    // Not being able to remember the choice is not worth breaking the game over.
+  }
+}
+
+function applyDifficulty(level) {
+  difficulty = DIFFICULTY[level] ? level : "medium";
+  Object.assign(AI, AI_DEFAULTS, DIFFICULTY[difficulty]);
+  for (const b of difficultyBtns) {
+    b.setAttribute("aria-checked", String(b.dataset.level === difficulty));
+  }
+}
+
+function showMenu(heading = "") {
+  phase = "menu";
+  menuHeading.textContent = heading;
+  menu.hidden = false;
+  updateStatus();
+}
 
 function centredBall() {
   return { x: CENTRE_X, y: CENTRE_Y, vx: 0, vy: 0 };
@@ -151,7 +204,9 @@ function setPaused(value) {
 // anyone not looking at the canvas.
 function updateStatus() {
   scoreReader.textContent = `You ${player.score}, AI ${ai.score}`;
-  if (gameOver) {
+  if (phase === "menu") {
+    statusEl.textContent = ""; // the menu heading carries the result
+  } else if (gameOver) {
     statusEl.textContent = player.score > ai.score ? "You win! 🎉" : "AI wins!";
   } else if (paused) {
     statusEl.textContent = "Paused · Esc to resume";
@@ -359,7 +414,7 @@ function update() {
 function onScore() {
   if (player.score >= WIN_SCORE || ai.score >= WIN_SCORE) {
     gameOver = true;
-    updateStatus();
+    showMenu(player.score > ai.score ? "You win! 🎉" : "AI wins!");
     return;
   }
   ball = centredBall();
@@ -524,7 +579,7 @@ function restart() {
   aiVel = 0;
   aiNextRead = 0;
   aiTarget = (HEIGHT - PADDLE_HEIGHT) / 2;
-  updateStatus();
+  showMenu();
   start();
 }
 
@@ -544,11 +599,29 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) setPaused(true);
 });
 restartBtn.addEventListener("click", restart);
+
+for (const b of difficultyBtns) {
+  b.addEventListener("click", () => {
+    applyDifficulty(b.dataset.level);
+    saveDifficulty(difficulty);
+  });
+}
+
+playBtn.addEventListener("click", () => {
+  menu.hidden = true;
+  phase = "serve";
+  paused = false;
+  updateStatus();
+  // Otherwise focus stays on Play and the first Space re-activates it instead of
+  // serving.
+  playBtn.blur();
+});
 helpToggle.addEventListener("click", toggleHelp);
 
 // The win score is stated in the panel, so it is filled in from the constant
 // rather than written into the markup twice.
 document.getElementById("win-score").textContent = WIN_SCORE;
 
-updateStatus();
+applyDifficulty(loadDifficulty() ?? "medium");
+showMenu();
 start();

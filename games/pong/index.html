@@ -11,11 +11,28 @@
   <main class="page">
     <a class="back-link" href="../../index.html">← All games</a>
     <h1>Pong</h1>
-    <p id="status" class="status">Press Space to serve</p>
+    <p id="status" class="status"></p>
     <!-- The score is painted on the canvas, which a screen reader cannot read.
          This carries it for them and is never shown. -->
     <p id="score-reader" class="visually-hidden" aria-live="polite">You 0, AI 0</p>
-    <canvas id="board" width="600" height="400" aria-label="Pong game board"></canvas>
+    <div class="board-wrap">
+      <canvas id="board" width="600" height="400" aria-label="Pong game board"></canvas>
+      <!-- Real buttons rather than shapes painted on the canvas: keyboard focus,
+           tab order and screen-reader support all come free, and canvas pixels
+           have none of it. -->
+      <div id="menu" class="menu" hidden>
+        <p id="menu-heading" class="menu-heading"></p>
+        <div id="difficulty" class="difficulty" role="radiogroup" aria-label="Difficulty">
+          <button type="button" class="btn secondary" role="radio"
+                  aria-checked="false" data-level="easy">Easy</button>
+          <button type="button" class="btn secondary" role="radio"
+                  aria-checked="true" data-level="medium">Medium</button>
+          <button type="button" class="btn secondary" role="radio"
+                  aria-checked="false" data-level="hard">Hard</button>
+        </div>
+        <button id="play" class="btn">Play</button>
+      </div>
+    </div>
     <div class="controls">
       <button id="restart" class="btn">Restart</button>
       <button id="help-toggle" class="btn secondary icon" title="How to play"
