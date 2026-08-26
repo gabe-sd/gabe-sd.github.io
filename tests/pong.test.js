@@ -47,6 +47,9 @@ const { check, report } = makeChecks();
     ball: { ...ball }, player: { ...player }, ai: { ...ai }, gameOver,
   }));
   const opt = (name) => `typeof ${name} === "undefined" ? null : ${name}`;
+  const readerText = () => page.evaluate(() =>
+    document.getElementById("score-reader")?.textContent ?? null);
+
   const consts = await page.evaluate(`({
     WIDTH, HEIGHT, PADDLE_WIDTH, PADDLE_HEIGHT, BALL_SIZE, WIN_SCORE, PADDLE_SPEED,
     TICK_MS: ${opt("TICK_MS")},
@@ -82,6 +85,28 @@ const { check, report } = makeChecks();
       (await page.textContent("#status")).includes("Press Space"),
       await page.textContent("#status"));
     check("canvas is 600x400", WIDTH === 600 && HEIGHT === 400, `${WIDTH}x${HEIGHT}`);
+
+    // draw() paints the score on the canvas, which no screen reader can read.
+    // Not isVisible(): a 1px clipped element counts as visible to Playwright, so
+    // assert on the technique itself.
+    const reader = await page.evaluate(() => {
+      const el = document.getElementById("score-reader");
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      const st = getComputedStyle(el);
+      return { live: el.getAttribute("aria-live"), w: r.width, h: r.height,
+               display: st.display, clip: st.clipPath };
+    });
+    check("a live region carries the score", reader && reader.live === "polite",
+      reader && reader.live);
+    if (reader) {
+      check("clipped away rather than rendered", reader.w <= 1 && reader.h <= 1,
+        `${reader.w}x${reader.h} clip=${reader.clip}`);
+      check("but still in the accessibility tree, not display:none",
+        reader.display !== "none", reader.display);
+    }
+    check("and starts level", (await readerText()) === "You 0, AI 0",
+      await readerText());
   }
 
   console.log("2. the harness can actually freeze the loop");
@@ -230,8 +255,10 @@ const { check, report } = makeChecks();
       s.ball.x === WIDTH / 2 && s.ball.y === HEIGHT / 2, `${s.ball.x},${s.ball.y}`);
     check("ball waits rather than launching straight away", s.ball.vx === 0,
       s.ball.vx);
-    check("status reports the score",
-      (await page.textContent("#status")).includes("0"),
+    check("the score reaches the hidden live region",
+      (await readerText()) === "You 0, AI 1", await readerText());
+    check("and is not repeated in the status line",
+      !/\d/.test(await page.textContent("#status")),
       await page.textContent("#status"));
 
     await freeze();
@@ -251,7 +278,7 @@ const { check, report } = makeChecks();
       conceded.phase);
     check("the ball holds still through it", conceded.vx === 0, conceded.vx);
     check("status says a serve is coming",
-      (await page.textContent("#status")).includes("serving"),
+      (await page.textContent("#status")).toLowerCase().includes("serving"),
       await page.textContent("#status"));
 
     await step(conceded.serveTicks - 1);
@@ -359,6 +386,8 @@ const { check, report } = makeChecks();
     await page.evaluate(() => restart());
     const t = await read();
     check("scores cleared", t.player.score === 0 && t.ai.score === 0);
+    check("the live region is reset too",
+      (await readerText()) === "You 0, AI 0", await readerText());
     check("gameOver cleared", t.gameOver === false);
     check("paddles recentred", t.player.y === MAX_Y / 2 && t.ai.y === MAX_Y / 2);
     check("ball re-served from the centre",

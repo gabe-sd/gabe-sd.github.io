@@ -12,6 +12,9 @@
     <a class="back-link" href="../../index.html">← All games</a>
     <h1>Pong</h1>
     <p id="status" class="status">Press Space to serve</p>
+    <!-- The score is painted on the canvas, which a screen reader cannot read.
+         This carries it for them and is never shown. -->
+    <p id="score-reader" class="visually-hidden" aria-live="polite">You 0, AI 0</p>
     <canvas id="board" width="600" height="400" aria-label="Pong game board"></canvas>
     <div class="controls">
       <button id="restart" class="btn">Restart</button>

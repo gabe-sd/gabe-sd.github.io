@@ -51,23 +51,22 @@ the best time.
 Remaining work on `games/pong/`. Entries stay in ID order so a reference is easy to
 find; priority is stated here rather than encoded in the ordering.
 
-Order of work. Steps 2 and 3 are dependencies, not preference:
+Order of work. The first two are dependencies, not preference:
 
-1. **P17**. Not a taste call, so it does not need playing first.
-2. **P18**, before P8 and P9. It changes the player's own top speed, so any
+1. **P18**, before P8 and P9. It changes the player's own top speed, so any
    difficulty tuned ahead of it is tuned against a baseline about to move.
-3. **P8** on its own rather than bundled with P9, so the AI can be judged without
+2. **P8** on its own rather than bundled with P9, so the AI can be judged without
    difficulty presets confusing the signal.
-4. **P9 and P10** together — same panel, same stored settings, and P10 is nearly
+3. **P9 and P10** together — same panel, same stored settings, and P10 is nearly
    free once the panel exists.
-5. `games/pong/DESIGN.md`. The AI model is the content it has been waiting for,
+4. `games/pong/DESIGN.md`. The AI model is the content it has been waiting for,
    and `CLAUDE.md` is already past the paragraph it allows a game there.
-6. **P14** and **P15**, whenever. P14 needs someone who can see the canvas; P15
+5. **P14** and **P15**, whenever. P14 needs someone who can see the canvas; P15
    wants splitting into separate entries before any of it starts.
 
-Everything from step 2 on changes how the game feels, so it gets played before it
-merges, one step at a time. Three feel changes reviewed together can be called
-worse without anyone being able to say which one did it.
+Steps 1 to 3 all change how the game feels, so each gets played before it merges,
+one at a time. Three feel changes reviewed together can be called worse without
+anyone being able to say which one did it.
 
 `tests/pong.test.js` covers the physics, the round lifecycle, the controls and the
 panels — add to it rather than around it. Nothing is currently pinned there, but
@@ -134,27 +133,6 @@ is soft on any display with `devicePixelRatio > 1`. Size the backing store by
   already local two-player.
 - **Hit feedback.** A short ball trail, a paddle flash on contact, a flash on
   score. A few lines each in `draw()`.
-
-### P17 — Drop the score from the status line
-
-`draw()` already paints both scores across the top of the canvas, so `#status`
-repeating them as "You 1 — 0 AI" is the same information twice, and it pushes the
-message that matters out past a separator. Strip the score and leave `#status`
-saying only what is happening: the serve prompt, "serving…", "paused, Esc to
-resume", and the win or loss.
-
-- `updateStatus()` builds every branch from one `score` string, so this is a
-  rewrite of that function, not a deletion in one place.
-- Blank during a rally is correct and matches Minesweeper, whose status empties
-  once play starts. `.status` has a reserved min-height in `shared.css`, so
-  nothing shifts when it goes empty.
-- **The canvas score is invisible to a screen reader.** `#status` is currently its
-  only non-visual readout, so deleting it outright is an accessibility regression.
-  Either keep a visually hidden live region carrying the score, or have the
-  between-points message carry it ("1 — 0, serving…") so it is announced exactly
-  when it changes. Do not simply drop it.
-- `tests/pong.test.js` asserts the status reports the score after a point. That
-  assertion moves to whatever carries the score instead.
 
 ### P18 — Pausing lets a mouse player reposition for free
 

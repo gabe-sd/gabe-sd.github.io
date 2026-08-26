@@ -4,6 +4,7 @@ const statusEl = document.getElementById("status");
 const restartBtn = document.getElementById("restart");
 const helpToggle = document.getElementById("help-toggle");
 const instructions = document.getElementById("instructions");
+const scoreReader = document.getElementById("score-reader");
 
 const WIDTH = canvas.width;
 const HEIGHT = canvas.height;
@@ -99,21 +100,22 @@ function setPaused(value) {
   updateStatus();
 }
 
+// #status is game state only. draw() already paints both scores across the top of
+// the canvas, so repeating them here would be the same information twice; the
+// score goes to the hidden live region instead, which is the only way it reaches
+// anyone not looking at the canvas.
 function updateStatus() {
-  if (gameOver) return; // the win or loss message stands until restart
-  const score = `You ${player.score} — ${ai.score} AI`;
-  if (paused) {
-    statusEl.textContent = `${score} · paused, Esc to resume`;
-    return;
-  }
-  if (phase === "countdown") {
-    statusEl.textContent = `${score} · serving…`;
+  scoreReader.textContent = `You ${player.score}, AI ${ai.score}`;
+  if (gameOver) {
+    statusEl.textContent = player.score > ai.score ? "You win! 🎉" : "AI wins!";
+  } else if (paused) {
+    statusEl.textContent = "Paused · Esc to resume";
+  } else if (phase === "countdown") {
+    statusEl.textContent = "Serving…";
   } else if (phase === "serve") {
-    statusEl.textContent = player.score || ai.score
-      ? `${score} · press Space to serve`
-      : "Press Space to serve";
+    statusEl.textContent = "Press Space to serve";
   } else {
-    statusEl.textContent = score;
+    statusEl.textContent = ""; // nothing to say during a rally
   }
 }
 
@@ -211,8 +213,7 @@ function update() {
 function onScore() {
   if (player.score >= WIN_SCORE || ai.score >= WIN_SCORE) {
     gameOver = true;
-    statusEl.textContent =
-      player.score > ai.score ? "You win! 🎉" : "AI wins!";
+    updateStatus();
     return;
   }
   ball = centredBall();
