@@ -41,7 +41,9 @@ Any new feature or fix starts with a branch — `git checkout -b <short-name>`
 before the first edit, not after the work is done. `main` stays clean so a
 half-finished change can be abandoned or set aside without unpicking it, and so
 the merge commit is what records the feature (see `minesweeper-highscore` in the
-history). Name it for the change, not the game alone.
+history). Name it for the change, not the game alone — and when the work has a
+`TODO.md` entry, the branch **is** that entry's slug, so the merge commit carries
+it into history and one string finds the entry, the discussion and the diff.
 
 If you catch yourself editing on `main`, move the work across before committing:
 `git checkout -b <name>` carries uncommitted changes with it.

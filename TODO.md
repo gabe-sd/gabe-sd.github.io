@@ -6,21 +6,140 @@ belongs in git history, not here, so delete entries as they land.
 Keep entries actionable: enough context to start without rediscovering the
 constraints, including whatever was non-obvious the first time round.
 
-Once a section has enough entries to need them, they carry a short ID prefixed by
-the game (`P` for Pong) so they can be named in conversation. Four rules stop those
-rotting:
+Within a section, entries are in priority order. The first one is what to do next.
 
-- **Assigned once, never reused or renumbered.** Deleting a landed entry leaves a
-  gap; closing the gap silently repoints every reference made before it.
-- **Kept out of commit messages and branch names.** An ID stops meaning anything
-  the moment its entry is deleted, so history has to describe itself.
-- **Grep for the ID before deleting an entry.** A cross-reference to an entry that
-  no longer exists cannot be recovered without digging through old file versions.
-- **Never cite an ID that has already gone.** Point at the code or the behaviour
-  instead — a new entry referring to landed work is the same dead link arriving
-  from the other direction.
+## Naming entries
 
-## Minesweeper: remember the panel open/closed state
+Every entry is headed by a slug — the game, then **the work**:
+`pong-difficulty-menu`, not `pong-difficulty`. Areas recur and get revisited; a
+specific piece of work happens once, which is what keeps slugs from colliding.
+
+The slug is also the branch name, so it lands in the merge commit and one string
+retrieves the entry, the discussion and the implementation:
+
+```bash
+grep -rn "<slug>" .               # the entry, and anything referring to it
+git log --all --grep="<slug>"     # the work itself, once it has landed
+```
+
+Run both before inventing a slug. Nothing else is needed: git is the record of
+retired slugs, so there is no list to maintain, and a slug that did somehow repeat
+still describes what it names in both places.
+
+## Pong
+
+`games/pong/DESIGN.md` has the model and what was tried and rejected; keep it in
+step with the code, in the same commit as the change.
+
+`tests/pong.test.js` covers the physics, the round lifecycle, the ai, the controls
+and the panels — add to it rather than around it. Nothing is currently pinned
+there, but if you knowingly leave something broken, pin it as described in
+`CLAUDE.md`.
+
+Anything that changes how the game feels gets played before it merges. Not
+designing for mobile at this point.
+
+### pong-assisted-insane-modes — Assisted and Insane modes
+
+Two difficulty modes outside the Easy / Medium / Hard the menu already offers:
+**Assisted**, a genuine handicap for someone who just wants to rally, and
+**Insane**, comically hard on purpose.
+
+They are their own entry because they change *the game*, not the opponent. The
+existing presets only override the `AI` object, so both sides play the same game
+and the save-rate sweep measures the difference between them honestly. These two
+would also move ball speed and paddle height, which is a different kind of change
+and worth being able to tell apart.
+
+- Assisted: slower serve and a lower speed cap, a taller player paddle, and an ai
+  well below Easy. It should be very hard to lose.
+- Insane: faster ball, shorter player paddle, and an ai near the top of what the
+  levers allow. It should be close to unwinnable and obviously a joke.
+- Two more buttons in the menu's `#difficulty` row, or a second row if five across
+  is too wide at 600px. `applyDifficulty()` already layers a preset over a pristine
+  copy of the defaults, so adding entries to `DIFFICULTY` is most of the work — but
+  these two also need to reset whatever they change *outside* the `AI` object,
+  which nothing does yet.
+- The save-rate figures in `games/pong/DESIGN.md` stop being comparable across
+  modes once the ball and paddle vary, since they measure the ai against a fixed
+  game. Either measure these separately or say plainly that the numbers only apply
+  to the ai-only presets.
+- Asymmetric paddle heights make the two sides visibly unequal. That is the point
+  here, but confirm it does not simply look broken before committing to it.
+
+### pong-high-dpi-canvas — Blurry on high-DPI displays
+
+The canvas backing store is a fixed 600x400 scaled by CSS `max-width: 100%`, so it
+is soft on any display with `devicePixelRatio > 1`. Size the backing store by
+`devicePixelRatio` and scale the context to match.
+
+- `handlePointerMove` already converts client coordinates using the ratio of
+  `HEIGHT` to the element's rendered height, so it survives this change — but it is
+  the thing to check first if the paddle starts tracking the pointer incorrectly.
+- The menu is positioned against `.board-wrap` rather than the canvas itself, so it
+  should be unaffected. Worth a look regardless.
+- Nobody working on this from a terminal can see the result: screen capture of the
+  X11 root is black on the dev box. It needs someone who can look at the screen to
+  say whether it actually got sharper.
+
+### pong-sound — Paddle, wall and score tones
+
+Classic Pong is its blip. A WebAudio oscillator gives paddle, wall and score tones
+with no asset files and no dependency, which is what keeps it compatible with the
+no-dependencies rule.
+
+- Needs a mute toggle with the choice remembered — same namespaced key and
+  try/catch treatment as the difficulty.
+- Browsers refuse to start an AudioContext before a user gesture, and there is an
+  obvious one to hang it off: the Play button.
+- The menu has room for a mute control, or it can sit with Restart and `?`.
+
+### pong-two-player — Two-player mode
+
+W/S for the left paddle, arrows for the right. A small change to the input
+handling, and it matches Tic Tac Toe and Chess, which are both already local
+two-player.
+
+- The ai and the difficulty menu both become meaningless in this mode. Decide
+  whether it is a fourth button in that row, a separate toggle, or its own entry
+  point.
+- `updateAi()` would simply not run and the right paddle would read keys the way
+  the left one does. The pointer takeover logic is written for one player and would
+  need splitting or disabling.
+
+### pong-hit-feedback — Visual feedback on contact
+
+A short ball trail, a paddle flash on contact, a flash on score. A few lines each
+in `draw()`.
+
+- `draw()` redraws from scratch every frame and keeps no history, so a trail needs
+  the last few positions stored somewhere.
+- Anything that flashes has to be driven by the tick count rather than by wall
+  time, or it will run at different speeds on different monitors.
+
+### pong-persisted-stats — Remembered stats
+
+Longest rally, or wins and losses, stored the same way as the Minesweeper best
+time: one namespaced key, every access wrapped in try/catch.
+
+- Where it displays is the open question. The menu is the obvious home, and it is
+  currently three buttons and Play.
+
+### pong-configurable-win-score — Configurable win score (deferred)
+
+`WIN_SCORE` is hardcoded to 5, which is a short game. First to 5 / 7 / 11 would be
+the obvious options.
+
+**Deferred rather than scheduled.** It was going to ride along with the difficulty
+work on the grounds that a settings panel would have room for it; the menu that was
+built — three difficulty buttons and Play — does not. Decide where it lives, and
+whether it is wanted at all, before building it. The `?` panel already reads the
+win score from `WIN_SCORE` rather than hardcoding it, so that part will not need
+revisiting.
+
+## Minesweeper
+
+### minesweeper-panel-state — Remember the panel open/closed state
 
 Both collapsible panels — How to play (`#instructions`) and the gear's advanced
 panel (`#settings`) — reset to closed on every reload, so anyone who wants one
@@ -42,98 +161,21 @@ the best time.
   panels start closed. Restoring a saved "open" would break them, so either clear
   the keys in test setup or assert the restore explicitly.
 
-## Reaction time test game
+## New games
 
-## Chimp memory test game (see human benchmark site)
+### reaction-time-game — Reaction time test
 
-## Pong
+### chimp-memory-game — Chimp memory test
 
-Remaining work on `games/pong/`. Entries stay in ID order so a reference is easy to
-find; priority is stated here rather than encoded in the ordering.
+See the Human Benchmark version for the shape of it.
 
-Order of work:
+## Site-wide
 
-1. **P19** — Assisted and Insane, two more buttons in the menu's difficulty row.
-2. **P14** and **P15**, whenever. P14 needs someone who can see the canvas; P15
-   wants splitting into separate entries before any of it starts.
+### site-visual-design — Improve the site's design and visual appeal
 
-**P10 is deferred** and deliberately not in that list. It was going to ride along
-with the difficulty work on the grounds that a settings panel would have room for
-it; the menu that was built — three difficulty buttons and Play — does not. It
-needs somewhere to live before it needs building, and it may not be wanted at all.
+### highscore-backend — A backend for stored values
 
-Step 1 changes how the game feels, so it gets played before it merges. Not
-designing for mobile at this point.
-
-`games/pong/DESIGN.md` has the model and what was tried and rejected; keep it in
-step with the code, in the same commit as the change.
-
-`tests/pong.test.js` covers the physics, the round lifecycle, the controls and the
-panels — add to it rather than around it. Nothing is currently pinned there, but
-if you knowingly leave something broken, pin it as described in `CLAUDE.md`.
-
-### P10 — Configurable win score (deferred)
-
-`WIN_SCORE` is hardcoded to 5, which is a short game. First to 5 / 7 / 11 would be
-the obvious options.
-
-Deferred rather than scheduled: the difficulty menu is three buttons and Play, so
-there is nowhere for this to go without adding a second row that nobody has asked
-for. Decide where it lives — and whether it is wanted — before building it. The
-`?` panel already reads the win score from `WIN_SCORE` rather than hardcoding it,
-so that part will not need revisiting.
-
-### P14 — Blurry on high-DPI displays
-
-The canvas backing store is a fixed 600x400 scaled by CSS `max-width: 100%`, so it
-is soft on any display with `devicePixelRatio > 1`. Size the backing store by
-`devicePixelRatio` and scale the context to match.
-
-- `handlePointerMove` already converts client coordinates using the ratio of
-  `HEIGHT` to the element's rendered height, so it survives this change — but it is
-  the thing to check first if the paddle starts tracking the pointer incorrectly.
-
-### P15 — Nice to have
-
-- **Sound.** Classic Pong is its blip. A WebAudio oscillator gives paddle, wall and
-  score tones with no asset files and no dependency, which is what keeps it
-  compatible with the no-dependencies rule. Needs a mute toggle, remembered.
-- **Persisted stats.** Longest rally, or wins and losses, stored the same way as
-  the Minesweeper best time: one namespaced key, every access wrapped.
-- **Two-player mode.** W/S for the left paddle, arrows for the right. Small change
-  to the input handling, and it matches Tic Tac Toe and Chess, which are both
-  already local two-player.
-- **Hit feedback.** A short ball trail, a paddle flash on contact, a flash on
-  score. A few lines each in `draw()`.
-
-### P19 — Assisted and Insane modes
-
-Two difficulty modes beyond the Easy / Medium / Hard that P9 adds, sitting outside
-them at both ends: **Assisted**, a genuine handicap for someone who just wants to
-rally, and **Insane**, comically hard on purpose.
-
-These are separate from P9 because they change *the game*, not the opponent. P9's
-presets only override the `AI` object, so both sides play the same game and the
-save-rate sweep measures the difference honestly. These two would also move ball
-speed and paddle height, which is a different kind of change and worth keeping
-distinguishable.
-
-- Assisted: slower serve and a lower speed cap, a taller player paddle, and an ai
-  well below Easy. It should be very hard to lose.
-- Insane: faster ball, shorter player paddle, and an ai near the top of what the
-  levers allow. It should be close to unwinnable and obviously a joke.
-- Two more buttons in the menu's `#difficulty` row, or a second row if five across
-  is too wide at 600px. `applyDifficulty()` already layers a preset over a pristine
-  copy of the defaults, so adding entries to `DIFFICULTY` is most of the work — but
-  these two also need to reset whatever they change *outside* the `AI` object,
-  which nothing does yet.
-- The save-rate figure in `games/pong/DESIGN.md` stops being comparable across
-  modes once the ball and paddle change, since it measures the ai against a fixed
-  game. Either measure these separately or say plainly that the number only
-  applies to the ai-only presets.
-- Asymmetric paddle heights make the two sides visibly unequal. That is the point
-  here, but it is worth confirming it does not look broken before committing to it.
-
-## Improve site design and visual appeal
-
-## Plan and architect a backend for stored values e.g. highscore table
+Everything is `localStorage` today, so nothing is shared between devices or
+players. A high score table is the obvious first thing that needs a server, and
+also the first thing that would break the "no build, no dependencies, files served
+as-is" property the site has now. Worth planning before it is wanted.

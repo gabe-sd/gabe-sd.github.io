@@ -81,10 +81,10 @@ const { check, report } = makeChecks();
       `${s.player.score}-${s.ai.score}`);
     check("not over", s.gameOver === false);
     check("player paddle starts centred", s.player.y === MAX_Y / 2, s.player.y);
-    // The ai cannot be asserted centred: it chases from the very first frame, so
-    // by the time the loop can be frozen it has already moved. That it starts
-    // reacting with no delay is the behaviour P8 replaces.
-    check("ai paddle is on the board", s.ai.y >= 0 && s.ai.y <= MAX_Y, s.ai.y);
+    // The ai used to chase the ball from the very first frame, so it had already
+    // moved by the time the loop could be frozen and could only be asserted to be
+    // on the board at all. It now holds the centre until a ball is sent to it.
+    check("ai paddle waits at the centre", Math.abs(s.ai.y - MAX_Y / 2) < 1, s.ai.y);
     check("ball starts centred on the board", isCentred(s.ball), where(s.ball));
     check("ball waits to be served rather than launching itself",
       s.ball.vx === 0 && s.ball.vy === 0, `${s.ball.vx},${s.ball.vy}`);
