@@ -37,10 +37,10 @@ velocity vector from a speed that is stepped up per hit and capped.
 
 The previous model multiplied `vx` per hit and **added** to `vy`, so vertical speed
 accumulated without limit. Hitting near the same paddle edge repeatedly compounded
-it: a long rally reached a measured speed of **61.9** against what is now a cap of
-10, by which point the ball moved far enough per tick to skip vertically past a
-paddle between one tick and the next. That is why nothing may accumulate into
-`ball.vy` directly.
+it: a long rally reached a measured speed of **61.9** — several times what
+`BALL_SPEED_MAX` allows even on Insane, which raises it — by which point the ball
+moved far enough per tick to skip vertically past a paddle between one tick and
+the next. That is why nothing may accumulate into `ball.vy` directly.
 
 Paddle collisions test the **crossing**, not the position. `ball.x <= PADDLE_WIDTH`
 stays true for several ticks as a missed ball travels off the board, so testing the
@@ -459,10 +459,12 @@ taller. The two sides being visibly unequal in those modes is the point, not a
 bug.
 
 **Expand and Squeeze scale a paddle's own base size, not `PADDLE_HEIGHT`.** An
-absolute target silently means different things in different modes: with Assisted's
-base at 120px, growing to "1.7 × 80" would have been a 13% bump the player could
-barely see, while the same number in a mode with a normal base is a near-doubling.
-Relative keeps the *effect* constant where the absolute kept only the number.
+absolute target silently means different things in different modes. Assisted
+already starts you well above the default height, so a growth target written as a
+multiple of `PADDLE_HEIGHT` lands barely above where that paddle already was — a
+bump the player cannot see — while the identical number in a mode with a normal
+base is close to a doubling. Relative keeps the *effect* constant where the
+absolute kept only the number.
 
 ### Two traps
 

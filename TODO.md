@@ -31,10 +31,10 @@ still describes what it names in both places.
 `games/pong/DESIGN.md` has the model and what was tried and rejected; keep it in
 step with the code, in the same commit as the change.
 
-`tests/pong.test.js` covers the physics, the round lifecycle, the ai, the controls
-and the panels — add to it rather than around it. Nothing is currently pinned
-there, but if you knowingly leave something broken, pin it as described in
-`CLAUDE.md`.
+`tests/pong.test.js` covers the physics, the round lifecycle, the ai, the
+controls, the panels, the difficulty presets, the win score and every ability —
+add to it rather than around it. Nothing is currently pinned there, but if you
+knowingly leave something broken, pin it as described in `CLAUDE.md`.
 
 Anything that changes how the game feels gets played before it merges. Not
 designing for mobile at this point.
@@ -46,6 +46,41 @@ without either of us being able to say which one did it - so they are serialised
 here rather than batched.
 
 Entries with no gate need nothing from him and can run back to back.
+
+### pong-explain-the-modes — Say what the modes and the powerups actually do
+
+**Gate: read the wording.** Text in a panel rather than a feel change, so it does
+not need its own playtest — but nobody except Gabriel can say whether it reads to
+a beginner, which is the only audience that matters here.
+
+The `?` panel lists the controls and the win score and nothing else. It has never
+mentioned the difficulty modes, and since the abilities landed it is silently
+missing the half of the game that is hardest to work out by looking at it: on
+Assisted a three-pip meter fills and the paddle turns green and grows, on Insane
+the opponent teleports, glows, shrinks your paddle and fires a shot above the
+speed the ball otherwise reaches. None of it is named anywhere in the game.
+
+It matters most for the mode it was built for. Assisted exists so a child who has
+not played Pong before has fun, and a child is exactly who will not work out
+unaided that hitting the ball with the very end of their own paddle, three times,
+is what fills the meter.
+
+- The panel is per-mode content in a game that can change mode from the menu at
+  any time. Decide whether it lists every mode at once or only the current one —
+  the second reads better and means the text has to be rebuilt in
+  `applyDifficulty()`, alongside the paddle reset it already does there.
+- Naming what fills the clutch meter tells the player to aim with the edge of
+  their own paddle, which is a real strategy the game currently hides. Worth
+  deciding whether revealing it is the intent.
+- `#win-score` in that panel is already rewritten when the win score changes;
+  whatever keeps mode text in step should follow the same path.
+- Do not quote the numbers. A panel that says "three close calls" goes stale the
+  first time `segments` is tuned, in exactly the way `games/pong/DESIGN.md` warns
+  a doc does — and here the player sees the wrong version, not just the next
+  developer.
+- The mobile entry below flags that this panel already lies to a touch device by
+  listing keys it does not have. Same panel, and worth reading together even
+  though mobile is deferred.
 
 ### pong-high-dpi-canvas — Blurry on high-DPI displays
 
@@ -119,7 +154,8 @@ no-dependencies rule.
   try/catch treatment as the difficulty.
 - Browsers refuse to start an AudioContext before a user gesture, and there is an
   obvious one to hang it off: the Play button.
-- The menu has room for a mute control, or it can sit with Restart and `?`.
+- The menu is now five difficulty buttons, a win score row and Play, so a mute
+  control most likely sits with Restart and `?` rather than in it.
 
 ### pong-hit-feedback — Visual feedback on contact
 
@@ -128,8 +164,12 @@ no-dependencies rule.
 A short ball trail, a paddle flash on contact, a flash on score. A few lines each
 in `draw()`.
 
-- `draw()` redraws from scratch every frame and keeps no history, so a trail needs
-  the last few positions stored somewhere.
+- **Most of this is already written, for the abilities rather than for contact.**
+  `aiGhosts` keeps the last few paddle positions and draws them fading behind a
+  blink, which is exactly the shape a ball trail wants; `paddleFlash` already
+  flashes a band across a paddle when the clutch meter fills. Extend those rather
+  than building parallel machinery beside them — their knobs live in
+  `ABILITY.afterimages` and `ABILITY.pop`.
 - Anything that flashes has to be driven by the tick count rather than by wall
   time, or it will run at different speeds on different monitors.
 
@@ -141,8 +181,9 @@ the storage and the counting are not.
 Longest rally, or wins and losses, stored the same way as the Minesweeper best
 time: one namespaced key, every access wrapped in try/catch.
 
-- Where it displays is the open question. The menu is the obvious home, and it is
-  currently three buttons and Play.
+- Where it displays is the open question. The menu was the obvious home when it
+  held three buttons; it now carries five difficulty buttons, a three-button win
+  score row and Play, so anything added there has to earn the space.
 
 ### pong-mobile-support — Make Pong work properly on a phone (deferred)
 
