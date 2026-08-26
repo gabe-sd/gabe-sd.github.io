@@ -150,8 +150,13 @@ the serve speed and skip straight past a paddle. Play is a three-phase machine:
 `serve` waits for the player, `countdown` is the pause after a point, `play` is
 a live ball, and `update()` moves the paddles but returns before touching the
 ball in anything but `play` — a test that places the ball by hand has to set
-`phase` too. Pausing (Escape or `p`, and automatically on `blur` or a
-hidden tab) gates `update()` entirely and zeroes the accumulator, so paused real
+`phase` too. Pointer control sets `player.y` directly from the event handler and is
+deliberately *not* rate-limited, so a mouse moves the paddle faster than the keys
+can and repositioning it while paused is a free move. Both were fixed once and
+the fix was rejected on play: chasing the cursor instead of being it cost more in
+feel than the exploit costs in a single-player game with no scoreboard. Leave it
+alone. Pausing (Escape or `p`, and automatically on `blur` or a hidden tab) gates
+`update()` entirely and zeroes the accumulator, so paused real
 time is dropped rather than banked up to replay on resume; it deliberately does
 not resume on focus. The loop stops itself once `gameOver` is set and `restart()`
 brings it back, but scheduling is guarded by `running` rather than by `rafId`, so a
