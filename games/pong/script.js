@@ -14,6 +14,9 @@ const winScoreBtns = [...document.querySelectorAll("#win-score-choice [data-scor
 const WIDTH = canvas.width;
 const HEIGHT = canvas.height;
 const PADDLE_WIDTH = 10;
+// The height both paddles start at. Each paddle carries its own `h` from here,
+// because the abilities below stretch and shrink them independently - this is the
+// base, not the current size, and anything reading a live paddle wants `.h`.
 const PADDLE_HEIGHT = 80;
 const PADDLE_SPEED = 6;
 // Everything the ai does, in one place. The point of the numbers is that its
@@ -139,8 +142,19 @@ let colors = readColors();
 const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
 darkQuery.addEventListener("change", () => { colors = readColors(); });
 
-let player = { y: HEIGHT / 2 - PADDLE_HEIGHT / 2, score: 0 };
-let ai = { y: HEIGHT / 2 - PADDLE_HEIGHT / 2, score: 0 };
+// `h` is the size drawn and collided against; `hTarget` is what it is easing
+// towards. They differ only while a resize is animating.
+function newPaddle() {
+  return {
+    y: HEIGHT / 2 - PADDLE_HEIGHT / 2,
+    score: 0,
+    h: PADDLE_HEIGHT,
+    hTarget: PADDLE_HEIGHT,
+  };
+}
+
+let player = newPaddle();
+let ai = newPaddle();
 let ball = centredBall();
 let keys = { up: false, down: false };
 let gameOver = false;
@@ -157,6 +171,10 @@ let serveTicks = 0;
 let serveTo = Math.random() < 0.5 ? 1 : -1; // -1 travels left, towards the player
 let paused = false;
 let aiTarget = (HEIGHT - PADDLE_HEIGHT) / 2;
+// Keeps a paddle on the board. Its height varies, so the lower bound does too.
+function clampPaddle(p) {
+  p.y = Math.max(0, Math.min(HEIGHT - p.h, p.y));
+}
 let aiVel = 0;
 let aiNextRead = 0;
 let aiErrorSign = 0; // which way this approach's misread leans, rolled once
@@ -353,7 +371,7 @@ function aiGlance() {
     * (AI.jitterAtSlowBall + (1 - AI.jitterAtSlowBall) * ballSpeedFraction());
   const wobble = (Math.random() * 2 - 1) * jitter;
   aiTarget = hit + aiErrorSign * spread + wobble + BALL_SIZE / 2
-    - aiAim * (PADDLE_HEIGHT / 2) - PADDLE_HEIGHT / 2;
+    - aiAim * (ai.h / 2) - ai.h / 2;
 }
 
 // It only reacts to a ball coming at it, and drifts back to the middle between
@@ -369,7 +387,7 @@ function updateAi() {
   aiApproaching = approaching;
 
   if (!approaching) {
-    aiTarget = (HEIGHT - PADDLE_HEIGHT) / 2;
+    aiTarget = (HEIGHT - ai.h) / 2;
   } else if (aiReactionLeft > 0) {
     aiReactionLeft -= 1;
     aiVel = 0;
@@ -391,7 +409,7 @@ function updateAi() {
   const wanted = Math.max(-top, Math.min(top, delta / Math.max(0.5, AI.brakeTicks)));
   aiVel += Math.max(-accel, Math.min(accel, wanted - aiVel));
   ai.y += aiVel;
-  ai.y = Math.max(0, Math.min(HEIGHT - PADDLE_HEIGHT, ai.y));
+  clampPaddle(ai);
 }
 
 function crossingY(prevX, prevY, planeX) {
@@ -403,9 +421,11 @@ function crossingY(prevX, prevY, planeX) {
   return prevY + (ball.y - prevY) * t;
 }
 
-function bounce(paddleY, dir) {
-  const offset = ball.y + BALL_SIZE / 2 - (paddleY + PADDLE_HEIGHT / 2);
-  const hit = Math.max(-1, Math.min(1, offset / (PADDLE_HEIGHT / 2)));
+// Takes the paddle rather than its y: the angle is measured against that
+// paddle's own centre and half-height, which the abilities make vary.
+function bounce(paddle, dir) {
+  const offset = ball.y + BALL_SIZE / 2 - (paddle.y + paddle.h / 2);
+  const hit = Math.max(-1, Math.min(1, offset / (paddle.h / 2)));
   const angle = hit * MAX_BOUNCE_ANGLE;
   const speed = Math.min(Math.hypot(ball.vx, ball.vy) * BALL_SPEEDUP, BALL_SPEED_MAX);
   ball.vx = dir * speed * Math.cos(angle);
@@ -419,7 +439,7 @@ function update() {
     if (keys.up) player.y -= PADDLE_SPEED;
     if (keys.down) player.y += PADDLE_SPEED;
   }
-  player.y = Math.max(0, Math.min(HEIGHT - PADDLE_HEIGHT, player.y));
+  clampPaddle(player);
 
   updateAi();
 
@@ -441,16 +461,16 @@ function update() {
   // crossing test above is interpolating along.
   if (ball.vx < 0) {
     const y = crossingY(prevX, prevY, PLAYER_PLANE);
-    if (y !== null && y + BALL_SIZE >= player.y && y <= player.y + PADDLE_HEIGHT) {
+    if (y !== null && y + BALL_SIZE >= player.y && y <= player.y + player.h) {
       ball.y = y;
-      bounce(player.y, 1);
+      bounce(player, 1);
       ball.x = PLAYER_PLANE;
     }
   } else if (ball.vx > 0) {
     const y = crossingY(prevX, prevY, AI_PLANE);
-    if (y !== null && y + BALL_SIZE >= ai.y && y <= ai.y + PADDLE_HEIGHT) {
+    if (y !== null && y + BALL_SIZE >= ai.y && y <= ai.y + ai.h) {
       ball.y = y;
-      bounce(ai.y, -1);
+      bounce(ai, -1);
       ball.x = AI_PLANE;
     }
   }
@@ -505,8 +525,8 @@ function draw() {
   ctx.setLineDash([]);
 
   ctx.fillStyle = colors.fg;
-  ctx.fillRect(0, player.y, PADDLE_WIDTH, PADDLE_HEIGHT);
-  ctx.fillRect(WIDTH - PADDLE_WIDTH, ai.y, PADDLE_WIDTH, PADDLE_HEIGHT);
+  ctx.fillRect(0, player.y, PADDLE_WIDTH, player.h);
+  ctx.fillRect(WIDTH - PADDLE_WIDTH, ai.y, PADDLE_WIDTH, ai.h);
 
   ctx.fillStyle = colors.accent;
   ctx.fillRect(ball.x, ball.y, BALL_SIZE, BALL_SIZE);
@@ -623,7 +643,7 @@ function handlePointerMove(e) {
   const rect = canvas.getBoundingClientRect();
   const scale = HEIGHT / rect.height;
   const y = (e.clientY - rect.top) * scale;
-  player.y = Math.max(0, Math.min(HEIGHT - PADDLE_HEIGHT, y - PADDLE_HEIGHT / 2));
+  player.y = Math.max(0, Math.min(HEIGHT - player.h, y - player.h / 2));
 }
 
 function toggleHelp() {
@@ -638,8 +658,8 @@ function toggleHelp() {
 // the load menu - nothing to clear, loop already running - and left a finished
 // game finished when the same menu returned at the end of one.
 function resetMatch() {
-  player = { y: HEIGHT / 2 - PADDLE_HEIGHT / 2, score: 0 };
-  ai = { y: HEIGHT / 2 - PADDLE_HEIGHT / 2, score: 0 };
+  player = newPaddle();
+  ai = newPaddle();
   ball = centredBall();
   gameOver = false;
   accumulator = 0;
@@ -651,7 +671,7 @@ function resetMatch() {
   aiReactionLeft = 0;
   aiVel = 0;
   aiNextRead = 0;
-  aiTarget = (HEIGHT - PADDLE_HEIGHT) / 2;
+  aiTarget = (HEIGHT - ai.h) / 2;
 }
 
 function restart() {
