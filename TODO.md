@@ -55,7 +55,8 @@ Order of work:
 
 1. **P9 and P10** together — same panel, same stored settings, and P10 is nearly
    free once the panel exists.
-2. **P14** and **P15**, whenever. P14 needs someone who can see the canvas; P15
+2. **P19**, once the menu from step 1 exists.
+3. **P14** and **P15**, whenever. P14 needs someone who can see the canvas; P15
    wants splitting into separate entries before any of it starts.
 
 Step 1 changes how the game feels, so it gets played before it merges.
@@ -114,6 +115,31 @@ is soft on any display with `devicePixelRatio > 1`. Size the backing store by
   already local two-player.
 - **Hit feedback.** A short ball trail, a paddle flash on contact, a flash on
   score. A few lines each in `draw()`.
+
+### P19 — Assisted and Insane modes
+
+Two difficulty modes beyond the Easy / Medium / Hard that P9 adds, sitting outside
+them at both ends: **Assisted**, a genuine handicap for someone who just wants to
+rally, and **Insane**, comically hard on purpose.
+
+These are separate from P9 because they change *the game*, not the opponent. P9's
+presets only override the `AI` object, so both sides play the same game and the
+save-rate sweep measures the difference honestly. These two would also move ball
+speed and paddle height, which is a different kind of change and worth keeping
+distinguishable.
+
+- Assisted: slower serve and a lower speed cap, a taller player paddle, and an ai
+  well below Easy. It should be very hard to lose.
+- Insane: faster ball, shorter player paddle, and an ai near the top of what the
+  levers allow. It should be close to unwinnable and obviously a joke.
+- Needs P9's menu to exist first; these are two more buttons in the same row, or a
+  second row if five across is too wide at 600px.
+- The save-rate figure in `games/pong/DESIGN.md` stops being comparable across
+  modes once the ball and paddle change, since it measures the ai against a fixed
+  game. Either measure these separately or say plainly that the number only
+  applies to the ai-only presets.
+- Asymmetric paddle heights make the two sides visibly unequal. That is the point
+  here, but it is worth confirming it does not look broken before committing to it.
 
 ## Improve site design and visual appeal
 
