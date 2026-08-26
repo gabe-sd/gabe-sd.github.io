@@ -1013,6 +1013,84 @@ const { check, report } = makeChecks();
       flung2.y >= 0 && flung2.y <= HEIGHT - BALL_SIZE, flung2.y);
   }
 
+  console.log("21. a whole game, end to end");
+  {
+    // Everything above forces state to reach a situation. Nothing plays the game.
+    // This drives the real phase machine from the first serve to a win, with a
+    // player that returns everything, so the ai has to concede WIN_SCORE times.
+    const game = await page.evaluate((budget) => {
+      cancelAnimationFrame(rafId);
+      restart();
+      const seen = new Set([phase]);
+      let sawCountdown = false;
+      let ticks = 0;
+      serve(); // the player would press Space here
+      while (!gameOver && ticks++ < budget) {
+        // A player that never misses: park the paddle on the ball.
+        player.y = Math.max(0, Math.min(HEIGHT - PADDLE_HEIGHT,
+          ball.y + BALL_SIZE / 2 - PADDLE_HEIGHT / 2));
+        update();
+        seen.add(phase);
+        if (phase === "countdown") sawCountdown = true;
+      }
+      return { gameOver, ticks, phases: [...seen], sawCountdown,
+               player: player.score, ai: ai.score, status: statusEl.textContent };
+    }, 200000);
+
+    check("the game reaches a conclusion", game.gameOver, `after ${game.ticks} ticks`);
+    check("someone reached the win score",
+      Math.max(game.player, game.ai) === WIN_SCORE, `${game.player}-${game.ai}`);
+    check("a player who returns everything wins", game.player === WIN_SCORE,
+      `${game.player}-${game.ai}`);
+    check("the ai does concede points in real play", game.player > 0);
+    check("it passed through every phase",
+      ["serve", "play", "countdown"].every((p) => game.phases.includes(p)),
+      game.phases.join(", "));
+    check("points did not chain without the pause between them", game.sawCountdown);
+    check("the status line announces the result",
+      /win|wins/i.test(game.status), game.status);
+  }
+
+  console.log("22. restarting and pausing at awkward moments");
+  {
+    // Restart is otherwise only exercised from a finished game.
+    await freeze();
+    await set({ ball: { x: 200, y: 150, vx: 6, vy: 3 }, player: { y: 40 } });
+    await step(5);
+    await page.evaluate(() => { player.score = 3; ai.score = 2; restart(); });
+    const mid = await read();
+    check("restarting mid-rally clears the score",
+      mid.player.score === 0 && mid.ai.score === 0,
+      `${mid.player.score}-${mid.ai.score}`);
+    check("and parks the ball", mid.ball.vx === 0 && isCentred(mid.ball),
+      where(mid.ball));
+    check("and returns to waiting for a serve",
+      (await page.evaluate(() => phase)) === "serve",
+      await page.evaluate(() => phase));
+
+    // Pausing during the countdown must hold the countdown too, not just the ball.
+    await freeze();
+    await set({ player: { y: 0 }, ball: { x: 40, y: 300, vx: -6, vy: 0 } });
+    await stepToScore(30);
+    check("preconditions: mid-countdown",
+      (await page.evaluate(() => phase)) === "countdown");
+    const before = await page.evaluate(() => serveTicks);
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(60);
+    await step(20);
+    check("the serve countdown holds while paused",
+      (await page.evaluate(() => serveTicks)) === before,
+      `${before} -> ${await page.evaluate(() => serveTicks)}`);
+    check("and the game has not served itself",
+      (await page.evaluate(() => phase)) === "countdown");
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(60);
+    await step(before + 2);
+    check("resuming lets it finish counting down and serve",
+      (await page.evaluate(() => phase)) === "play",
+      await page.evaluate(() => phase));
+  }
+
   check("no page errors", errors.length === 0, errors.join("; "));
 
   await browser.close();
