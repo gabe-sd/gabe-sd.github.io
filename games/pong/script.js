@@ -112,7 +112,10 @@ const ABILITY = {
     cooldownTicks: 320,
     telegraphTicks: 26,
     durationTicks: 210,
-    scale: 0.6,           // what your paddle shrinks to; 1 = no shrink
+    scale: 0.7,           // fraction of your paddle's *base* size it shrinks to,
+                          // not of PADDLE_HEIGHT: the base varies by mode, and an
+                          // absolute target would shrink you by different amounts
+                          // in different modes for no stated reason. 1 = no shrink
   },
 
   // --- Assisted's moves, which are yours -----------------------------------
@@ -132,7 +135,7 @@ const ABILITY = {
     // for a point that ends before you touch the ball again.
     durationTicks: 1200,
     usesToExpire: 2,      // returns made with the big paddle; 0 = time only
-    scale: 1.7,           // what your paddle grows to; 1 = no growth
+    scale: 1.35,          // multiple of your paddle's *base* size; 1 = no growth
     behindToTrigger: 2,   // points behind that earn it; 0 = never from the score
     concededToTrigger: 3, // points lost in a row that earn it, however the match
                           // stands overall; 0 = never from a losing run
@@ -165,10 +168,14 @@ const MOVES = ["blink", "overdrive", "squeeze", "expand", "clutch"];
 // The figures are what each preset measured at; they are starting points to tune
 // by feel, not settings to preserve.
 const DIFFICULTY = {
+  // Assisted is for someone who has barely played, and what makes that fun is
+  // rallies, not a scoreline. Its ai is therefore *competent* - a crippled
+  // opponent does not play gently, it ends the point by missing. The handicap
+  // lives on the player's side instead: a slow ball and a much bigger paddle.
   assisted: {
-    ai: { speed: 3, reactionTicks: 34, lookaheadBounces: 0, readErrorFarPx: 120,
-          readErrorNearPx: 95, panicSpeed: 3 },
-    game: { BALL_SPEED: 3.5, BALL_SPEED_MAX: 6.5 },
+    ai: { speed: 4.5, reactionTicks: 34, lookaheadBounces: 0, readErrorFarPx: 120,
+          readErrorNearPx: 45, aimSpread: 0.15, panicSpeed: 4.5 },
+    game: { BALL_SPEED: 3.5, BALL_SPEED_MAX: 6.5, PLAYER_PADDLE_SCALE: 1.5 },
   },
   easy: { ai: { readErrorNearPx: 60, reactionTicks: 24, lookaheadBounces: 0 } }, // ~73%
   medium: { ai: { readErrorNearPx: 45, reactionTicks: 18 } },                    // ~87%
@@ -348,7 +355,7 @@ function startMove(name) {
     aiGhosts = [];
   }
   if (name === "squeeze" || name === "expand") {
-    player.hTarget = PADDLE_HEIGHT * spec.scale;
+    player.hTarget = baseHeight(player) * spec.scale;
   }
   if (name === "expand") expandUses = 0;
 }

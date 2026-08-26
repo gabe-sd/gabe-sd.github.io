@@ -172,8 +172,27 @@ play the identical game — same ball speed, same paddle sizes — which is the 
 reason the share of shots the ai saves is a fair measure of the gap between them.
 Nothing may be added to these three that changes the game itself.
 
-**Assisted and Insane deliberately break that**, which is why they are a separate
-kind rather than two more entries in the same list. They move ball speed as well
+**Assisted is for someone who has barely played, and what makes that fun is
+rallies — not a scoreline.** Its ai is therefore *competent*, and deliberately
+stronger than Easy's. That looks backwards and is the most important thing on this
+page to not undo.
+
+A crippled opponent does not play gently. It ends the point by **missing**, and a
+point that ends is a rally that did not happen. Measured against a beginner —
+wide aim error, slow paddle — the old weak-ai Assisted produced the **shortest
+rallies of any mode in the game**: 2.3 contacts per point against Easy's 2.6 and
+Medium's 3.1, with 23% of points ending without either side touching the ball.
+The mode meant to be the friendliest was the one where the ball came back least.
+
+The handicap lives on the player's side instead: a slow ball, and a paddle half as
+large again as the opponent's. That combination is what lets both things be true
+at once — the same beginner now sees **6.0 contacts per point, 13% untouched, and
+still takes 79% of the points**. Strengthening the ai alone drops them to winning
+half their points; enlarging the paddle alone leaves a quarter of points untouched.
+Neither lever works without the other.
+
+**Insane deliberately breaks the fair-preset rule too**, which is why both are a
+separate kind rather than two more entries in the same list. They move ball speed as well
 as the ai, so each is measured against its own ball and their percentages are not
 on the same scale as the middle three. A preset therefore has an `ai` half and an
 optional `game` half, and the menu colours these two differently — green and red
@@ -226,7 +245,11 @@ and re-running it is how any new preset gets a comparable figure:
 | after the human-feel work, before tuning | **100%** |
 | untuned defaults | ~92% |
 | Easy / Medium / Hard | ~72% / ~86% / ~96% |
-| Assisted / Insane, each against its own ball | ~60% / ~99% |
+| Assisted / Insane, each against its own ball | ~80% / ~98% |
+
+Assisted's ai saving *more* than Easy's is not a mistake — see above. It is
+supposed to return the ball; the help is the player's paddle and the slow ball,
+neither of which this number can see.
 
 The last row is not comparable with the others and the sweep marks it so. Those
 two modes also change how hard the ball is for the **player**, which this harness
@@ -386,10 +409,15 @@ eye reports a bug. `resizeTicks: 0` gives the instant version back if that is ev
 wanted, and a test pins the eased behaviour.
 
 `PLAYER_PADDLE_SCALE` and `AI_PADDLE_SCALE` are the size a paddle settles back to
-and are part of a preset's `game` half — Insane starts you shorter. Assisted does
-**not** give a permanently taller paddle: yours grows when you have earned it and
-returns afterwards, which handicaps without ever leaving the two sides looking
-permanently lopsided.
+and are part of a preset's `game` half — Insane starts you shorter, Assisted much
+taller. The two sides being visibly unequal in those modes is the point, not a
+bug.
+
+**Expand and Squeeze scale a paddle's own base size, not `PADDLE_HEIGHT`.** An
+absolute target silently means different things in different modes: with Assisted's
+base at 120px, growing to "1.7 × 80" would have been a 13% bump the player could
+barely see, while the same number in a mode with a normal base is a near-doubling.
+Relative keeps the *effect* constant where the absolute kept only the number.
 
 ### Two traps
 
