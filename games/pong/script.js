@@ -9,6 +9,7 @@ const menu = document.getElementById("menu");
 const menuHeading = document.getElementById("menu-heading");
 const playBtn = document.getElementById("play");
 const difficultyBtns = [...document.querySelectorAll("#difficulty [data-level]")];
+const winScoreBtns = [...document.querySelectorAll("#win-score-choice [data-score]")];
 
 const WIDTH = canvas.width;
 const HEIGHT = canvas.height;
@@ -54,10 +55,28 @@ const AI = {
 // same game, so the share of shots the ai saves measures the difference honestly.
 // The figures are what each preset measured at; they are starting points to tune
 // by feel, not settings to preserve.
+// Difficulty is overrides on AI, and for the two joke modes on GAME as well.
+// Easy/Medium/Hard touch `ai` only, which is what keeps their save rates
+// comparable: all three play the same ball with the same paddles, so the only
+// thing that differs is the opponent. Assisted and Insane deliberately break
+// that, and their percentages mean nothing next to the middle three.
+// The figures are what each preset measured at; they are starting points to tune
+// by feel, not settings to preserve.
 const DIFFICULTY = {
-  easy: { readErrorNearPx: 60, reactionTicks: 24, lookaheadBounces: 0 }, // ~73%
-  medium: { readErrorNearPx: 45, reactionTicks: 18 },                    // ~87%
-  hard: { readErrorNearPx: 22, reactionTicks: 8 },                       // ~95%
+  assisted: {
+    ai: { speed: 3, reactionTicks: 34, lookaheadBounces: 0, readErrorFarPx: 120,
+          readErrorNearPx: 95, panicSpeed: 3 },
+    game: { BALL_SPEED: 3.5, BALL_SPEED_MAX: 6.5 },
+  },
+  easy: { ai: { readErrorNearPx: 60, reactionTicks: 24, lookaheadBounces: 0 } }, // ~73%
+  medium: { ai: { readErrorNearPx: 45, reactionTicks: 18 } },                    // ~87%
+  hard: { ai: { readErrorNearPx: 22, reactionTicks: 8 } },                       // ~95%
+  insane: {
+    ai: { speed: 6, reactionTicks: 2, lookaheadBounces: Infinity, resampleTicks: 2,
+          resampleJitter: 1, readErrorFarPx: 24, readErrorNearPx: 28,
+          readConvergence: 0.7, readJitterPx: 2, panicSpeed: 10 },
+    game: { BALL_SPEED: 7, BALL_SPEED_MAX: 14 },
+  },
 };
 // Applied over a pristine copy each time, or switching down from a preset would
 // leave whatever the previous one had overridden.
@@ -65,7 +84,12 @@ const AI_DEFAULTS = { ...AI };
 const DIFFICULTY_KEY = "pong.difficulty";
 let difficulty = "medium";
 const BALL_SIZE = 10;
-const WIN_SCORE = 5;
+// Points needed to take the match. `let` because the menu sets it; the ? panel
+// reads it from here rather than hardcoding it, so it has to be refreshed
+// whenever it changes and not only at load.
+const WIN_SCORES = [5, 7, 11];
+const WIN_SCORE_KEY = "pong.winScore";
+let WIN_SCORE = WIN_SCORES[0];
 
 // One physics tick. Every speed constant here is per tick, not per rendered
 // frame: loop() runs a whole number of ticks per frame, so the game plays the
@@ -77,8 +101,13 @@ const TICK_MS = 1000 / 60;
 // on however long it was away, all at once.
 const MAX_CATCHUP_MS = 250;
 
-const BALL_SPEED = 5;
-const BALL_SPEED_MAX = 10;
+// Ball speed is a *game* knob rather than an ai one: Assisted and Insane move it,
+// which is exactly why they are a different kind of preset. `let`, so a preset
+// can change them, with the starting values captured as the pristine copy that
+// applyGame() restores every time - the same discipline AI_DEFAULTS gives AI.
+let BALL_SPEED = 5;
+let BALL_SPEED_MAX = 10;
+const GAME_DEFAULTS = { BALL_SPEED, BALL_SPEED_MAX };
 const BALL_SPEEDUP = 1.05;
 // Steepest a paddle can send the ball, measured off the horizontal.
 const MAX_BOUNCE_ANGLE = Math.PI / 3;
@@ -154,12 +183,52 @@ function saveDifficulty(level) {
   }
 }
 
+function loadWinScore() {
+  try {
+    const n = Number(localStorage.getItem(WIN_SCORE_KEY));
+    return WIN_SCORES.includes(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveWinScore(n) {
+  try {
+    localStorage.setItem(WIN_SCORE_KEY, String(n));
+  } catch {
+    // Not being able to remember the choice is not worth breaking the game over.
+  }
+}
+
+// Both rows in the menu are radiogroups over a data attribute, so which one is
+// selected is the same job twice.
+function markSelected(buttons, key, value) {
+  for (const b of buttons) {
+    b.setAttribute("aria-checked", String(b.dataset[key] === String(value)));
+  }
+}
+
+// Writes every field every time rather than only the overridden ones, so
+// switching down from Insane cannot leave its faster ball behind.
+function applyGame(overrides = {}) {
+  BALL_SPEED = overrides.BALL_SPEED ?? GAME_DEFAULTS.BALL_SPEED;
+  BALL_SPEED_MAX = overrides.BALL_SPEED_MAX ?? GAME_DEFAULTS.BALL_SPEED_MAX;
+}
+
 function applyDifficulty(level) {
   difficulty = DIFFICULTY[level] ? level : "medium";
-  Object.assign(AI, AI_DEFAULTS, DIFFICULTY[difficulty]);
-  for (const b of difficultyBtns) {
-    b.setAttribute("aria-checked", String(b.dataset.level === difficulty));
-  }
+  const preset = DIFFICULTY[difficulty];
+  Object.assign(AI, AI_DEFAULTS, preset.ai);
+  applyGame(preset.game);
+  markSelected(difficultyBtns, "level", difficulty);
+}
+
+function applyWinScore(n) {
+  WIN_SCORE = WIN_SCORES.includes(n) ? n : WIN_SCORES[0];
+  markSelected(winScoreBtns, "score", WIN_SCORE);
+  // The ? panel states the target. Filling it in only at load left it confidently
+  // wrong the moment the choice could change.
+  document.getElementById("win-score").textContent = WIN_SCORE;
 }
 
 function showMenu(heading = "") {
@@ -615,6 +684,13 @@ for (const b of difficultyBtns) {
   });
 }
 
+for (const b of winScoreBtns) {
+  b.addEventListener("click", () => {
+    applyWinScore(Number(b.dataset.score));
+    saveWinScore(WIN_SCORE);
+  });
+}
+
 playBtn.addEventListener("click", () => {
   resetMatch();
   menu.hidden = true;
@@ -630,10 +706,7 @@ playBtn.addEventListener("click", () => {
 });
 helpToggle.addEventListener("click", toggleHelp);
 
-// The win score is stated in the panel, so it is filled in from the constant
-// rather than written into the markup twice.
-document.getElementById("win-score").textContent = WIN_SCORE;
-
 applyDifficulty(loadDifficulty() ?? "medium");
+applyWinScore(loadWinScore() ?? WIN_SCORES[0]);
 showMenu();
 start();

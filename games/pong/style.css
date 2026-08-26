@@ -32,14 +32,62 @@
   display: none;
 }
 
+.menu-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.menu-label {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .difficulty {
   display: flex;
+  justify-content: center;
   gap: 0.4rem;
+  /* Five across is comfortably inside a 600px board, but the canvas is
+     max-width: 100% and the buttons are not, so a narrow window needs them to
+     fall onto a second line rather than out of the menu. */
+  flex-wrap: wrap;
 }
 
 .difficulty .btn[aria-checked="true"] {
   background: var(--accent);
   border-color: var(--accent);
+  color: white;
+}
+
+/* Assisted and Insane change the game itself - ball speed, and eventually paddle
+   sizes - rather than only the opponent, so they are marked as a different kind
+   of thing. Deliberately not --accent: that already means "selected", and a blue
+   Assisted button would read as chosen at a glance. --win and --lose are the
+   existing theme tokens, so these follow the theme like everything else.
+   Placeholder styling until the game gets real art. */
+.difficulty .btn[data-level="assisted"] {
+  border-color: var(--win);
+  color: var(--win);
+}
+
+.difficulty .btn[data-level="assisted"][aria-checked="true"] {
+  background: var(--win);
+  border-color: var(--win);
+  color: white;
+}
+
+.difficulty .btn[data-level="insane"] {
+  border-color: var(--lose);
+  color: var(--lose);
+}
+
+.difficulty .btn[data-level="insane"][aria-checked="true"] {
+  background: var(--lose);
+  border-color: var(--lose);
   color: white;
 }
 

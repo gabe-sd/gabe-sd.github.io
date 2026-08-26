@@ -65,36 +65,27 @@ is soft on any display with `devicePixelRatio > 1`. Size the backing store by
   X11 root is black on the dev box. It needs someone who can look at the screen to
   say whether it actually got sharper.
 
-### pong-assisted-insane-modes — Assisted and Insane modes
+### pong-assisted-insane-modes — Should the joke modes change paddle sizes too
 
-**Gate: playtest.** Is Assisted genuinely hard to lose, is Insane funny rather
-than merely annoying, and do the uneven paddles read as deliberate?
+**Gate: playtest — this entry *is* the question.** Play Assisted. If it is already
+hard to lose, delete this entry; the modes are done.
 
-Two difficulty modes outside the Easy / Medium / Hard the menu already offers:
-**Assisted**, a genuine handicap for someone who just wants to rally, and
-**Insane**, comically hard on purpose.
+Assisted and Insane ship handicapping ball speed and the ai, and **not** paddle
+height, which the original entry also called for. That half was held back on
+purpose: a taller player paddle against a normal ai one is visibly asymmetric, and
+whether that reads as deliberate or as a rendering bug is not answerable from a
+terminal.
 
-They are their own entry because they change *the game*, not the opponent. The
-existing presets only override the `AI` object, so both sides play the same game
-and the save-rate sweep measures the difference between them honestly. These two
-would also move ball speed and paddle height, which is a different kind of change
-and worth being able to tell apart.
-
-- Assisted: slower serve and a lower speed cap, a taller player paddle, and an ai
-  well below Easy. It should be very hard to lose.
-- Insane: faster ball, shorter player paddle, and an ai near the top of what the
-  levers allow. It should be close to unwinnable and obviously a joke.
-- Two more buttons in the menu's `#difficulty` row, or a second row if five across
-  is too wide at 600px. `applyDifficulty()` already layers a preset over a pristine
-  copy of the defaults, so adding entries to `DIFFICULTY` is most of the work — but
-  these two also need to reset whatever they change *outside* the `AI` object,
-  which nothing does yet.
-- The save-rate figures in `games/pong/DESIGN.md` stop being comparable across
-  modes once the ball and paddle vary, since they measure the ai against a fixed
-  game. Either measure these separately or say plainly that the numbers only apply
-  to the ai-only presets.
-- Asymmetric paddle heights make the two sides visibly unequal. That is the point
-  here, but confirm it does not simply look broken before committing to it.
+- The measured save rates are ~60% for Assisted and ~99% for Insane, each against
+  its own ball — see `games/pong/DESIGN.md`, and note those two are not on the same
+  scale as Easy/Medium/Hard.
+- If paddle height is wanted, `PADDLE_HEIGHT` has to split into a player and an ai
+  value, which is ~18 references in `script.js` and ~14 in `tests/pong.test.js`.
+  `applyGame()` is already the place it would be reset from, and already writes
+  every field on every call, so the reset discipline comes free.
+- Insane must keep saving less than 100%. Section 25 of the suite asserts it, and
+  `games/pong/DESIGN.md` says why: an ai that never concedes cannot be beaten, only
+  survived, which is a softlock rather than a difficulty.
 
 ### pong-two-player — Two-player mode
 
@@ -149,21 +140,6 @@ time: one namespaced key, every access wrapped in try/catch.
 
 - Where it displays is the open question. The menu is the obvious home, and it is
   currently three buttons and Play.
-
-### pong-configurable-win-score — Configurable win score (deferred)
-
-**Gate: decide whether it is wanted.** Cheapest folded into
-`pong-assisted-insane-modes`, while the menu is already open.
-
-`WIN_SCORE` is hardcoded to 5, which is a short game. First to 5 / 7 / 11 would be
-the obvious options.
-
-**Deferred rather than scheduled.** It was going to ride along with the difficulty
-work on the grounds that a settings panel would have room for it; the menu that was
-built — three difficulty buttons and Play — does not. Decide where it lives, and
-whether it is wanted at all, before building it. The `?` panel already reads the
-win score from `WIN_SCORE` rather than hardcoding it, so that part will not need
-revisiting.
 
 ### pong-mobile-support — Make Pong work properly on a phone (deferred)
 

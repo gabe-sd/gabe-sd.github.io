@@ -22,13 +22,38 @@
            have none of it. -->
       <div id="menu" class="menu" hidden>
         <p id="menu-heading" class="menu-heading"></p>
-        <div id="difficulty" class="difficulty" role="radiogroup" aria-label="Difficulty">
-          <button type="button" class="btn secondary" role="radio"
-                  aria-checked="false" data-level="easy">Easy</button>
-          <button type="button" class="btn secondary" role="radio"
-                  aria-checked="true" data-level="medium">Medium</button>
-          <button type="button" class="btn secondary" role="radio"
-                  aria-checked="false" data-level="hard">Hard</button>
+        <div class="menu-group">
+          <!-- A visible caption, not just aria-label: with two rows of buttons
+               an unlabelled one is ambiguous to everybody, not only to a screen
+               reader. aria-labelledby then avoids announcing it twice. -->
+          <p class="menu-label" id="difficulty-label">Difficulty</p>
+          <div id="difficulty" class="difficulty" role="radiogroup"
+               aria-labelledby="difficulty-label">
+            <!-- Assisted and Insane change the game itself, not just the
+                 opponent, and are coloured to say so at a glance. -->
+            <button type="button" class="btn secondary" role="radio"
+                    aria-checked="false" data-level="assisted">Assisted</button>
+            <button type="button" class="btn secondary" role="radio"
+                    aria-checked="false" data-level="easy">Easy</button>
+            <button type="button" class="btn secondary" role="radio"
+                    aria-checked="true" data-level="medium">Medium</button>
+            <button type="button" class="btn secondary" role="radio"
+                    aria-checked="false" data-level="hard">Hard</button>
+            <button type="button" class="btn secondary" role="radio"
+                    aria-checked="false" data-level="insane">Insane</button>
+          </div>
+        </div>
+        <div class="menu-group">
+          <p class="menu-label" id="win-score-label">First to</p>
+          <div id="win-score-choice" class="difficulty" role="radiogroup"
+               aria-labelledby="win-score-label">
+            <button type="button" class="btn secondary" role="radio"
+                    aria-checked="true" data-score="5">5</button>
+            <button type="button" class="btn secondary" role="radio"
+                    aria-checked="false" data-score="7">7</button>
+            <button type="button" class="btn secondary" role="radio"
+                    aria-checked="false" data-score="11">11</button>
+          </div>
         </div>
         <button id="play" class="btn">Play</button>
       </div>
