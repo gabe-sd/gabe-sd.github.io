@@ -84,6 +84,7 @@ const ABILITY = {
   // --- Insane's moves ------------------------------------------------------
   blink: {
     modes: ["insane"],
+    tell: "charge",       // glows, pulses and shakes; "tint" only recolours
     chance: 0.4,          // per approach of the ball; 0 = never
     cooldownTicks: 150,
     telegraphTicks: 12,   // 0 = no warning at all
@@ -95,6 +96,7 @@ const ABILITY = {
   },
   overdrive: {
     modes: ["insane"],
+    tell: "charge",       // glows, pulses and shakes; "tint" only recolours
     chance: 0.3,
     cooldownTicks: 260,
     telegraphTicks: 45,   // long on purpose: the charge is the whole show
@@ -105,6 +107,7 @@ const ABILITY = {
   },
   squeeze: {
     modes: ["insane"],
+    tell: "charge",       // glows, pulses and shakes; "tint" only recolours
     chance: 0.25,
     cooldownTicks: 320,
     telegraphTicks: 26,
@@ -115,6 +118,10 @@ const ABILITY = {
   // --- Assisted's moves, which are yours -----------------------------------
   expand: {
     modes: ["assisted"],
+    // Growing to nearly twice its size is announcement enough, and unlike squeeze
+    // this is not a warning about anything - there is nothing to brace for. The
+    // charge treatment on top read as a second, different thing happening.
+    tell: "tint",
     chance: 0,            // never random: it is earned, not rolled
     cooldownTicks: 150,
     telegraphTicks: 10,
@@ -128,9 +135,12 @@ const ABILITY = {
     scale: 1.7,           // what your paddle grows to; 1 = no growth
     streakToTrigger: 3,   // returns in a row that earn it; 0 = never from a streak
     behindToTrigger: 2,   // points behind that earn it; 0 = never from the score
+    concededToTrigger: 3, // points lost in a row that earn it, however the match
+                          // stands overall; 0 = never from a losing run
   },
   clutch: {
     modes: ["assisted"],
+    tell: "charge",
     chance: 0,
     cooldownTicks: 120,
     telegraphTicks: 0,    // earned by a save that has already happened
@@ -288,6 +298,9 @@ let expandUses = 0;
 // Close calls banked towards the next charged shot. Drawn, so the reward is
 // something you watch approach rather than something that silently arrives.
 let clutchCharge = 0;
+// Points conceded back to back. Separate from the score gap: losing three on the
+// trot while still level is its own kind of trouble.
+let concededStreak = 0;
 
 function resetAbilities() {
   moveState = {};
@@ -299,6 +312,7 @@ function resetAbilities() {
   playerStreak = 0;
   expandUses = 0;
   clutchCharge = 0;
+  concededStreak = 0;
 }
 
 function moveActive(name) {
@@ -793,22 +807,31 @@ function update() {
   if (ball.x < 0) {
     ai.score += 1;
     serveTo = -1; // back at the player who just conceded
-    onScore();
+    onScore("ai");
   } else if (ball.x > WIDTH) {
     player.score += 1;
     serveTo = 1;
-    onScore();
+    onScore("player");
   }
 }
 
-function onScore() {
+// `scorer` is who won the point, passed rather than inferred: the run of points
+// conceded is not recoverable from the score once it has been added.
+function onScore(scorer) {
   if (player.score >= WIN_SCORE || ai.score >= WIN_SCORE) {
     gameOver = true;
     showMenu(player.score > ai.score ? "You win! 🎉" : "AI wins!");
     return;
   }
   playerStreak = 0;
+  concededStreak = scorer === "ai" ? concededStreak + 1 : 0;
   const ex = ABILITY.expand;
+  // Two separate kinds of trouble: a losing run, and being behind overall. Either
+  // earns a hand. Both bank rather than firing into a cooldown and vanishing.
+  if (ex.concededToTrigger > 0 && concededStreak >= ex.concededToTrigger
+      && armMove("expand")) {
+    concededStreak = 0;
+  }
   if (ex.behindToTrigger > 0 && ai.score - player.score >= ex.behindToTrigger) {
     armMove("expand");
   }
@@ -820,7 +843,9 @@ function onScore() {
 
 // Which moves show on which paddle, in order of precedence. The colour says whose
 // move it is rather than what it does: red is the villain acting, green is yours.
-const PLAYER_TELLS = [["squeeze", "villain"], ["expand", "hero"], ["clutch", "hero"]];
+// Clutch first: its pulse is the only thing that says a charge is in hand, while
+// expand's tell is the paddle's own size and shows whatever is drawn over it.
+const PLAYER_TELLS = [["squeeze", "villain"], ["clutch", "hero"], ["expand", "hero"]];
 const AI_TELLS = [["overdrive", "villain"], ["blink", "villain"]];
 
 // A paddle winding up shakes and glows harder the closer it is to firing; one
@@ -833,6 +858,8 @@ function drawPaddle(p, x, tells) {
     const st = moveState[name];
     if (!st || st.phase === "idle") continue;
     const spec = ABILITY[name];
+    tint = colors[who];
+    if (spec.tell === "tint") break;   // the colour is the whole tell
     if (st.phase === "telegraph") {
       glow = spec.telegraphTicks > 0 ? 1 - st.ticks / spec.telegraphTicks : 1;
       shake = ABILITY.vibratePx * glow;
@@ -844,14 +871,16 @@ function drawPaddle(p, x, tells) {
         : 1;
       shake = ABILITY.activeVibratePx;
     }
-    tint = colors[who];
     break;
   }
   ctx.save();
   if (tint) {
-    ctx.shadowColor = tint;
-    ctx.shadowBlur = 4 + 20 * glow;
     ctx.fillStyle = tint;
+    // Guarded: an unguarded shadowBlur would leave a halo on a tint-only tell.
+    if (glow > 0) {
+      ctx.shadowColor = tint;
+      ctx.shadowBlur = 4 + 20 * glow;
+    }
   } else {
     ctx.fillStyle = colors.fg;
   }

@@ -1523,6 +1523,49 @@ const { check, report } = makeChecks();
     });
     check("falling behind earns it too", behind !== "idle", behind);
 
+    // A losing run earns it independently of the score gap, so the test zeroes the
+    // behind trigger - otherwise either one passing would look like both working.
+    await setup("assisted");
+    const run = await page.evaluate(() => {
+      const savedBehind = ABILITY.expand.behindToTrigger;
+      ABILITY.expand.behindToTrigger = 0;
+      const concede = () => {
+        phase = "play";
+        ball = { x: -1, y: 200, vx: -5, vy: 0 };
+        update();
+      };
+      const win = () => {
+        phase = "play";
+        ball = { x: WIDTH + 1, y: 200, vx: 5, vy: 0 };
+        update();
+      };
+      // Two on the trot is not enough.
+      resetAbilities();
+      player.score = 0; ai.score = 0;
+      concede(); concede();
+      const afterTwo = moveState.expand.phase;
+      // A point of your own wipes the run.
+      win();
+      concede(); concede();
+      const afterBreak = moveState.expand.phase;
+      // Three in a row does it.
+      resetAbilities();
+      player.score = 0; ai.score = 0;
+      concede(); concede(); concede();
+      const afterThree = moveState.expand.phase;
+      const streakLeft = concededStreak;
+      ABILITY.expand.behindToTrigger = savedBehind;
+      return { afterTwo, afterBreak, afterThree, streakLeft };
+    });
+    check("two points lost on the trot is not enough",
+      run.afterTwo === "idle", run.afterTwo);
+    check("and winning one wipes the run", run.afterBreak === "idle",
+      run.afterBreak);
+    check("three lost in a row earns a bigger paddle",
+      run.afterThree !== "idle", run.afterThree);
+    check("and the run resets once it has paid out",
+      run.streakLeft === 0, run.streakLeft);
+
     // --- clutch ------------------------------------------------------------
     await setup("assisted");
     const clutch = await page.evaluate(() => {
@@ -1588,6 +1631,74 @@ const { check, report } = makeChecks();
       pips.charged.join(" | "));
     check("and no meter is drawn in a mode that has no clutch",
       pips.absent.join() === pips.empty.join(), pips.absent.join(" | "));
+
+    // Expand recolours the paddle and does nothing else. A glow bleeds outside the
+    // paddle rect, so sampling just past its edge is what separates the two tells.
+    const tells = await page.evaluate(() => {
+      applyDifficulty("assisted");
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = "play";
+      player.y = 150;
+      const inside = () => {
+        const d = ctx.getImageData(PADDLE_WIDTH - 3,
+          Math.round(player.y + player.h / 2), 1, 1).data;
+        return `${d[0]},${d[1]},${d[2]}`;
+      };
+      const justOutside = () => {
+        const d = ctx.getImageData(PADDLE_WIDTH + 5,
+          Math.round(player.y + player.h / 2), 1, 1).data;
+        return `${d[0]},${d[1]},${d[2]}`;
+      };
+      const topEdgeOver = (n) => {
+        const seen = new Set();
+        for (let i = 0; i < n; i++) { update(); draw(); seen.add(inside()); }
+        return seen.size;
+      };
+
+      draw();
+      const plain = { in: inside(), out: justOutside() };
+
+      armMove("expand");
+      while (moveState.expand.phase !== "active") update();
+      for (let i = 0; i < 60; i++) update();
+      draw();
+      const grown = player.h;
+      const ex = { in: inside(), out: justOutside(), steady: topEdgeOver(20) };
+
+      resetAbilities();
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = "play";
+      player.y = 150;
+      armMove("clutch");
+      update();
+      draw();
+      const cl = { in: inside(), out: justOutside() };
+
+      // Both at once: the charge must still be the thing you see.
+      resetAbilities();
+      armMove("expand");
+      while (moveState.expand.phase !== "active") update();
+      armMove("clutch");
+      for (let i = 0; i < 40; i++) update();
+      draw();
+      const both = justOutside();
+      return { plain, ex, cl, both, grown, base: PADDLE_HEIGHT };
+    });
+    check("expand recolours the paddle", tells.ex.in !== tells.plain.in,
+      `${tells.plain.in} -> ${tells.ex.in}`);
+    check("and grows it", tells.grown > tells.base,
+      `${tells.base} -> ${tells.grown.toFixed(1)}`);
+    check("but casts no glow past its own edge",
+      tells.ex.out === tells.plain.out,
+      `${tells.ex.out} vs plain ${tells.plain.out}`);
+    check("and does not twitch", tells.ex.steady === 1, tells.ex.steady);
+    check("a held charge still glows past the edge",
+      tells.cl.out !== tells.plain.out,
+      `${tells.cl.out} vs plain ${tells.plain.out}`);
+    check("and is not masked by an active expand",
+      tells.both !== tells.plain.out, tells.both);
 
     // Through a real collision rather than by calling onPlayerReturn: if the hook
     // ran before the bounce, the close call would spend the charge on the very

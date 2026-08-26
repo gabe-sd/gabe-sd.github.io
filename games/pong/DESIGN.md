@@ -264,6 +264,27 @@ like a cartoon villain, charges a shot that comes back faster than the game
 normally permits, and squeezes your paddle. Assisted hands the same kind of thing
 to you.
 
+### Two kinds of tell
+
+A move either **charges** — glowing, pulsing and shaking — or merely **tints** the
+paddle, and `tell` in its config says which.
+
+The distinction is not decoration. A charge tell is a *warning*: something is
+about to happen that you should brace for, or a thing you are holding that you
+have to remember to spend. A tint is a *statement*: this is what you have now.
+Expand grows the paddle to nearly twice its size, which announces itself without
+help, and — unlike Squeeze, which shrinks you and genuinely is a threat — there is
+nothing to brace for. Given the charge treatment as well, it read as a second,
+different thing happening on top of the growth.
+
+`PLAYER_TELLS` checks Clutch **before** Expand, because Expand's real tell is the
+paddle's own size and survives being drawn over, while a held charge has nothing
+but its pulse. In the other order, a charge earned during an active Expand was
+invisible.
+
+A test separates the two by sampling a pixel just outside the paddle: a glow
+bleeds past the rect and a tint does not.
+
 **Every move telegraphs before it does anything.** A move is `idle`, then
 `telegraph` — a visible wind-up with no effect yet — then `active`. That order is
 the whole reason the moves feel fair: you see the paddle shaking and glowing, so
@@ -318,10 +339,15 @@ raised by however many points it is behind — it stops playing around exactly w
 you start winning, which is both the drama and a self-balancing property: it
 cannot bully you while you are already losing.
 
-Yours are never random. Three returns in a row, a save caught on the very end of
-the paddle, or falling behind by a couple of points — the handout arrives attached
-to something you did, or to being in genuine trouble. A random gift would feel
-like the game pitying you at moments you had not earned and did not need.
+Yours are never random. Three returns in a row, three close calls, falling behind
+on the scoreboard, or losing three points on the trot — the handout arrives
+attached to something you did, or to being in genuine trouble. A random gift would
+feel like the game pitying you at moments you had not earned and did not need.
+
+The losing run and the score gap are **separate triggers on purpose**. Dropping
+three in a row while still level is a different kind of trouble from being two
+points down after trading evenly, and only one of them is visible in the score.
+Winning a point wipes the run, so it measures a slide rather than a total.
 
 **A timed effect cannot guarantee you ever get to use it.** The bigger paddle
 originally ran on a timer, and at Assisted's ball speed one round trip is longer
