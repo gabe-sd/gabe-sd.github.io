@@ -582,17 +582,37 @@ const { check, report } = makeChecks();
     check("restart clears the pause", !(await page.evaluate(() => paused)));
   }
 
-  console.log("16. known bugs, pinned - these assertions invert when the fix lands");
+  console.log("16. paddle collision is a crossing, not a position");
   {
-    // P2: collision is a half-plane test (ball.x <= PADDLE_WIDTH), not a crossing
-    // test, so a ball that already went past the paddle is still rescued if the
-    // paddle arrives late. Expected to flip to "scores" when P2 lands.
+    // Already past the plane when the paddle arrives. The old half-plane test
+    // rescued this, because ball.x <= PADDLE_WIDTH stays true on the way out.
     await freeze();
     await set({ player: { y: 260 }, ball: { x: 1, y: 300, vx: -3, vy: 0 } });
     await step(1);
-    const s = await read();
-    check("P2: a ball already past the paddle plane is still rescued (bug)",
-      s.ball.vx > 0 && s.ai.score === 0, `vx=${s.ball.vx} score=${s.ai.score}`);
+    const late = await read();
+    check("a paddle arriving after the ball has passed does not save it",
+      late.ai.score === 1, `score=${late.ai.score} vx=${late.ball.vx}`);
+
+    // In place before the crossing: still an ordinary save.
+    await freeze();
+    await set({ player: { y: 260 }, ball: { x: 40, y: 300, vx: -6, vy: 0 } });
+    await step(10);
+    const good = await read();
+    check("a paddle in place before the crossing still saves",
+      good.ball.vx > 0 && good.ai.score === 0,
+      `vx=${good.ball.vx} score=${good.ai.score}`);
+
+    // The hit is judged where the path crossed the plane, not where the ball
+    // finished the tick. vy is past the speed cap here on purpose: at real
+    // speeds the gap between the two is only a few pixels, which is too small
+    // to assert on cleanly but is exactly the band at the paddle ends where the
+    // answer differs.
+    await freeze();
+    await set({ player: { y: 160 }, ball: { x: 16, y: 160, vx: -8, vy: 100 } });
+    await step(1);
+    const steep = await read();
+    check("judged at the crossing point, not at the end of the tick",
+      steep.ball.vx > 0, `vx=${steep.ball.vx} y=${steep.ball.y}`);
   }
 
   check("no page errors", errors.length === 0, errors.join("; "));

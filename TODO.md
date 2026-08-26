@@ -53,9 +53,7 @@ find; priority is stated here rather than encoded in the ordering.
 
 Order of work. Steps 2 and 3 are dependencies, not preference:
 
-1. **P2 and P17** together. Neither is a taste call, so neither needs playing
-   first. P2 makes the game marginally harder by removing accidental saves; that
-   is the only change in feel.
+1. **P17**. Not a taste call, so it does not need playing first.
 2. **P18**, before P8 and P9. It changes the player's own top speed, so any
    difficulty tuned ahead of it is tuned against a baseline about to move.
 3. **P8** on its own rather than bundled with P9, so the AI can be judged without
@@ -72,18 +70,8 @@ merges, one step at a time. Three feel changes reviewed together can be called
 worse without anyone being able to say which one did it.
 
 `tests/pong.test.js` covers the physics, the round lifecycle, the controls and the
-panels — add to it rather than around it. Its last section pins known-wrong
-behaviour as passing assertions, so fixing P2 is supposed to turn a check red;
-rewrite that assertion as part of the fix rather than deleting it.
-
-### P2 — The paddle can rescue a ball that is already past it
-
-Paddle collision tests `ball.x <= PADDLE_WIDTH` — a half-plane, not a band. A ball
-that misses vertically stays inside that region for several frames while it
-travels out to `ball.x < 0`, so sliding the paddle down onto it afterwards still
-registers a hit. Slow balls linger there longest, so it is most exploitable exactly
-when the game is easiest. Test the crossing between the previous and current
-position, not the current position alone.
+panels — add to it rather than around it. Nothing is currently pinned there, but
+if you knowingly leave something broken, pin it as described in `CLAUDE.md`.
 
 ### P8 — The AI is an omniscient tracker
 

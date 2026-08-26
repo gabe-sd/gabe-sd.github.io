@@ -32,6 +32,10 @@ const MAX_BOUNCE_ANGLE = Math.PI / 3;
 // Pause between a point and the next serve, in ticks. Counted in ticks rather
 // than milliseconds so it is exact and does not need a second clock.
 const SERVE_DELAY_TICKS = 60;
+// The vertical lines a ball has to cross to reach a paddle: the inside face of
+// each one, offset on the right by the ball's own width.
+const PLAYER_PLANE = PADDLE_WIDTH;
+const AI_PLANE = WIDTH - PADDLE_WIDTH - BALL_SIZE;
 
 // A canvas cannot read CSS custom properties, so the theme tokens are copied
 // into plain values here and re-copied whenever the OS theme flips.
@@ -119,6 +123,20 @@ function updateStatus() {
 // vx and *added* to vy on every hit, so vy grew without bound - a long rally
 // ended with the ball travelling almost vertically and outrunning the collision
 // check.
+// Where the ball's path this tick crossed a vertical plane, or null if it did not
+// cross it going the right way. Testing the crossing rather than the position at
+// the end of the tick is what stops a paddle catching a ball that is already
+// past it: `ball.x <= PADDLE_WIDTH` stays true for several ticks as a missed
+// ball travels off the board, so a late-arriving paddle used to rescue it.
+function crossingY(prevX, prevY, planeX) {
+  const crossed = ball.vx < 0
+    ? prevX > planeX && ball.x <= planeX
+    : prevX < planeX && ball.x >= planeX;
+  if (!crossed) return null;
+  const t = (planeX - prevX) / (ball.x - prevX);
+  return prevY + (ball.y - prevY) * t;
+}
+
 function bounce(paddleY, dir) {
   const offset = ball.y + BALL_SIZE / 2 - (paddleY + PADDLE_HEIGHT / 2);
   const hit = Math.max(-1, Math.min(1, offset / (PADDLE_HEIGHT / 2)));
@@ -151,32 +169,32 @@ function update() {
   }
   if (phase !== "play") return;
 
+  const prevX = ball.x;
+  const prevY = ball.y;
   ball.x += ball.vx;
   ball.y += ball.vy;
+
+  // Paddles before walls, so a wall bounce cannot bend the path that the
+  // crossing test above is interpolating along.
+  if (ball.vx < 0) {
+    const y = crossingY(prevX, prevY, PLAYER_PLANE);
+    if (y !== null && y + BALL_SIZE >= player.y && y <= player.y + PADDLE_HEIGHT) {
+      ball.y = y;
+      bounce(player.y, 1);
+      ball.x = PLAYER_PLANE;
+    }
+  } else if (ball.vx > 0) {
+    const y = crossingY(prevX, prevY, AI_PLANE);
+    if (y !== null && y + BALL_SIZE >= ai.y && y <= ai.y + PADDLE_HEIGHT) {
+      ball.y = y;
+      bounce(ai.y, -1);
+      ball.x = AI_PLANE;
+    }
+  }
 
   if (ball.y <= 0 || ball.y >= HEIGHT - BALL_SIZE) {
     ball.vy *= -1;
     ball.y = Math.max(0, Math.min(HEIGHT - BALL_SIZE, ball.y));
-  }
-
-  if (
-    ball.x <= PADDLE_WIDTH &&
-    ball.y + BALL_SIZE >= player.y &&
-    ball.y <= player.y + PADDLE_HEIGHT &&
-    ball.vx < 0
-  ) {
-    bounce(player.y, 1);
-    ball.x = PADDLE_WIDTH;
-  }
-
-  if (
-    ball.x >= WIDTH - PADDLE_WIDTH - BALL_SIZE &&
-    ball.y + BALL_SIZE >= ai.y &&
-    ball.y <= ai.y + PADDLE_HEIGHT &&
-    ball.vx > 0
-  ) {
-    bounce(ai.y, -1);
-    ball.x = WIDTH - PADDLE_WIDTH - BALL_SIZE;
   }
 
   if (ball.x < 0) {
