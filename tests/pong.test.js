@@ -171,6 +171,16 @@ const { check, report } = makeChecks();
     const bot = await read();
     check("bounces off the bottom", bot.ball.vy < 0, bot.ball.vy);
     check("stays inside the bottom edge", bot.ball.y <= HEIGHT - BALL_SIZE, bot.ball.y);
+
+    // The overshoot is reflected, not clamped away. Clamping cost up to |vy| of
+    // travel per bounce, which is invisible in play but puts the ball off any
+    // straight-line prediction of where it will end up.
+    await freeze();
+    await set({ ball: { x: 300, y: HEIGHT - BALL_SIZE - 2, vx: 0, vy: 8 } });
+    await step(1);
+    const over = await read();
+    check("the overshoot past a wall is reflected, not discarded",
+      Math.abs(over.ball.y - (HEIGHT - BALL_SIZE - 6)) < 1e-6, over.ball.y);
   }
 
   console.log("6. velocity model: speed capped, angle bounded");
@@ -183,6 +193,10 @@ const { check, report } = makeChecks();
     const rally = await page.evaluate((n) => {
       let maxSpeed = 0, maxSteep = 0, minAbsVx = Infinity, hits = 0;
       const clamp = (v) => Math.max(0, Math.min(HEIGHT - PADDLE_HEIGHT, v));
+      // This case places both paddles itself; leave the ai out of it, or it drags
+      // ai.y a few pixels a tick and the ball starts clipping the paddle ends.
+      const realUpdateAi = typeof updateAi === "function" ? updateAi : null;
+      if (realUpdateAi) updateAi = () => {};
       for (let i = 0; i < n; i++) {
         const was = Math.sign(ball.vx);
         update();
@@ -194,6 +208,7 @@ const { check, report } = makeChecks();
         maxSteep = Math.max(maxSteep, Math.abs(ball.vy) / Math.max(1e-9, Math.abs(ball.vx)));
         minAbsVx = Math.min(minAbsVx, Math.abs(ball.vx));
       }
+      if (realUpdateAi) updateAi = realUpdateAi;
       return { maxSpeed, maxSteep, minAbsVx, hits, points: player.score + ai.score };
     }, 5000);
 
@@ -611,7 +626,314 @@ const { check, report } = makeChecks();
     check("restart clears the pause", !(await page.evaluate(() => paused)));
   }
 
-  console.log("16. paddle collision is a crossing, not a position");
+  console.log("16. how the ai behaves");
+  {
+    // These two describe the old chasing ai's behaviour by contradiction, so they
+    // are the before/after evidence for this change.
+    await freeze();
+    await set({ ai: { y: 0 }, ball: { x: 300, y: 30, vx: -5, vy: 0 } });
+    await step(45); // enough to recentre, short of conceding the point
+    const idle = (await read()).ai.y;
+    check("it returns to the centre while the ball is away",
+      Math.abs(idle - MAX_Y / 2) < 1, idle);
+    check("rather than following a ball not being sent to it",
+      Math.abs(idle - 30) > 100, idle);
+
+    await freeze();
+    await set({ ai: { y: 0 }, ball: { x: 100, y: 380, vx: 5, vy: 0 } });
+    const react = await page.evaluate((n) => {
+      const before = ai.y;
+      for (let i = 0; i < n; i++) update();
+      const during = ai.y;
+      update();
+      return { before, during, after: ai.y };
+    }, 12);
+    check("it holds still through a reaction delay",
+      react.during === react.before, `${react.before} -> ${react.during}`);
+    check("then starts moving", react.after !== react.during,
+      `${react.during} -> ${react.after}`);
+    check("winding up rather than snapping to full speed",
+      Math.abs(react.after - react.during) < consts.PADDLE_SPEED,
+      `moved ${Math.abs(react.after - react.during).toFixed(2)}px on its first tick`);
+
+    // Braking later than it can stop is what produces the overshoot; it has to
+    // come back, the way a hand does.
+    const swing = await page.evaluate(() => {
+      if (typeof AI === "undefined") return null;
+      cancelAnimationFrame(rafId);
+      restart();
+      // A live approach with glancing switched off, so the target this sets
+      // stays put and only the movement is under test.
+      phase = "play";
+      ball = { x: 100, y: 200, vx: 5, vy: 0 };
+      ai.y = 0; aiVel = 0; aiTarget = 200;
+      aiApproaching = true; aiReactionLeft = 0; aiNextRead = 1e6;
+      const trace = [];
+      for (let i = 0; i < 150; i++) { updateAi(); trace.push(ai.y); }
+      const speeds = trace.map((v, i) => (i ? Math.abs(v - trace[i - 1]) : 0));
+      return { peak: Math.max(...trace), settled: trace[149],
+               topSpeed: Math.max(...speeds), normal: AI.speed, panic: AI.panicSpeed };
+    });
+    check("it overshoots its target", !!swing && swing.peak > 200.5,
+      swing && `peak ${swing.peak.toFixed(1)} for a target of 200`);
+    check("and settles back onto it", !!swing && Math.abs(swing.settled - 200) < 0.5,
+      swing && swing.settled.toFixed(2));
+    check("it lunges above its normal speed when badly out of position",
+      !!swing && swing.topSpeed > swing.normal + 0.1,
+      swing && `${swing.topSpeed.toFixed(2)} vs a normal ${swing.normal}`);
+    check("but not above its panic speed",
+      !!swing && swing.topSpeed <= swing.panic + 1e-9,
+      swing && swing.topSpeed.toFixed(2));
+  }
+
+  console.log("17. the ai reads the ball rather than solving it");
+  {
+    const hasAi = await page.evaluate(() => typeof predictInterceptY === "function");
+    check("there is an intercept prediction to test", hasAi);
+    const aiRun = (fn, arg) => hasAi ? page.evaluate(fn, arg) : null;
+
+    // With full lookahead the prediction must match the game's own physics, not
+    // arithmetic done here: park the paddle off the board, run the ball to the
+    // ai's plane, compare. vx divides the distance exactly, so the ball lands on
+    // the plane rather than past it.
+    for (const vy of hasAi ? [0, 5, 11] : []) {
+      const r = await page.evaluate((v) => {
+        cancelAnimationFrame(rafId);
+        restart();
+        phase = "play";
+        ball = { x: 100, y: 100, vx: 5, vy: v };
+        const predicted = predictInterceptY(Infinity);
+        const real = updateAi;
+        updateAi = () => {};
+        ai.y = 10000; // parked where it cannot interfere
+        let guard = 0;
+        while (ball.x < AI_PLANE && guard++ < 10000) update();
+        const out = { predicted, actual: ball.y };
+        updateAi = real;
+        return out;
+      }, vy);
+      check(`a full read matches the simulated path (vy=${vy})`,
+        Math.abs(r.predicted - r.actual) < 2,
+        `predicted ${r.predicted.toFixed(1)}, landed ${r.actual.toFixed(1)}`);
+    }
+
+    check("no prediction for a ball travelling away", hasAi && await page.evaluate(
+      () => {
+        ball = { x: 300, y: 200, vx: -5, vy: 0 };
+        return typeof predictInterceptY === "function"
+          ? predictInterceptY(Infinity) : 0;
+      }) === null);
+
+    // Seeing one bounce ahead is a genuine misread of a ball that bounces more,
+    // which is the shot that most exposed the old ai as a machine.
+    const short = await aiRun(() => {
+      cancelAnimationFrame(rafId);
+      restart();
+      phase = "play";
+      ball = { x: 100, y: 100, vx: 5, vy: 11 }; // bounces twice on the way over
+      return { full: predictInterceptY(Infinity), limited: predictInterceptY(1) };
+    });
+    check("a limited lookahead misreads a multi-bounce shot",
+      !!short && Math.abs(short.full - short.limited) > 50,
+      short && `full ${short.full.toFixed(0)} vs one-bounce ${short.limited.toFixed(0)}`);
+
+    // The whole complaint: it must not be standing on the answer the moment the
+    // ball is struck. Compare where it is early against where the ball will
+    // actually arrive.
+    const walk = await aiRun(() => {
+      cancelAnimationFrame(rafId);
+      restart();
+      phase = "play";
+      ai.y = (HEIGHT - PADDLE_HEIGHT) / 2;
+      ball = { x: PLAYER_PLANE, y: 60, vx: 6, vy: 9 };
+      const truth = predictInterceptY(Infinity) + BALL_SIZE / 2 - PADDLE_HEIGHT / 2;
+      const early = [];
+      for (let i = 0; i < 30; i++) { update(); early.push(ai.y); }
+      let guard = 0;
+      while (ball.vx > 0 && guard++ < 400) update();
+      return { truth, earliest: early[8], settled: ai.y };
+    });
+    check("it is not standing on the answer just after the ball is struck",
+      !!walk && Math.abs(walk.earliest - walk.truth) > 25,
+      walk && `at tick 8 it is ${Math.abs(walk.earliest - walk.truth).toFixed(0)}px off`);
+
+    // Turning every knob off must reproduce the old direct mover exactly, so any
+    // of this can be isolated or backed out without editing code.
+    const off = await aiRun(() => {
+      const saved = { ...AI };
+      Object.assign(AI, {
+        reactionTicks: 0, lookaheadBounces: Infinity, resampleTicks: 1,
+        resampleJitter: 0, readErrorFarPx: 0, readErrorNearPx: 0,
+        readJitterPx: 0, aimSpread: 0, accelTicks: 0, brakeTicks: 1,
+        panicSpeed: AI.speed,
+      });
+      cancelAnimationFrame(rafId);
+      restart();
+      phase = "play";
+      ai.y = 0;
+      ball = { x: 100, y: 300, vx: 5, vy: 0 };
+      update();
+      const step1 = ai.y;
+      let guard = 0;
+      while (ball.vx > 0 && guard++ < 500) update();
+      const out = { step1, speed: AI.speed, vx: ball.vx, conceded: player.score };
+      Object.assign(AI, saved);
+      return out;
+    });
+    check("with every knob off it moves at full speed from the first tick",
+      !!off && Math.abs(off.step1 - off.speed) < 1e-9, off && off.step1);
+    check("and a perfect read intercepts the ball",
+      !!off && off.vx < 0 && off.conceded === 0,
+      off && `vx=${off.vx.toFixed(2)} conceded=${off.conceded}`);
+
+    // A read bad enough still misses: the error is real, not decorative.
+    const missed = await aiRun(() => {
+      const saved = { ...AI };
+      Object.assign(AI, { reactionTicks: 0, readJitterPx: 0, aimSpread: 0 });
+      cancelAnimationFrame(rafId);
+      restart();
+      phase = "play";
+      ai.y = 0;
+      ball = { x: 100, y: 380, vx: 5, vy: 0 };
+      update();
+      aiErrorSign = -1;
+      AI.readErrorFarPx = 400;
+      AI.readErrorNearPx = 400;
+      let guard = 0;
+      while (player.score === 0 && guard++ < 500) update();
+      const out = { scored: player.score };
+      Object.assign(AI, saved);
+      return out;
+    });
+    check("a bad enough read misses it", !!missed && missed.scored === 1,
+      missed && missed.scored);
+
+    // Its read tightens as the ball comes in, and stays loose for most of the
+    // flight rather than tightening evenly - that is what stops it committing.
+    const conv = await aiRun(() => {
+      const saved = { ...AI };
+      Object.assign(AI, { readJitterPx: 0, aimSpread: 0, lookaheadBounces: Infinity });
+      cancelAnimationFrame(rafId);
+      restart();
+      phase = "play";
+      const sample = (x) => {
+        ball = { x, y: 200, vx: 6, vy: 0 };
+        aiErrorSign = 1; // fix the direction so only the magnitude varies
+        aiGlance();
+        const truth = predictInterceptY(Infinity) + BALL_SIZE / 2 - PADDLE_HEIGHT / 2;
+        return Math.abs(aiTarget - truth);
+      };
+      const out = {
+        far: sample(PLAYER_PLANE + 10),
+        mid: sample((PLAYER_PLANE + AI_PLANE) / 2),
+        near: sample(AI_PLANE - 20),
+      };
+      Object.assign(AI, saved);
+      return out;
+    });
+    check("its read tightens as the ball comes in",
+      !!conv && conv.far > conv.mid && conv.mid > conv.near,
+      conv && `${conv.far.toFixed(0)} -> ${conv.mid.toFixed(0)} -> ${conv.near.toFixed(0)}`);
+    check("and is still well out halfway, rather than tightening evenly",
+      !!conv && conv.mid > (conv.far + conv.near) / 2,
+      conv && `${conv.mid.toFixed(0)} vs an even ${((conv.far + conv.near) / 2).toFixed(0)}`);
+    check("but never becomes certain",
+      !!conv && conv.near > 1, conv && conv.near.toFixed(1));
+
+    // A slow ball is easy to follow; the paddle should look settled on it rather
+    // than fidgeting the way it does under a fast one.
+    const twitch = await aiRun(() => {
+      const saved = { ...AI };
+      Object.assign(AI, {
+        readErrorFarPx: 0, readErrorNearPx: 0, lookaheadBounces: Infinity,
+        aimSpread: 0,
+      });
+      cancelAnimationFrame(rafId);
+      restart();
+      phase = "play";
+      const spreadAt = (speed) => {
+        const seen = [];
+        for (let i = 0; i < 300; i++) {
+          ball = { x: 300, y: 200, vx: speed, vy: 0 };
+          aiErrorSign = 0; // isolate the per-glance wobble
+          aiGlance();
+          seen.push(aiTarget);
+        }
+        return Math.max(...seen) - Math.min(...seen);
+      };
+      const out = { slow: spreadAt(BALL_SPEED), fast: spreadAt(BALL_SPEED_MAX) };
+      Object.assign(AI, saved);
+      return out;
+    });
+    check("it wobbles far less following a slow ball",
+      !!twitch && twitch.slow < twitch.fast * 0.5,
+      twitch && `${twitch.slow.toFixed(1)}px slow vs ${twitch.fast.toFixed(1)}px fast`);
+    check("but still wobbles under a fast one", !!twitch && twitch.fast > 2,
+      twitch && twitch.fast.toFixed(1));
+
+    // Where on its paddle it aims is what varies the angle it returns at.
+    const angles = {};
+    for (const aim of hasAi ? [0.9, -0.9] : []) {
+      angles[aim] = await aiRun((a) => {
+        const saved = { ...AI };
+        Object.assign(AI, {
+          reactionTicks: 0, resampleTicks: 1, resampleJitter: 0,
+          readErrorFarPx: 0, readErrorNearPx: 0, readJitterPx: 0,
+          accelTicks: 0, brakeTicks: 1,
+        });
+        cancelAnimationFrame(rafId);
+        restart();
+        phase = "play";
+        ai.y = 0;
+        ball = { x: 100, y: 200, vx: 5, vy: 0 };
+        update();
+        aiAim = a;
+        let guard = 0;
+        while (ball.vx > 0 && guard++ < 500) { aiAim = a; update(); }
+        const out = ball.vy;
+        Object.assign(AI, saved);
+        return out;
+      }, aim);
+    }
+    check("aiming low returns the ball downward", angles[0.9] > 0, angles[0.9]);
+    check("aiming high returns it upward", angles[-0.9] < 0, angles[-0.9]);
+  }
+
+  console.log("18. the ai is beatable, and competent");
+  {
+    // The one property that actually matters and that no other check reaches. It
+    // caught a real regression: making the ai feel human took it from 91% to
+    // saving every single shot, because a read that converges to near-certainty
+    // plus a fast recovery means it always gets there in the end.
+    const shots = 400;
+    const saved = await page.evaluate((n) => {
+      if (typeof AI === "undefined") return null;
+      cancelAnimationFrame(rafId);
+      let s = 0;
+      for (let i = 0; i < n; i++) {
+        restart();
+        phase = "play";
+        ai.y = (HEIGHT - PADDLE_HEIGHT) / 2;
+        const angle = (Math.random() * 2 - 1) * (Math.PI / 3);
+        const speed = 5 + Math.random() * 5;
+        ball = { x: PLAYER_PLANE, y: Math.random() * (HEIGHT - BALL_SIZE),
+                 vx: speed * Math.cos(angle), vy: speed * Math.sin(angle) };
+        let guard = 0;
+        while (ball.vx > 0 && player.score === 0 && guard++ < 800) update();
+        if (player.score === 0) s++;
+      }
+      return s;
+    }, shots);
+    const rate = saved === null ? null : (100 * saved) / shots;
+    // Deliberately a wide band. It is there to catch "unbeatable" and "hopeless",
+    // not to pin a tuning value that is meant to be adjusted by feel.
+    check("the ai misses some of what is thrown at it",
+      rate !== null && rate < 98, rate !== null && `saves ${rate.toFixed(1)}%`);
+    check("but saves most of it", rate !== null && rate > 80,
+      rate !== null && `saves ${rate.toFixed(1)}%`);
+  }
+
+  console.log("19. paddle collision is a crossing, not a position");
   {
     // Already past the plane when the paddle arrives. The old half-plane test
     // rescued this, because ball.x <= PADDLE_WIDTH stays true on the way out.

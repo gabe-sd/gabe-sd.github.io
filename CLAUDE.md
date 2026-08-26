@@ -84,7 +84,8 @@ with state worth protecting.
 ### The page contract
 
 Every game lives in `games/<name>/` as three files (`index.html`, `style.css`,
-`script.js`) and is otherwise self-contained. Adding a game means creating that
+`script.js`), plus a `DESIGN.md` once it has earned one, and is otherwise
+self-contained. Adding a game means creating that
 folder and a card in the root `index.html` — nothing else changes.
 
 Each game page follows a contract that `shared.css` depends on:
@@ -124,7 +125,15 @@ break that.
 Keep each entry to a paragraph or two of *invariants* — what a reader must not
 break. When one outgrows that it has started carrying design rationale instead,
 which belongs in `games/<name>/DESIGN.md` with the invariants and a pointer left
-here. Pong is at that threshold now.
+here. Pong has one; the others do not need one yet.
+
+A design doc is only worth having if it is true, so **changing how a game plays
+means updating its design doc in the same commit** — the model, and anything tried
+and rejected along the way. Rejected alternatives are the most valuable thing in
+there and the easiest to lose: without them the next person re-runs the experiment
+and reaches the same answer a day later. Keep values out of it; those live in the
+code as named constants, and a doc that repeats them is wrong the first time one is
+tuned.
 
 **Chess** (`games/chess/script.js`) is the substantial one. Legality is layered:
 `generatePseudoMoves` produces moves ignoring check; `applyMove` is pure — it
@@ -136,35 +145,22 @@ check detection, castling-through-check rules, and `isInCheck`.
 Changes to move rules belong in the pseudo-move layer; do not special-case
 legality in the click handler.
 
-**Pong** (`games/pong/script.js`) runs a `requestAnimationFrame` loop over mutable
-`player`/`ai`/`ball` objects, but the loop only *paces* the game: `advance()`
-drains elapsed real time into whole `TICK_MS` ticks and calls `update()` once per
-tick, so play is identical at 60Hz and 144Hz. Every speed constant is therefore
-per tick, not per frame — add a new one in those units, and do not move
-per-frame movement back into `loop()`. `advance()` clamps a single frame to
-`MAX_CATCHUP_MS` so a backgrounded tab does not resume by simulating minutes at
-once. Ball speed is recomputed and capped on every paddle hit by `bounce()`, which
-also derives the angle from the strike position: nothing may accumulate into
-`ball.vy` directly, which is what previously let a long rally reach ten times
-the serve speed and skip straight past a paddle. Play is a three-phase machine:
-`serve` waits for the player, `countdown` is the pause after a point, `play` is
-a live ball, and `update()` moves the paddles but returns before touching the
-ball in anything but `play` — a test that places the ball by hand has to set
-`phase` too. Pointer control sets `player.y` directly from the event handler and is
-deliberately *not* rate-limited, so a mouse moves the paddle faster than the keys
-can and repositioning it while paused is a free move. Both were fixed once and
-the fix was rejected on play: chasing the cursor instead of being it cost more in
-feel than the exploit costs in a single-player game with no scoreboard. Leave it
-alone. Pausing (Escape or `p`, and automatically on `blur` or a hidden tab) gates
-`update()` entirely and zeroes the accumulator, so paused real
-time is dropped rather than banked up to replay on resume; it deliberately does
-not resume on focus. The loop stops itself once `gameOver` is set and `restart()`
-brings it back, but scheduling is guarded by `running` rather than by `rafId`, so a
-caller that has cancelled the pending frame — the test harness does exactly
-that — does not get it restarted underneath them. A canvas cannot use CSS custom
-properties, so theme colours are copied into a plain `colors` object by
-`readColors()` and re-copied from a `prefers-color-scheme` change listener; only
-the background is re-read per frame.
+**Pong** (`games/pong/script.js`) keeps its model, its measurements and its
+rejected alternatives in `games/pong/DESIGN.md` — read that before changing how it
+plays. Four things will bite you without it:
+
+- The loop only *paces*: `advance()` drains real time into whole `TICK_MS` ticks
+  and calls `update()` once per tick, so every speed constant is per tick. Nothing
+  may accumulate into `ball.vy` either — `bounce()` owns velocity outright.
+- Two things exist for the test harness. `update()` returns before touching the
+  ball outside `phase === "play"`, so a test placing the ball must set `phase`;
+  and loop scheduling is guarded by `running`, not by `rafId`, so a caller that
+  cancelled the pending frame does not get it restarted underneath them.
+- Pointer control is deliberately *not* rate-limited, which makes a mouse faster
+  than the keys. That was fixed once and reverted on play. It looks like a bug.
+- Every knob in the `AI` object documents the value that switches its feature off,
+  and a test asserts that all of them off reproduces the old direct mover. Keep
+  that true: it is all tuned by feel, and feel changes.
 
 **Minesweeper** (`games/minesweeper/script.js`) places mines lazily on the first
 reveal, excluding the 3x3 around that cell, so the first click is always safe —
