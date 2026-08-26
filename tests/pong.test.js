@@ -24,6 +24,7 @@ const { check, report } = makeChecks();
   const freeze = () => page.evaluate(() => {
     cancelAnimationFrame(rafId);
     restart();
+    document.getElementById("menu").hidden = true;
     phase = "play";
   });
   const freezeOnly = () => page.evaluate(() => cancelAnimationFrame(rafId));
@@ -87,8 +88,12 @@ const { check, report } = makeChecks();
     check("ball starts centred on the board", isCentred(s.ball), where(s.ball));
     check("ball waits to be served rather than launching itself",
       s.ball.vx === 0 && s.ball.vy === 0, `${s.ball.vx},${s.ball.vy}`);
-    check("status prompts for a serve",
-      (await page.textContent("#status")).includes("Press Space"),
+    check("the menu is showing", await page.isVisible("#menu"));
+    check("with no heading before a game has been played",
+      (await page.textContent("#menu-heading")).trim() === "",
+      await page.textContent("#menu-heading"));
+    check("and the status line is left to the menu",
+      (await page.textContent("#status")).trim() === "",
       await page.textContent("#status"));
     check("canvas is 600x400", WIDTH === 600 && HEIGHT === 400, `${WIDTH}x${HEIGHT}`);
 
@@ -361,9 +366,9 @@ const { check, report } = makeChecks();
     const s = await read();
     check("player reaches the win score", s.player.score === WIN_SCORE, s.player.score);
     check("game is over", s.gameOver === true);
-    check("status announces the win",
-      (await page.textContent("#status")).includes("You win"),
-      await page.textContent("#status"));
+    check("the menu announces the win",
+      (await page.textContent("#menu-heading")).includes("You win"),
+      await page.textContent("#menu-heading"));
     const before = (await read()).ball.x;
     await step(5);
     check("stepping does nothing once over", (await read()).ball.x === before);
@@ -375,9 +380,9 @@ const { check, report } = makeChecks();
     });
     await step(20);
     check("ai can win too", (await read()).gameOver === true);
-    check("status announces the loss",
-      (await page.textContent("#status")).includes("AI wins"),
-      await page.textContent("#status"));
+    check("the menu announces the loss",
+      (await page.textContent("#menu-heading")).includes("AI wins"),
+      await page.textContent("#menu-heading"));
 
     // The loop stops itself once the game is over rather than redrawing a frozen
     // board forever. Driving loop() by hand is safe here: with gameOver set it
@@ -539,7 +544,7 @@ const { check, report } = makeChecks();
     await page.keyboard.press("Space");
     await page.waitForTimeout(120);
     check("Space on a focused button does not also serve",
-      (await page.evaluate(() => phase)) === before && before === "serve",
+      (await page.evaluate(() => phase)) === before && before === "menu",
       `${before} -> ${await page.evaluate(() => phase)}`);
     check("it toggles the panel shut instead",
       !(await page.isVisible("#instructions")));
@@ -645,13 +650,13 @@ const { check, report } = makeChecks();
 
     await freeze();
     await set({ ai: { y: 0 }, ball: { x: 100, y: 380, vx: 5, vy: 0 } });
-    const react = await page.evaluate((n) => {
+    const react = await page.evaluate(() => {
       const before = ai.y;
-      for (let i = 0; i < n; i++) update();
+      for (let i = 0; i < AI.reactionTicks; i++) update();
       const during = ai.y;
       update();
-      return { before, during, after: ai.y };
-    }, 12);
+      return { before, during, after: ai.y, ticks: AI.reactionTicks };
+    });
     check("it holds still through a reaction delay",
       react.during === react.before, `${react.before} -> ${react.during}`);
     check("then starts moving", react.after !== react.during,
@@ -1024,7 +1029,9 @@ const { check, report } = makeChecks();
       const seen = new Set([phase]);
       let sawCountdown = false;
       let ticks = 0;
-      serve(); // the player would press Space here
+      document.getElementById("play").click(); // leaves the menu, enters "serve"
+      seen.add(phase);
+      serve(); // and the player presses Space
       while (!gameOver && ticks++ < budget) {
         // A player that never misses: park the paddle on the ball.
         player.y = Math.max(0, Math.min(HEIGHT - PADDLE_HEIGHT,
@@ -1034,7 +1041,8 @@ const { check, report } = makeChecks();
         if (phase === "countdown") sawCountdown = true;
       }
       return { gameOver, ticks, phases: [...seen], sawCountdown,
-               player: player.score, ai: ai.score, status: statusEl.textContent };
+               player: player.score, ai: ai.score, status: statusEl.textContent,
+               heading: menuHeading.textContent };
     }, 200000);
 
     check("the game reaches a conclusion", game.gameOver, `after ${game.ticks} ticks`);
@@ -1047,8 +1055,10 @@ const { check, report } = makeChecks();
       ["serve", "play", "countdown"].every((p) => game.phases.includes(p)),
       game.phases.join(", "));
     check("points did not chain without the pause between them", game.sawCountdown);
-    check("the status line announces the result",
-      /win|wins/i.test(game.status), game.status);
+    check("the menu announces the result", /win|wins/i.test(game.heading),
+      game.heading);
+    check("and the status line is left to it", game.status.trim() === "",
+      game.status);
   }
 
   console.log("22. restarting and pausing at awkward moments");
@@ -1064,8 +1074,8 @@ const { check, report } = makeChecks();
       `${mid.player.score}-${mid.ai.score}`);
     check("and parks the ball", mid.ball.vx === 0 && isCentred(mid.ball),
       where(mid.ball));
-    check("and returns to waiting for a serve",
-      (await page.evaluate(() => phase)) === "serve",
+    check("and returns to the menu",
+      (await page.evaluate(() => phase)) === "menu" && await page.isVisible("#menu"),
       await page.evaluate(() => phase));
 
     // Pausing during the countdown must hold the countdown too, not just the ball.
@@ -1089,6 +1099,102 @@ const { check, report } = makeChecks();
     check("resuming lets it finish counting down and serve",
       (await page.evaluate(() => phase)) === "play",
       await page.evaluate(() => phase));
+  }
+
+  console.log("23. the difficulty menu");
+  {
+    await page.evaluate(() => restart());
+    check("Restart brings the menu back", await page.isVisible("#menu"));
+    const checked = () => page.evaluate(() =>
+      [...document.querySelectorAll("#difficulty [data-level]")]
+        .filter((b) => b.getAttribute("aria-checked") === "true")
+        .map((b) => b.dataset.level));
+    check("exactly one difficulty is selected", (await checked()).length === 1,
+      (await checked()).join(","));
+
+    await page.click('#difficulty [data-level="easy"]');
+    check("clicking one selects it", (await checked())[0] === "easy",
+      (await checked()).join(","));
+    check("and deselects the others", (await checked()).length === 1);
+    check("selecting does not start the game",
+      (await page.evaluate(() => phase)) === "menu" && await page.isVisible("#menu"));
+    check("it actually reaches the ai",
+      (await page.evaluate(() => AI.reactionTicks))
+        === (await page.evaluate(() => DIFFICULTY.easy.reactionTicks)));
+
+    await page.click("#play");
+    await page.waitForTimeout(80);
+    check("Play hides the menu", !(await page.isVisible("#menu")));
+    check("and drops into the serve prompt, not a live ball",
+      (await page.evaluate(() => phase)) === "serve",
+      await page.evaluate(() => phase));
+    check("with the ball still parked",
+      (await page.evaluate(() => ball.vx)) === 0);
+    check("Space now serves rather than re-pressing Play", await (async () => {
+      await page.keyboard.press("Space");
+      await page.waitForTimeout(80);
+      return (await page.evaluate(() => phase)) === "play";
+    })());
+
+    // The choice survives a reload.
+    await page.reload();
+    await page.waitForSelector("#board");
+    check("the choice is remembered across a reload",
+      (await page.evaluate(() => difficulty)) === "easy",
+      await page.evaluate(() => difficulty));
+    check("and the button shows it", (await checked())[0] === "easy");
+
+    // ...and an unavailable localStorage falls back rather than throwing.
+    const blocked = await browser.newPage();
+    await blocked.addInitScript(() => {
+      Object.defineProperty(window, "localStorage", {
+        get() { throw new Error("site data blocked"); },
+      });
+    });
+    const blockedErrors = [];
+    blocked.on("pageerror", (e) => blockedErrors.push(String(e)));
+    await blocked.goto(PAGE);
+    await blocked.waitForSelector("#board");
+    check("a blocked localStorage does not break the page",
+      blockedErrors.length === 0, blockedErrors.join("; "));
+    check("and falls back to the default difficulty",
+      (await blocked.evaluate(() => difficulty)) === "medium",
+      await blocked.evaluate(() => difficulty));
+    await blocked.close();
+
+    // The presets have to differ in the direction they claim to.
+    await page.evaluate(() => { localStorage.removeItem("pong.difficulty"); });
+    const rates = await page.evaluate((n) => {
+      cancelAnimationFrame(rafId);
+      const saved = { ...AI };
+      const out = {};
+      for (const level of Object.keys(DIFFICULTY)) {
+        applyDifficulty(level);
+        let s = 0;
+        for (let i = 0; i < n; i++) {
+          restart();
+          phase = "play";
+          ai.y = (HEIGHT - PADDLE_HEIGHT) / 2;
+          const a = (Math.random() * 2 - 1) * (Math.PI / 3);
+          const sp = 5 + Math.random() * 5;
+          ball = { x: PLAYER_PLANE, y: Math.random() * (HEIGHT - BALL_SIZE),
+                   vx: sp * Math.cos(a), vy: sp * Math.sin(a) };
+          let g = 0;
+          while (ball.vx > 0 && player.score === 0 && g++ < 800) update();
+          if (player.score === 0) s++;
+        }
+        out[level] = (100 * s) / n;
+      }
+      Object.assign(AI, saved);
+      return out;
+    }, 300);
+    const shown = Object.entries(rates)
+      .map(([k, v]) => `${k} ${v.toFixed(0)}%`).join(", ");
+    check("harder difficulties save more", rates.easy < rates.medium
+      && rates.medium < rates.hard, shown);
+    check("easy is genuinely beatable", rates.easy < 85, shown);
+    check("hard is not a formality", rates.hard > 88, shown);
+    await page.evaluate(() => { restart(); applyDifficulty("medium"); });
   }
 
   check("no page errors", errors.length === 0, errors.join("; "));

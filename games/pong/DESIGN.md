@@ -163,6 +163,30 @@ mover exactly**. Backing out or isolating any single part of this is a number, n
 an edit. That guarantee is worth keeping: all of this is tuned by feel, and feel
 changes.
 
+### Difficulty
+
+A difficulty is a set of overrides on the `AI` object and **nothing else**. Both
+sides play the same game — same ball speed, same paddle sizes — which is what
+makes the share of shots the AI saves a fair measure of the difference between
+them. Presets that also moved ball speed or paddle height would break that
+comparison, which is why the two joke modes are tracked separately in `TODO.md`.
+
+They are applied over a pristine copy of the defaults each time. Applying one
+preset on top of another would otherwise leave whatever the previous one had
+overridden — switching from Easy back to Hard would silently keep Easy's bounce
+lookahead.
+
+The menu that selects them is **real buttons overlaid on the canvas**, not shapes
+painted onto it. Canvas pixels have no keyboard focus, no tab order and nothing for
+a screen reader, and hit-testing would have to be hand-rolled; DOM buttons get all
+of it free and can be made to look identical. The menu shows on load and at the end
+of a game, never mid-match — pause is a separate thing and does not surface it.
+
+Play drops into the existing `serve` phase rather than starting a rally, so the
+player still serves the first ball. Restart returns to the menu rather than
+restarting silently, so there is one path into a match and the difficulty can be
+changed on the way.
+
 ### What actually changes difficulty
 
 Measured as the share of shots saved, over hundreds of random angles and speeds
@@ -173,7 +197,8 @@ with the paddle starting centred:
 | original chasing AI | 88% |
 | first predictive AI | 91% |
 | after the human-feel work, before tuning | **100%** |
-| now | ~92% |
+| untuned defaults | ~92% |
+| Easy / Medium / Hard | ~70% / ~86% / ~95% |
 
 That 100% is the entry worth remembering. Making the AI feel human made it
 **unbeatable**, and nothing but playing it revealed that. The cause: a read that

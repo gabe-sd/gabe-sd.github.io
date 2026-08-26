@@ -1,3 +1,48 @@
+.board-wrap {
+  position: relative;
+  line-height: 0; /* no descender gap under the canvas for the menu to sit in */
+}
+
+/* Scoped to :not([hidden]) or the display value would beat the hidden attribute
+   and the menu would render over the board on load. */
+.menu:not([hidden]) {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  border-radius: 8px;
+  line-height: normal;
+  /* Opaque first as a fallback, then veiled where color-mix is supported, so the
+     final score stays readable behind it. */
+  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+}
+
+.menu-heading {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--fg);
+}
+
+.menu-heading:empty {
+  display: none;
+}
+
+.difficulty {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.difficulty .btn[aria-checked="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
 #board {
   background: var(--cell-bg);
   border: 2px solid var(--cell-border);
