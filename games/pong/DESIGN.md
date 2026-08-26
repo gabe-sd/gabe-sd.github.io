@@ -190,7 +190,8 @@ changed on the way.
 ### What actually changes difficulty
 
 Measured as the share of shots saved, over hundreds of random angles and speeds
-with the paddle starting centred:
+with the paddle starting centred. `node tests/ai-sweep.js` is what produces these,
+and re-running it is how any new preset gets a comparable figure:
 
 | version | saves |
 | --- | --- |
