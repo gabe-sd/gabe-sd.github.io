@@ -47,11 +47,25 @@ the best time.
 Remaining work on `games/pong/`. Entries stay in ID order so a reference is easy to
 find; priority is stated here rather than encoded in the ordering.
 
-Suggested order: P17 whenever, it is small and touches nothing else. P18 next —
-it is a live fairness problem and it decides whether mouse control survives at
-all. Then P8 and P9 together, since difficulty settings are only meaningful
-against an AI that has something worth tuning. P2, P14 and P15 are independent and
-can go in any order.
+Order of work. Steps 2 and 3 are dependencies, not preference:
+
+1. **P2 and P17** together. Neither is a taste call, so neither needs playing
+   first. P2 makes the game marginally harder by removing accidental saves; that
+   is the only change in feel.
+2. **P18**, before P8 and P9. It changes the player's own top speed, so any
+   difficulty tuned ahead of it is tuned against a baseline about to move.
+3. **P8** on its own rather than bundled with P9, so the AI can be judged without
+   difficulty presets confusing the signal.
+4. **P9 and P10** together — same panel, same stored settings, and P10 is nearly
+   free once the panel exists.
+5. `games/pong/DESIGN.md`. The AI model is the content it has been waiting for,
+   and `CLAUDE.md` is already past the paragraph it allows a game there.
+6. **P14** and **P15**, whenever. P14 needs someone who can see the canvas; P15
+   wants splitting into separate entries before any of it starts.
+
+Everything from step 2 on changes how the game feels, so it gets played before it
+merges, one step at a time. Three feel changes reviewed together can be called
+worse without anyone being able to say which one did it.
 
 `tests/pong.test.js` covers the physics, the round lifecycle, the controls and the
 panels — add to it rather than around it. Its last section pins known-wrong
