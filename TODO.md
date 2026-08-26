@@ -53,14 +53,18 @@ find; priority is stated here rather than encoded in the ordering.
 
 Order of work:
 
-1. **P9 and P10** together — same panel, same stored settings, and P10 is nearly
-   free once the panel exists.
-2. **P19**, once the menu from step 1 exists.
-3. **P20** whenever — it is small, self-contained, and needs no playtest.
-4. **P14** and **P15**, whenever. P14 needs someone who can see the canvas; P15
+1. **P9** — the difficulty menu.
+2. **P19**, once that menu exists; it is two more buttons in the same row.
+3. **P14** and **P15**, whenever. P14 needs someone who can see the canvas; P15
    wants splitting into separate entries before any of it starts.
 
-Step 1 changes how the game feels, so it gets played before it merges.
+**P10 is deferred** and deliberately not in that list. It was going to ride along
+with P9 on the grounds that a settings panel would have room for it, and the menu
+that was actually specified — three difficulty buttons and Play — does not. It
+needs somewhere to live before it needs building, and it may not be wanted at all.
+
+Step 1 changes how the game feels, so it gets played before it merges. Not
+designing for mobile at this point.
 
 `games/pong/DESIGN.md` has the model and what was tried and rejected; keep it in
 step with the code, in the same commit as the change.
@@ -89,10 +93,16 @@ base speed, and possibly `PADDLE_HEIGHT`.
   returning null when unavailable, and an unguarded read at load takes the page
   down. Treat "cannot read" as the default difficulty.
 
-### P10 — Configurable win score
+### P10 — Configurable win score (deferred)
 
-`WIN_SCORE` is hardcoded to 5, which is a short game. First to 5 / 7 / 11 belongs
-in the same settings panel as the difficulty.
+`WIN_SCORE` is hardcoded to 5, which is a short game. First to 5 / 7 / 11 would be
+the obvious options.
+
+Deferred rather than scheduled: the difficulty menu is three buttons and Play, so
+there is nowhere for this to go without adding a second row that nobody has asked
+for. Decide where it lives — and whether it is wanted — before building it. The
+`?` panel already reads the win score from `WIN_SCORE` rather than hardcoding it,
+so that part will not need revisiting.
 
 ### P14 — Blurry on high-DPI displays
 
@@ -141,30 +151,6 @@ distinguishable.
   applies to the ai-only presets.
 - Asymmetric paddle heights make the two sides visibly unequal. That is the point
   here, but it is worth confirming it does not look broken before committing to it.
-
-### P20 — The ball is not actually centred
-
-It spawns half its own width to the right of the centre line, and the same
-distance below the vertical centre. `ball.x`/`ball.y` are the ball's **top left
-corner** — `draw()` does `fillRect(ball.x, ball.y, BALL_SIZE, BALL_SIZE)` — but
-`centredBall()` and `newBall()` both set them to `WIDTH / 2` and `HEIGHT / 2`. The
-centre line is drawn at `WIDTH / 2` too, so the ball sits entirely to one side of
-it and it is obvious once seen.
-
-Subtract `BALL_SIZE / 2` from both, in both functions.
-
-- Several cases in `tests/pong.test.js` assert the ball returns to
-  `WIDTH / 2, HEIGHT / 2` after a point and after Restart. They need the same
-  offset applied, and they are the reason to change both functions together rather
-  than only the one that looked wrong.
-- No physics changes: every collision and the ai's prediction already treat
-  `ball.x` as the left edge consistently, and `AI_PLANE` already subtracts
-  `BALL_SIZE` to account for it. This is only where the ball is put down.
-- The wider version of this is that a ball tracked by its corner needs half-width
-  corrections scattered around — `bounce()` and `predictInterceptY()` both carry
-  one. Switching to a centre-based position would remove them, but it touches every
-  collision and the prediction at once. Not worth it for this; worth knowing if
-  something else ever forces that area open.
 
 ## Improve site design and visual appeal
 

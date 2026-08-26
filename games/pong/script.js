@@ -68,6 +68,11 @@ const MAX_BOUNCE_ANGLE = Math.PI / 3;
 const SERVE_DELAY_TICKS = 60;
 // The vertical lines a ball has to cross to reach a paddle: the inside face of
 // each one, offset on the right by the ball's own width.
+// ball.x/y are the ball's top left corner, so centring it means backing off half
+// its width. Setting them to WIDTH/2, HEIGHT/2 put it a full half-width right of
+// the centre line, which draw() renders at exactly WIDTH/2.
+const CENTRE_X = WIDTH / 2 - BALL_SIZE / 2;
+const CENTRE_Y = HEIGHT / 2 - BALL_SIZE / 2;
 const PLAYER_PLANE = PADDLE_WIDTH;
 const AI_PLANE = WIDTH - PADDLE_WIDTH - BALL_SIZE;
 
@@ -112,7 +117,7 @@ let aiReactionLeft = 0;
 let aiApproaching = false;
 
 function centredBall() {
-  return { x: WIDTH / 2, y: HEIGHT / 2, vx: 0, vy: 0 };
+  return { x: CENTRE_X, y: CENTRE_Y, vx: 0, vy: 0 };
 }
 
 // dir is the direction of travel, not a random choice: the serve goes to whoever
@@ -121,8 +126,8 @@ function centredBall() {
 function newBall(dir) {
   const angle = (Math.random() * 0.6 - 0.3) * Math.PI;
   return {
-    x: WIDTH / 2,
-    y: HEIGHT / 2,
+    x: CENTRE_X,
+    y: CENTRE_Y,
     vx: dir * BALL_SPEED * Math.cos(angle),
     vy: BALL_SPEED * Math.sin(angle),
   };

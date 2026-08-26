@@ -75,6 +75,24 @@ and lands exactly where a test can step to it. The serve goes to whoever concede
 the point; it used to be a coin flip, which meant points could be won by the ball
 happening to launch itself at the AI.
 
+## Pausing
+
+Escape or `p`, and automatically on losing the window or having the tab hidden.
+
+**Resuming is deliberately manual**, including after the window comes back. The
+whole point is not to return to a ball that is already past you, so an automatic
+resume would undo the feature it looks like it belongs to. A click on the board
+resumes as well as the keys, because a mouse-only player would otherwise be
+stranded by a keyboard-only control.
+
+Pausing zeroes the tick accumulator rather than letting real time bank up.
+Without that, resuming would replay the entire pause at once, up to the
+`MAX_CATCHUP_MS` clamp.
+
+The blur and visibility handling is covered only by dispatched events, not by a
+real focus change. That is a harness limit rather than a choice, and
+`tests/README.md` records what was tried so nobody spends the afternoon again.
+
 ## Controls
 
 Keyboard movement is capped at `PADDLE_SPEED` per tick. Pointer control sets
@@ -173,6 +191,36 @@ because it only moves an AI between perfect and useless.
 shots at the AI and asserts it misses some and saves most. The band is wide on
 purpose, because these are meant to be tuned by feel and the test exists to catch
 "unbeatable" and "hopeless", not to pin a setting.
+
+## Reading the game without seeing it
+
+`#status` carries game state only — the serve prompt, the countdown, the pause
+message, the result. Standing instructions live in the `?` panel, per the page
+contract in `CLAUDE.md`.
+
+The score is **not** in the status line, because `draw()` already paints it across
+the top of the canvas and repeating it is the same information twice. But canvas
+pixels are unreadable to a screen reader, which made the status line the only
+place the score existed as text — so deleting it outright would have been an
+accessibility regression. It moved to a visually hidden live region instead, which
+announces it exactly when it changes.
+
+That region is **clipped, not `display: none`**. `display: none` would take it out
+of the accessibility tree as well and defeat the entire point. It looks like dead
+markup; it is not.
+
+## Geometry
+
+`ball.x`/`ball.y` are the ball's **top left corner**, not its centre, because that
+is what `fillRect` wants. Anything positioning the ball has to back off half its
+width — centring it on the board means `WIDTH / 2 - BALL_SIZE / 2`, and setting it
+to `WIDTH / 2` puts it a full half-width to the right of the centre line, which is
+drawn at exactly `WIDTH / 2`. That shipped for a while and is obvious once seen.
+
+`bounce()` and `predictInterceptY()` both carry the same half-width correction.
+Switching to a centre-based position would remove all of them, at the cost of
+touching every collision and the prediction at once — not worth doing on its own,
+worth knowing if something else forces that area open.
 
 ## Theme
 

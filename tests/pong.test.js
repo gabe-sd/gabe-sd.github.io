@@ -47,6 +47,13 @@ const { check, report } = makeChecks();
     ball: { ...ball }, player: { ...player }, ai: { ...ai }, gameOver,
   }));
   const opt = (name) => `typeof ${name} === "undefined" ? null : ${name}`;
+  // The property that matters is where the ball *looks*, so these compare centres
+  // rather than the corner that ball.x/y actually are.
+  const isCentred = (b) => Math.abs(b.x + BALL_SIZE / 2 - WIDTH / 2) < 1e-9
+    && Math.abs(b.y + BALL_SIZE / 2 - HEIGHT / 2) < 1e-9;
+  const where = (b) => `centre ${(b.x + BALL_SIZE / 2).toFixed(1)},`
+    + `${(b.y + BALL_SIZE / 2).toFixed(1)} vs board ${WIDTH / 2},${HEIGHT / 2}`;
+
   const readerText = () => page.evaluate(() =>
     document.getElementById("score-reader")?.textContent ?? null);
 
@@ -77,8 +84,7 @@ const { check, report } = makeChecks();
     // by the time the loop can be frozen it has already moved. That it starts
     // reacting with no delay is the behaviour P8 replaces.
     check("ai paddle is on the board", s.ai.y >= 0 && s.ai.y <= MAX_Y, s.ai.y);
-    check("ball starts centred", s.ball.x === WIDTH / 2 && s.ball.y === HEIGHT / 2,
-      `${s.ball.x},${s.ball.y}`);
+    check("ball starts centred on the board", isCentred(s.ball), where(s.ball));
     check("ball waits to be served rather than launching itself",
       s.ball.vx === 0 && s.ball.vy === 0, `${s.ball.vx},${s.ball.vy}`);
     check("status prompts for a serve",
@@ -266,8 +272,7 @@ const { check, report } = makeChecks();
     const s = await read();
     check("ai scores when the ball passes the player", s.ai.score === 1, s.ai.score);
     check("it took the expected number of frames", steps > 0, steps);
-    check("ball returns to the centre",
-      s.ball.x === WIDTH / 2 && s.ball.y === HEIGHT / 2, `${s.ball.x},${s.ball.y}`);
+    check("ball returns to the centre", isCentred(s.ball), where(s.ball));
     check("ball waits rather than launching straight away", s.ball.vx === 0,
       s.ball.vx);
     check("the score reaches the hidden live region",
@@ -319,8 +324,8 @@ const { check, report } = makeChecks();
     await step(30);
     const waiting = await read();
     check("the ball does not move while waiting to be served",
-      waiting.ball.x === WIDTH / 2 && waiting.ball.vx === 0,
-      `${waiting.ball.x},${waiting.ball.vx}`);
+      isCentred(waiting.ball) && waiting.ball.vx === 0,
+      `${where(waiting.ball)} vx=${waiting.ball.vx}`);
 
     await set({ player: { y: 200 } });
     await page.keyboard.down("w");
@@ -405,8 +410,7 @@ const { check, report } = makeChecks();
       (await readerText()) === "You 0, AI 0", await readerText());
     check("gameOver cleared", t.gameOver === false);
     check("paddles recentred", t.player.y === MAX_Y / 2 && t.ai.y === MAX_Y / 2);
-    check("ball re-served from the centre",
-      t.ball.x === WIDTH / 2 && t.ball.y === HEIGHT / 2);
+    check("ball re-served from the centre", isCentred(t.ball), where(t.ball));
   }
 
   console.log("12. paddle controls");
@@ -964,6 +968,49 @@ const { check, report } = makeChecks();
     const steep = await read();
     check("judged at the crossing point, not at the end of the tick",
       steep.ball.vx > 0, `vx=${steep.ball.vx} y=${steep.ball.y}`);
+  }
+
+  console.log("20. drawing, and containment under absurd input");
+  {
+    // draw() is otherwise almost untested: every case above freezes the loop, so
+    // it only ever runs in the few frames before that. A throw in here would show
+    // up as a dead board and nothing else would catch it.
+    const drew = await page.evaluate(() => {
+      const done = [];
+      try {
+        cancelAnimationFrame(rafId);
+        restart(); draw(); done.push("serve");
+        phase = "play";
+        ball = { x: 10, y: 0, vx: 9, vy: -9 }; draw(); done.push("play, ball on a wall");
+        phase = "countdown"; draw(); done.push("countdown");
+        paused = true; draw(); done.push("paused");
+        paused = false; gameOver = true; draw(); done.push("game over");
+        gameOver = false;
+        player.score = 12; ai.score = 9; draw(); done.push("two-digit scores");
+        ai.y = 0; player.y = HEIGHT - PADDLE_HEIGHT; draw(); done.push("paddles at the edges");
+        restart();
+        return { ok: true, done };
+      } catch (e) {
+        return { ok: false, done, error: String(e) };
+      }
+    });
+    check("draw survives every game state", drew.ok,
+      drew.ok ? `${drew.done.length} states` : `failed after ${drew.done.length}: ${drew.error}`);
+
+    // The wall bounce reflects the overshoot and clamps behind that. The clamp is
+    // the thing standing between a bad velocity and a ball that leaves the board.
+    await freeze();
+    await set({ ball: { x: 300, y: 5, vx: 0, vy: -900 } });
+    await step(1);
+    const flung = (await read()).ball;
+    check("an absurd upward velocity cannot throw the ball off the board",
+      flung.y >= 0 && flung.y <= HEIGHT - BALL_SIZE, flung.y);
+    await freeze();
+    await set({ ball: { x: 300, y: HEIGHT - BALL_SIZE - 5, vx: 0, vy: 900 } });
+    await step(1);
+    const flung2 = (await read()).ball;
+    check("nor an absurd downward one",
+      flung2.y >= 0 && flung2.y <= HEIGHT - BALL_SIZE, flung2.y);
   }
 
   check("no page errors", errors.length === 0, errors.join("; "));
