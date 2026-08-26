@@ -156,10 +156,10 @@ time is dropped rather than banked up to replay on resume; it deliberately does
 not resume on focus. The loop stops itself once `gameOver` is set and `restart()`
 brings it back, but scheduling is guarded by `running` rather than by `rafId`, so a
 caller that has cancelled the pending frame — the test harness does exactly
-that — does not get it restarted underneath them. A canvas cannot use CSS custom properties, so theme colours are
-copied into a plain `colors` object by `readColors()` and re-copied from a
-`prefers-color-scheme` change listener; only the background is re-read per
-frame.
+that — does not get it restarted underneath them. A canvas cannot use CSS custom
+properties, so theme colours are copied into a plain `colors` object by
+`readColors()` and re-copied from a `prefers-color-scheme` change listener; only
+the background is re-read per frame.
 
 **Minesweeper** (`games/minesweeper/script.js`) places mines lazily on the first
 reveal, excluding the 3x3 around that cell, so the first click is always safe —
@@ -178,7 +178,8 @@ network, no accounts.
 Wrap every `localStorage` access. It does not merely return `null` when
 unavailable, it *throws* — in private windows, with site data blocked, and from
 `file://` in some browsers — so an unguarded read at load time takes the whole
-game down. `loadBestTime`/`saveBestTime`/`clearBestTime` degrade to "no record" instead, and
+game down. `loadBestTime`/`saveBestTime`/`clearBestTime` degrade to "no record"
+instead, and
 `tests/best-time.test.js` covers that path by making storage throw.
 
 The gear panel's Reset best time button clears the key. It is disabled whenever
@@ -219,8 +220,8 @@ Behaviour you are knowingly leaving broken should be pinned as a passing asserti
 that states the wrong result and says so. Fixing it then turns a check red, so the
 before/after evidence arrives without anyone having to remember to look for it.
 
-Where a suite drives the harness itself — freezing a loop, stepping a tick — assert
-that the harness works before assuming it does. A freeze that silently stops
+Where a suite drives the harness itself — freezing a loop, stepping a tick —
+assert that the harness works before assuming it does. A freeze that silently stops
 working turns every later check into a race that still passes.
 
 ### Mouse/pointer behaviour must be verified with real input

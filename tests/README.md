@@ -56,13 +56,13 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
   load.
 - **pong.test.js** — the physics and controls: paddle collisions, wall bounces,
   scoring, the round lifecycle (serve prompt, the pause after a point, serving
-  back at whoever conceded), the win condition, and paddle clamping. It cancels the animation frame
-  and steps `update()` by hand, so it does not race a live loop or depend on frame
-  timing. Its last section pins the remaining *known* bug (`P2` in `TODO.md`) as
-  passing assertions describing the wrong behaviour — fixing one of those is
-  supposed to turn its check red, which is the before/after evidence the fix
-  worked. Rewrite the assertion as part of the fix so it describes the corrected
-  behaviour; do not just delete it.
+  back at whoever conceded), the win condition, and paddle clamping. It cancels
+  the animation frame and steps `update()` by hand, so it does not race a live
+  loop or depend on frame timing. Its last section pins the one remaining *known*
+  bug (`P2` in `TODO.md`) as a passing assertion describing the wrong behaviour —
+  fixing it is supposed to turn that check red, which is the before/after evidence
+  the fix worked. Rewrite the assertion as part of the fix so it describes the
+  corrected behaviour; do not just delete it.
 
 These drive input through Playwright, which is enough for ordinary clicks. For a
 *new* pointer bug, reproduce with real OS-level input first — see

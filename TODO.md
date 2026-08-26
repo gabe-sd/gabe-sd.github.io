@@ -6,8 +6,9 @@ belongs in git history, not here, so delete entries as they land.
 Keep entries actionable: enough context to start without rediscovering the
 constraints, including whatever was non-obvious the first time round.
 
-Once a section has enough entries to need them, they carry a short ID (`P1`, `P2`,
-… for Pong) so they can be named in conversation. Three rules stop those rotting:
+Once a section has enough entries to need them, they carry a short ID prefixed by
+the game (`P` for Pong) so they can be named in conversation. Four rules stop those
+rotting:
 
 - **Assigned once, never reused or renumbered.** Deleting a landed entry leaves a
   gap; closing the gap silently repoints every reference made before it.
@@ -15,6 +16,9 @@ Once a section has enough entries to need them, they carry a short ID (`P1`, `P2
   the moment its entry is deleted, so history has to describe itself.
 - **Grep for the ID before deleting an entry.** A cross-reference to an entry that
   no longer exists cannot be recovered without digging through old file versions.
+- **Never cite an ID that has already gone.** Point at the code or the behaviour
+  instead — a new entry referring to landed work is the same dead link arriving
+  from the other direction.
 
 ## Minesweeper: remember the panel open/closed state
 
@@ -184,11 +188,11 @@ Worth trying before removing the mouse:
   the paddle still has to travel to at normal speed, so the exploit disappears —
   and mouse and keyboard get the same top speed for the first time. Try this one
   first.
-- Failing that, ignore pointer input while paused and make the P5 takeover
-  threshold apply again on resume. Weaker: it delays the snap by one event rather
-  than preventing it.
+- Failing that, ignore pointer input while paused and re-apply the
+  `POINTER_TAKEOVER_PX` threshold on resume. Weaker: it delays the snap by one
+  event rather than preventing it.
 - Failing that, allow pausing only between points. Kills the exploit but takes
-  most of the value out of P7.
+  most of the value out of being able to pause at all.
 - Last resort, drop mouse control. Simplest fix, and the game is playable without
   it, but it is a real loss for anyone who prefers a mouse — exhaust the above
   first.
