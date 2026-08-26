@@ -1389,6 +1389,222 @@ const { check, report } = makeChecks();
     });
   }
 
+  console.log("26. abilities");
+  {
+    await page.reload();
+    await page.waitForSelector("#board");
+    // Every case sets up its own position, so the loop stays frozen throughout.
+    const setup = (level) => page.evaluate((l) => {
+      cancelAnimationFrame(rafId);
+      applyDifficulty(l);
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = "play";
+    }, level);
+
+    // The fair presets must stay fair: no move may exist outside its own mode.
+    await setup("medium");
+    const fairArmed = await page.evaluate(() => {
+      let armed = 0;
+      for (const name of MOVES) if (armMove(name)) armed++;
+      return armed;
+    });
+    check("no move can be armed in the fair presets", fairArmed === 0, fairArmed);
+
+    // --- blink -------------------------------------------------------------
+    await setup("insane");
+    const blink = await page.evaluate(() => {
+      ball = { x: 200, y: 200, vx: 6, vy: 0 };
+      ai.y = 160;
+      armMove("blink");
+      const seen = [];
+      for (let i = 0; i < 60; i++) { update(); seen.push(ai.y); }
+      const jumps = seen.slice(1).map((v, i) => Math.abs(v - seen[i]));
+      return { biggest: Math.max(...jumps), reachable: AI.panicSpeed,
+               onBoard: seen.every((y) => y >= 0 && y <= HEIGHT - ai.h) };
+    });
+    check("blink moves the paddle further than it could ever travel",
+      blink.biggest > blink.reachable * 3, `${blink.biggest.toFixed(0)}px/tick`);
+    check("and never leaves the board", blink.onBoard);
+
+    // It is supposed to be nearly unbeatable while it lasts - that is the joke.
+    const blinkSaves = await page.evaluate((n) => {
+      let saved = 0;
+      for (let i = 0; i < n; i++) {
+        restart();
+        document.getElementById("menu").hidden = true;
+        phase = "play";
+        const a = (Math.random() * 2 - 1) * MAX_BOUNCE_ANGLE;
+        const sp = BALL_SPEED + Math.random() * (BALL_SPEED_MAX - BALL_SPEED);
+        ball = { x: PLAYER_PLANE, y: Math.random() * (HEIGHT - BALL_SIZE),
+                 vx: sp * Math.cos(a), vy: sp * Math.sin(a) };
+        moveState.blink.cooldown = 0;
+        armMove("blink");
+        let g = 0;
+        while (ball.vx > 0 && player.score === 0 && g++ < 800) update();
+        if (player.score === 0) saved++;
+      }
+      return (100 * saved) / n;
+    }, 120);
+    check("blink saves nearly everything it is used on", blinkSaves > 90,
+      `${blinkSaves.toFixed(0)}%`);
+
+    // --- overdrive ---------------------------------------------------------
+    await setup("insane");
+    const od = await page.evaluate(() => {
+      ball = { x: AI_PLANE - 5, y: 200, vx: 8, vy: 0 };
+      ai.y = 200 - ai.h / 2;
+      armMove("overdrive");
+      const effectDuringTelegraph = [];
+      while (moveState.overdrive.phase === "telegraph") {
+        effectDuringTelegraph.push(Math.hypot(ball.vx, ball.vy));
+        tickAbilities();
+      }
+      const before = Math.hypot(ball.vx, ball.vy);
+      update();
+      return { before, after: Math.hypot(ball.vx, ball.vy), cap: BALL_SPEED_MAX,
+               spent: moveState.overdrive.phase,
+               telegraphTicks: effectDuringTelegraph.length,
+               unchangedWhileCharging:
+                 effectDuringTelegraph.every((v) => v === effectDuringTelegraph[0]) };
+    });
+    check("overdrive returns the ball above the normal speed cap",
+      od.after > od.cap, `${od.after.toFixed(1)} vs cap ${od.cap}`);
+    check("and it is faster than the shot that arrived", od.after > od.before);
+    check("it is spent on contact rather than lingering", od.spent === "idle", od.spent);
+    check("and the telegraph is a warning, not an effect",
+      od.telegraphTicks > 0 && od.unchangedWhileCharging, od.telegraphTicks);
+
+    // --- squeeze -----------------------------------------------------------
+    await setup("insane");
+    const sq = await page.evaluate(() => {
+      const base = player.h;
+      armMove("squeeze");
+      while (moveState.squeeze.phase === "telegraph") update();
+      const first = player.h;
+      for (let i = 0; i < 80; i++) update();
+      const settled = player.h;
+      while (moveState.squeeze.phase === "active") update();
+      for (let i = 0; i < 120; i++) update();
+      return { base, first, settled, restored: player.h,
+               target: PADDLE_HEIGHT * ABILITY.squeeze.scale };
+    });
+    check("squeeze shrinks your paddle", sq.settled < sq.base,
+      `${sq.base} -> ${sq.settled.toFixed(1)}`);
+    check("it eases rather than snapping to the new size",
+      sq.first > sq.settled && sq.first < sq.base,
+      `first tick ${sq.first.toFixed(1)} of ${sq.base} -> ${sq.target}`);
+    check("and it wears off", Math.abs(sq.restored - sq.base) < 0.5,
+      sq.restored.toFixed(1));
+
+    // --- expand ------------------------------------------------------------
+    await setup("assisted");
+    const ex = await page.evaluate(() => {
+      const base = player.h;
+      for (let i = 0; i < ABILITY.expand.streakToTrigger; i++) {
+        onPlayerReturn(player.y + player.h / 2);
+      }
+      const armed = moveState.expand.phase;
+      for (let i = 0; i < 120; i++) update();
+      return { base, armed, grown: player.h,
+               target: PADDLE_HEIGHT * ABILITY.expand.scale };
+    });
+    check("a streak of returns earns a bigger paddle", ex.armed !== "idle", ex.armed);
+    check("and it actually grows", ex.grown > ex.base,
+      `${ex.base} -> ${ex.grown.toFixed(1)}`);
+
+    await setup("assisted");
+    const behind = await page.evaluate(() => {
+      ai.score = ABILITY.expand.behindToTrigger;
+      player.score = 0;
+      ball = { x: -1, y: 200, vx: -5, vy: 0 };
+      update();
+      return moveState.expand.phase;
+    });
+    check("falling behind earns it too", behind !== "idle", behind);
+
+    // --- clutch ------------------------------------------------------------
+    await setup("assisted");
+    const clutch = await page.evaluate(() => {
+      onPlayerReturn(player.y + player.h - 1);
+      const edge = moveState.clutch.phase;
+      resetAbilities();
+      onPlayerReturn(player.y + player.h / 2);
+      return { edge, centre: moveState.clutch.phase };
+    });
+    check("catching it on the very end of the paddle earns a charged shot",
+      clutch.edge !== "idle", clutch.edge);
+    check("catching it dead centre does not", clutch.centre === "idle", clutch.centre);
+
+    // Through a real collision rather than by calling onPlayerReturn: if the hook
+    // ran before the bounce, the close call would spend the charge on the very
+    // hit that earned it and the player would never see it.
+    await setup("assisted");
+    const earned = await page.evaluate(() => {
+      player.y = 150;
+      ball = { x: PLAYER_PLANE + 4, y: player.y + player.h - BALL_SIZE,
+               vx: -6, vy: 0 };
+      update();
+      return { phase: moveState.clutch.phase, bounced: ball.vx > 0 };
+    });
+    check("a real edge save leaves the charge in hand, not spent on itself",
+      earned.bounced && earned.phase !== "idle", JSON.stringify(earned));
+
+    // --- cooldowns ---------------------------------------------------------
+    await setup("insane");
+    const chain = await page.evaluate(() => {
+      armMove("squeeze");
+      while (moveState.squeeze.phase !== "idle") update();
+      return { immediately: armMove("squeeze"),
+               cooldown: moveState.squeeze.cooldown };
+    });
+    check("a move cannot chain straight into itself",
+      chain.immediately === false && chain.cooldown > 0, JSON.stringify(chain));
+
+    // --- switching modes ---------------------------------------------------
+    const sizes = await page.evaluate(() => {
+      applyDifficulty("insane");
+      armMove("squeeze");
+      const shrunk = player.hTarget;
+      applyDifficulty("easy");
+      return { shrunk, afterSwitch: player.h, armed: moveState.squeeze.phase };
+    });
+    check("switching mode restores the paddle", sizes.afterSwitch === 80,
+      sizes.afterSwitch);
+    check("and disarms whatever was pending", sizes.armed === "idle", sizes.armed);
+
+    // --- everything off ----------------------------------------------------
+    // The same contract the AI object carries: turning it all off has to give
+    // back the plain game, so any of this can be isolated by setting numbers.
+    const off = await page.evaluate(() => {
+      const saved = {};
+      for (const name of MOVES) { saved[name] = ABILITY[name].modes; ABILITY[name].modes = []; }
+      applyDifficulty("insane");
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = "play";
+      let armed = 0;
+      const heights = new Set();
+      for (let i = 0; i < 400; i++) {
+        ball = { x: 200, y: 200, vx: 6, vy: 2 };
+        update();
+        heights.add(player.h);
+        for (const name of MOVES) if (moveState[name].phase !== "idle") armed++;
+      }
+      for (const name of MOVES) ABILITY[name].modes = saved[name];
+      return { armed, heights: [...heights] };
+    });
+    check("with every move disabled, none ever fires", off.armed === 0, off.armed);
+    check("and the paddle never changes size", off.heights.length === 1,
+      off.heights.join(","));
+
+    await page.evaluate(() => {
+      applyDifficulty("medium");
+      localStorage.removeItem("pong.difficulty");
+      restart();
+    });
+  }
+
   check("no page errors", errors.length === 0, errors.join("; "));
 
   await browser.close();

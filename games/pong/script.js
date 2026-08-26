@@ -58,6 +58,79 @@ const AI = {
 // same game, so the share of shots the ai saves measures the difference honestly.
 // The figures are what each preset measured at; they are starting points to tune
 // by feel, not settings to preserve.
+// Assisted and Insane are characters rather than points on a difficulty scale:
+// each has moves it occasionally uses. Same contract as AI above - every knob
+// names the value that switches its feature off, so any one of these can be
+// isolated, weakened or removed without unpicking the rest. `modes: []` disables
+// a move outright.
+//
+// Every move telegraphs before it lands. That is the rule that keeps them from
+// feeling arbitrary: you see it coming, so losing to one is something that
+// happened rather than something the game did to you behind your back.
+const ABILITY = {
+  // Shared. behindBonusPerPoint is how strongly falling behind summons a move,
+  // for either side; 0 = the score is ignored and only the base chance applies.
+  behindBonusPerPoint: 0.18,
+  resizeTicks: 20,   // ticks a paddle takes to reach a new size; 0 = instant
+  vibratePx: 3,      // how hard a charging paddle shakes; 0 = perfectly still
+  afterimages: 4,    // ghosts left behind by a blink; 0 = none
+
+  // --- Insane's moves ------------------------------------------------------
+  blink: {
+    modes: ["insane"],
+    chance: 0.4,          // per approach of the ball; 0 = never
+    cooldownTicks: 150,
+    telegraphTicks: 12,   // 0 = no warning at all
+    durationTicks: 50,
+    hopTicks: 3,          // ticks between teleports; higher = calmer
+    lockPx: 150,          // within this of its plane it stops showing off and
+                          // hops onto the real intercept; 0 = shows off throughout
+    accuracyPx: 4,        // how close those on-target hops land
+  },
+  overdrive: {
+    modes: ["insane"],
+    chance: 0.3,
+    cooldownTicks: 260,
+    telegraphTicks: 45,   // long on purpose: the charge is the whole show
+    durationTicks: 150,   // how long the charge stays available once lit
+    speedMultiplier: 1.9, // 1 = an ordinary return
+    maxMultiplier: 1.8,   // lifts the speed cap for this shot only; 1 = capped
+  },
+  squeeze: {
+    modes: ["insane"],
+    chance: 0.25,
+    cooldownTicks: 320,
+    telegraphTicks: 26,
+    durationTicks: 210,
+    scale: 0.6,           // what your paddle shrinks to; 1 = no shrink
+  },
+
+  // --- Assisted's moves, which are yours -----------------------------------
+  expand: {
+    modes: ["assisted"],
+    chance: 0,            // never random: it is earned, not rolled
+    cooldownTicks: 150,
+    telegraphTicks: 10,
+    durationTicks: 320,
+    scale: 1.7,           // what your paddle grows to; 1 = no growth
+    streakToTrigger: 3,   // returns in a row that earn it; 0 = never from a streak
+    behindToTrigger: 2,   // points behind that earn it; 0 = never from the score
+  },
+  clutch: {
+    modes: ["assisted"],
+    chance: 0,
+    cooldownTicks: 120,
+    telegraphTicks: 0,    // earned by a save that has already happened
+    durationTicks: 260,   // how long the charged shot stays available
+    edgePx: 12,           // the band at each end of your paddle that counts as a
+                          // close call; 0 = never
+    speedMultiplier: 1.5,
+    maxMultiplier: 1.5,
+  },
+};
+
+const MOVES = ["blink", "overdrive", "squeeze", "expand", "clutch"];
+
 // Difficulty is overrides on AI, and for the two joke modes on GAME as well.
 // Easy/Medium/Hard touch `ai` only, which is what keeps their save rates
 // comparable: all three play the same ball with the same paddles, so the only
@@ -78,7 +151,7 @@ const DIFFICULTY = {
     ai: { speed: 6, reactionTicks: 2, lookaheadBounces: Infinity, resampleTicks: 2,
           resampleJitter: 1, readErrorFarPx: 24, readErrorNearPx: 28,
           readConvergence: 0.7, readJitterPx: 2, panicSpeed: 10 },
-    game: { BALL_SPEED: 7, BALL_SPEED_MAX: 14 },
+    game: { BALL_SPEED: 7, BALL_SPEED_MAX: 14, PLAYER_PADDLE_SCALE: 0.8 },
   },
 };
 // Applied over a pristine copy each time, or switching down from a preset would
@@ -110,7 +183,13 @@ const MAX_CATCHUP_MS = 250;
 // applyGame() restores every time - the same discipline AI_DEFAULTS gives AI.
 let BALL_SPEED = 5;
 let BALL_SPEED_MAX = 10;
-const GAME_DEFAULTS = { BALL_SPEED, BALL_SPEED_MAX };
+// The size each paddle returns to when nothing is acting on it, as a fraction of
+// PADDLE_HEIGHT. 1 = the ordinary paddle.
+let PLAYER_PADDLE_SCALE = 1;
+let AI_PADDLE_SCALE = 1;
+const GAME_DEFAULTS = {
+  BALL_SPEED, BALL_SPEED_MAX, PLAYER_PADDLE_SCALE, AI_PADDLE_SCALE,
+};
 const BALL_SPEEDUP = 1.05;
 // Steepest a paddle can send the ball, measured off the horizontal.
 const MAX_BOUNCE_ANGLE = Math.PI / 3;
@@ -135,6 +214,9 @@ function readColors() {
     fg: style.getPropertyValue("--fg").trim() || "#1c1c1e",
     accent: style.getPropertyValue("--accent").trim() || "#3b82f6",
     border: style.getPropertyValue("--cell-border").trim() || "#c7c7cc",
+    // Whose move it is: the villain's red, yours green.
+    villain: style.getPropertyValue("--lose").trim() || "#ef4444",
+    hero: style.getPropertyValue("--win").trim() || "#22c55e",
   };
 }
 
@@ -174,6 +256,149 @@ let aiTarget = (HEIGHT - PADDLE_HEIGHT) / 2;
 // Keeps a paddle on the board. Its height varies, so the lower bound does too.
 function clampPaddle(p) {
   p.y = Math.max(0, Math.min(HEIGHT - p.h, p.y));
+}
+
+// --- Abilities -------------------------------------------------------------
+// Each move is idle, in "telegraph" (visible wind-up, no effect yet) or "active".
+// The cooldown counts down in every phase, so nothing can chain into itself.
+let moveState = {};
+let blinkHop = 0;
+let aiGhosts = [];
+let playerStreak = 0;
+
+function resetAbilities() {
+  moveState = {};
+  for (const name of MOVES) {
+    moveState[name] = { phase: "idle", ticks: 0, cooldown: 0 };
+  }
+  blinkHop = 0;
+  aiGhosts = [];
+  playerStreak = 0;
+}
+
+function moveActive(name) {
+  return !!moveState[name] && moveState[name].phase === "active";
+}
+
+function moveAvailable(name) {
+  const st = moveState[name];
+  return !!st && ABILITY[name].modes.includes(difficulty)
+    && st.phase === "idle" && st.cooldown <= 0;
+}
+
+// A move gets likelier the further its owner is behind, which is what turns it
+// from a random annoyance into the opponent stopping playing around.
+function moveChance(name, ownerScore, otherScore) {
+  const deficit = Math.max(0, otherScore - ownerScore);
+  return ABILITY[name].chance + deficit * ABILITY.behindBonusPerPoint;
+}
+
+function armMove(name) {
+  if (!moveAvailable(name)) return false;
+  const st = moveState[name];
+  st.phase = "telegraph";
+  st.ticks = ABILITY[name].telegraphTicks;
+  if (st.ticks <= 0) startMove(name);
+  return true;
+}
+
+function startMove(name) {
+  const spec = ABILITY[name];
+  const st = moveState[name];
+  st.phase = "active";
+  st.ticks = spec.durationTicks;
+  if (name === "blink") {
+    blinkHop = 0;
+    aiGhosts = [];
+  }
+  if (name === "squeeze" || name === "expand") {
+    player.hTarget = PADDLE_HEIGHT * spec.scale;
+  }
+}
+
+function endMove(name) {
+  const st = moveState[name];
+  st.phase = "idle";
+  st.ticks = 0;
+  st.cooldown = ABILITY[name].cooldownTicks;
+  if (name === "blink") aiGhosts = [];
+  if (name === "squeeze" || name === "expand") player.hTarget = baseHeight(player);
+}
+
+// Charged shots are spent on contact rather than running out, so a paddle stops
+// glowing the instant it lands one.
+function consumeMove(name) {
+  if (!moveActive(name)) return false;
+  endMove(name);
+  return true;
+}
+
+function tickAbilities() {
+  for (const name of MOVES) {
+    const st = moveState[name];
+    if (!st) continue;
+    if (st.cooldown > 0) st.cooldown -= 1;
+    if (st.phase === "idle") continue;
+    st.ticks -= 1;
+    if (st.ticks > 0) continue;
+    if (st.phase === "telegraph") startMove(name);
+    else endMove(name);
+  }
+}
+
+// Paddles change size about their own centre, over resizeTicks rather than in one
+// frame: an instant resize reads as a glitch, an eased one reads as a move.
+function easePaddles() {
+  const k = ABILITY.resizeTicks > 0
+    ? 1 - Math.pow(0.05, 1 / ABILITY.resizeTicks)
+    : 1;
+  for (const p of [player, ai]) {
+    if (p.h === p.hTarget) continue;
+    const centre = p.y + p.h / 2;
+    p.h += (p.hTarget - p.h) * k;
+    if (Math.abs(p.hTarget - p.h) < 0.4) p.h = p.hTarget;
+    p.y = centre - p.h / 2;
+    clampPaddle(p);
+  }
+}
+
+// Blink: hop somewhere absurd while the ball is still far away, then hop onto the
+// real intercept once it is close. The showing-off half is why it reads as a
+// villain move rather than as the paddle simply being fast.
+function blinkTeleport() {
+  const spec = ABILITY.blink;
+  blinkHop -= 1;
+  if (blinkHop > 0) return;
+  blinkHop = spec.hopTicks;
+  if (ABILITY.afterimages > 0) {
+    aiGhosts.push(ai.y);
+    while (aiGhosts.length > ABILITY.afterimages) aiGhosts.shift();
+  }
+  const hit = predictInterceptY(Infinity);
+  if (hit !== null && AI_PLANE - ball.x < spec.lockPx) {
+    ai.y = hit + BALL_SIZE / 2 - ai.h / 2
+      + (Math.random() * 2 - 1) * spec.accuracyPx;
+  } else {
+    ai.y = Math.random() * (HEIGHT - ai.h);
+  }
+  clampPaddle(ai);
+  aiVel = 0;
+}
+
+// Returning the ball at all extends the streak; catching it on the very end of
+// the paddle is the close call that earns a charged shot back.
+function onPlayerReturn(hitY) {
+  playerStreak += 1;
+  const ex = ABILITY.expand;
+  if (ex.streakToTrigger > 0 && playerStreak >= ex.streakToTrigger
+      && armMove("expand")) {
+    playerStreak = 0;
+  }
+  const cl = ABILITY.clutch;
+  if (cl.edgePx > 0) {
+    const rel = hitY + BALL_SIZE / 2 - player.y;
+    if (rel < cl.edgePx || rel > player.h - cl.edgePx) armMove("clutch");
+  }
 }
 let aiVel = 0;
 let aiNextRead = 0;
@@ -231,6 +456,14 @@ function markSelected(buttons, key, value) {
 function applyGame(overrides = {}) {
   BALL_SPEED = overrides.BALL_SPEED ?? GAME_DEFAULTS.BALL_SPEED;
   BALL_SPEED_MAX = overrides.BALL_SPEED_MAX ?? GAME_DEFAULTS.BALL_SPEED_MAX;
+  PLAYER_PADDLE_SCALE =
+    overrides.PLAYER_PADDLE_SCALE ?? GAME_DEFAULTS.PLAYER_PADDLE_SCALE;
+  AI_PADDLE_SCALE = overrides.AI_PADDLE_SCALE ?? GAME_DEFAULTS.AI_PADDLE_SCALE;
+}
+
+// What a paddle settles back to once nothing is acting on it.
+function baseHeight(p) {
+  return PADDLE_HEIGHT * (p === player ? PLAYER_PADDLE_SCALE : AI_PADDLE_SCALE);
 }
 
 function applyDifficulty(level) {
@@ -238,6 +471,13 @@ function applyDifficulty(level) {
   const preset = DIFFICULTY[difficulty];
   Object.assign(AI, AI_DEFAULTS, preset.ai);
   applyGame(preset.game);
+  // Switching mode in the menu has to take the previous mode's paddles and any
+  // armed move with it, or Insane's short paddle survives into Easy.
+  resetAbilities();
+  for (const p of [player, ai]) {
+    p.h = p.hTarget = baseHeight(p);
+    clampPaddle(p);
+  }
   markSelected(difficultyBtns, "level", difficulty);
 }
 
@@ -383,8 +623,18 @@ function updateAi() {
     aiAim = (Math.random() * 2 - 1) * AI.aimSpread;
     aiReactionLeft = AI.reactionTicks;
     aiNextRead = 0;
+    // The villain decides whether to do something about this one.
+    for (const name of ["blink", "overdrive", "squeeze"]) {
+      if (Math.random() < moveChance(name, ai.score, player.score)) armMove(name);
+    }
   }
   aiApproaching = approaching;
+
+  // Blinking overrides everything, reaction delay included - that is the point.
+  if (moveActive("blink") && approaching) {
+    blinkTeleport();
+    return;
+  }
 
   if (!approaching) {
     aiTarget = (HEIGHT - ai.h) / 2;
@@ -427,13 +677,26 @@ function bounce(paddle, dir) {
   const offset = ball.y + BALL_SIZE / 2 - (paddle.y + paddle.h / 2);
   const hit = Math.max(-1, Math.min(1, offset / (paddle.h / 2)));
   const angle = hit * MAX_BOUNCE_ANGLE;
-  const speed = Math.min(Math.hypot(ball.vx, ball.vy) * BALL_SPEEDUP, BALL_SPEED_MAX);
+  // A charged shot is spent here, and lifts the speed cap for this one return -
+  // the whole threat of it is that it comes back faster than the game normally
+  // allows. maxMultiplier of 1 keeps it inside the usual cap.
+  const charge = paddle === ai ? "overdrive" : "clutch";
+  const spec = ABILITY[charge];
+  const carried = Math.hypot(ball.vx, ball.vy);
+  const speed = consumeMove(charge)
+    ? Math.min(carried * spec.speedMultiplier, BALL_SPEED_MAX * spec.maxMultiplier)
+    : Math.min(carried * BALL_SPEEDUP, BALL_SPEED_MAX);
   ball.vx = dir * speed * Math.cos(angle);
   ball.vy = speed * Math.sin(angle);
 }
 
 function update() {
   if (gameOver || paused) return;
+
+  // Both run in every phase: a cooldown should keep counting between points, and
+  // a resize that started mid-rally should finish rather than freeze at the serve.
+  tickAbilities();
+  easePaddles();
 
   if (control === "keyboard") {
     if (keys.up) player.y -= PADDLE_SPEED;
@@ -465,6 +728,8 @@ function update() {
       ball.y = y;
       bounce(player, 1);
       ball.x = PLAYER_PLANE;
+      // After the bounce, or a close call would spend the charge it just earned.
+      onPlayerReturn(y);
     }
   } else if (ball.vx > 0) {
     const y = crossingY(prevX, prevY, AI_PLANE);
@@ -506,10 +771,53 @@ function onScore() {
     showMenu(player.score > ai.score ? "You win! 🎉" : "AI wins!");
     return;
   }
+  playerStreak = 0;
+  const ex = ABILITY.expand;
+  if (ex.behindToTrigger > 0 && ai.score - player.score >= ex.behindToTrigger) {
+    armMove("expand");
+  }
   ball = centredBall();
   phase = "countdown";
   serveTicks = SERVE_DELAY_TICKS;
   updateStatus();
+}
+
+// Which moves show on which paddle, in order of precedence. The colour says whose
+// move it is rather than what it does: red is the villain acting, green is yours.
+const PLAYER_TELLS = [["squeeze", "villain"], ["expand", "hero"], ["clutch", "hero"]];
+const AI_TELLS = [["overdrive", "villain"], ["blink", "villain"]];
+
+// A paddle winding up shakes and glows harder the closer it is to firing; one
+// that is charged and waiting glows steadily. Both are how you know it is coming.
+function drawPaddle(p, x, tells) {
+  let shake = 0;
+  let glow = 0;
+  let tint = null;
+  for (const [name, who] of tells) {
+    const st = moveState[name];
+    if (!st || st.phase === "idle") continue;
+    const spec = ABILITY[name];
+    if (st.phase === "telegraph") {
+      glow = spec.telegraphTicks > 0 ? 1 - st.ticks / spec.telegraphTicks : 1;
+      shake = ABILITY.vibratePx * glow;
+    } else {
+      glow = 1;
+      shake = ABILITY.vibratePx * 0.35;
+    }
+    tint = colors[who];
+    break;
+  }
+  ctx.save();
+  if (tint) {
+    ctx.shadowColor = tint;
+    ctx.shadowBlur = 4 + 20 * glow;
+    ctx.fillStyle = tint;
+  } else {
+    ctx.fillStyle = colors.fg;
+  }
+  ctx.fillRect(x, p.y + (shake > 0 ? (Math.random() * 2 - 1) * shake : 0),
+    PADDLE_WIDTH, p.h);
+  ctx.restore();
 }
 
 function draw() {
@@ -524,9 +832,19 @@ function draw() {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  ctx.fillStyle = colors.fg;
-  ctx.fillRect(0, player.y, PADDLE_WIDTH, player.h);
-  ctx.fillRect(WIDTH - PADDLE_WIDTH, ai.y, PADDLE_WIDTH, ai.h);
+  // Ghosts first, so the paddle itself lands on top of its own trail.
+  if (aiGhosts.length > 0) {
+    ctx.save();
+    ctx.fillStyle = colors.villain;
+    for (let i = 0; i < aiGhosts.length; i++) {
+      ctx.globalAlpha = 0.1 + 0.2 * ((i + 1) / aiGhosts.length);
+      ctx.fillRect(WIDTH - PADDLE_WIDTH, aiGhosts[i], PADDLE_WIDTH, ai.h);
+    }
+    ctx.restore();
+  }
+
+  drawPaddle(player, 0, PLAYER_TELLS);
+  drawPaddle(ai, WIDTH - PADDLE_WIDTH, AI_TELLS);
 
   ctx.fillStyle = colors.accent;
   ctx.fillRect(ball.x, ball.y, BALL_SIZE, BALL_SIZE);
@@ -671,6 +989,11 @@ function resetMatch() {
   aiReactionLeft = 0;
   aiVel = 0;
   aiNextRead = 0;
+  resetAbilities();
+  for (const p of [player, ai]) {
+    p.h = p.hTarget = baseHeight(p);
+    p.y = HEIGHT / 2 - p.h / 2;
+  }
   aiTarget = (HEIGHT - ai.h) / 2;
 }
 

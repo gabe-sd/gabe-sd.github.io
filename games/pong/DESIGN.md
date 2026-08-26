@@ -230,8 +230,13 @@ and re-running it is how any new preset gets a comparable figure:
 
 The last row is not comparable with the others and the sweep marks it so. Those
 two modes also change how hard the ball is for the **player**, which this harness
-does not measure at all — it only ever asks whether the ai saved. Half of what
-makes Insane hard is invisible to the number.
+does not measure at all — it only ever asks whether the ai saved.
+
+Since the abilities landed the number understates Insane badly, and it is worth
+knowing why rather than trusting it. Two of its three moves — the charged shot and
+the paddle squeeze — do not touch whether the ai saves anything; they make the
+ball harder for *you*. The sweep cannot see them. Insane measures a shade **lower**
+than it did before the moves existed, and is much harder to play.
 
 That 100% is the entry worth remembering. Making the AI feel human made it
 **unbeatable**, and nothing but playing it revealed that. The cause: a read that
@@ -249,6 +254,71 @@ because it only moves an AI between perfect and useless.
 shots at the AI and asserts it misses some and saves most. The band is wide on
 purpose, because these are meant to be tuned by feel and the test exists to catch
 "unbeatable" and "hopeless", not to pin a setting.
+
+## Abilities
+
+Assisted and Insane are **characters, not points on a scale**. Tuning numbers
+harder and softer produced two more difficulties; what makes these two worth
+having is that the opponent has *moves* — Insane blinks up and down the board
+like a cartoon villain, charges a shot that comes back faster than the game
+normally permits, and squeezes your paddle. Assisted hands the same kind of thing
+to you.
+
+**Every move telegraphs before it does anything.** A move is `idle`, then
+`telegraph` — a visible wind-up with no effect yet — then `active`. That order is
+the whole reason the moves feel fair: you see the paddle shaking and glowing, so
+losing to one is something that happened rather than something the game did behind
+your back. A test asserts the ball is untouched throughout the wind-up, because a
+telegraph that already applied its effect would be decoration rather than a
+warning.
+
+A cooldown runs in every phase, so nothing chains into itself.
+
+### Who fires, and why
+
+**The villain rolls; you earn.** Insane's moves are a random chance per approach,
+raised by however many points it is behind — it stops playing around exactly when
+you start winning, which is both the drama and a self-balancing property: it
+cannot bully you while you are already losing.
+
+Yours are never random. Three returns in a row, a save caught on the very end of
+the paddle, or falling behind by a couple of points — the handout arrives attached
+to something you did, or to being in genuine trouble. A random gift would feel
+like the game pitying you at moments you had not earned and did not need.
+
+### Paddle sizes
+
+Each paddle carries its own `h`, eased towards `hTarget` over `resizeTicks` about
+its own centre. It is animated because an instant resize reads as a rendering
+glitch rather than as something happening — the paddle appears to *pop*, and the
+eye reports a bug. `resizeTicks: 0` gives the instant version back if that is ever
+wanted, and a test pins the eased behaviour.
+
+`PLAYER_PADDLE_SCALE` and `AI_PADDLE_SCALE` are the size a paddle settles back to
+and are part of a preset's `game` half — Insane starts you shorter. Assisted does
+**not** give a permanently taller paddle: yours grows when you have earned it and
+returns afterwards, which handicaps without ever leaving the two sides looking
+permanently lopsided.
+
+### Two traps
+
+`onPlayerReturn()` runs **after** `bounce()`, not before. A close call arms a
+charged shot and `bounce()` spends charged shots, so hooking it first meant the
+save that earned the charge immediately consumed it and the player never saw it.
+A test drives a real edge collision rather than calling the hook, because calling
+the hook directly cannot catch this.
+
+`applyDifficulty()` resets paddle sizes and disarms everything. Without it,
+choosing Insane and then Easy left you playing Easy with Insane's short paddle —
+the same class of bug as a preset leaking through `AI`, and invisible until
+somebody wonders why Easy felt wrong.
+
+### Everything is switchable
+
+Same contract as the `AI` object: every knob in `ABILITY` names the value that
+turns its feature off, `modes: []` disables a move outright, and a test asserts
+that with all of them off the game is the plain one — no move ever fires and no
+paddle ever changes size. All of this is tuned by feel, and feel changes.
 
 ## The win score
 
