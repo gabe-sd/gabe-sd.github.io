@@ -165,16 +165,34 @@ changes.
 
 ### Difficulty
 
-A difficulty is a set of overrides on the `AI` object and **nothing else**. Both
-sides play the same game — same ball speed, same paddle sizes — which is what
-makes the share of shots the AI saves a fair measure of the difference between
-them. Presets that also moved ball speed or paddle height would break that
-comparison, which is why the two joke modes are tracked separately in `TODO.md`.
+There are two kinds of preset and the difference matters.
 
-They are applied over a pristine copy of the defaults each time. Applying one
-preset on top of another would otherwise leave whatever the previous one had
-overridden — switching from Easy back to Hard would silently keep Easy's bounce
-lookahead.
+**Easy, Medium and Hard override the `AI` object and nothing else.** All three
+play the identical game — same ball speed, same paddle sizes — which is the only
+reason the share of shots the ai saves is a fair measure of the gap between them.
+Nothing may be added to these three that changes the game itself.
+
+**Assisted and Insane deliberately break that**, which is why they are a separate
+kind rather than two more entries in the same list. They move ball speed as well
+as the ai, so each is measured against its own ball and their percentages are not
+on the same scale as the middle three. A preset therefore has an `ai` half and an
+optional `game` half, and the menu colours these two differently — green and red
+against the accent that means "selected" — so it is visible at a glance that they
+are not more of the same.
+
+Both halves are applied over a pristine copy of the defaults each time.
+`applyGame()` writes **every** field on every call rather than only the overridden
+ones, for the same reason `AI` is rebuilt from `AI_DEFAULTS`: applying one preset
+on top of another otherwise leaves whatever the previous one set. Switching from
+Easy back to Hard would keep Easy's bounce lookahead, and switching off Insane
+would keep its faster ball — invisible in play, and it makes every later
+measurement a lie.
+
+**Insane must never save everything.** Its first tuning did: 400 shots, 400 saves.
+An ai that never concedes means the player can never take a point, so the match
+cannot be won, only lost — that is a softlock wearing a difficulty label, not a
+hard mode. The knob that does it is the same one named below, and the same rule
+applies with less room: brutal is a number below 100, not at it.
 
 The menu that selects them is **real buttons overlaid on the canvas**, not shapes
 painted onto it. Canvas pixels have no keyboard focus, no tab order and nothing for
@@ -207,7 +225,13 @@ and re-running it is how any new preset gets a comparable figure:
 | first predictive AI | 91% |
 | after the human-feel work, before tuning | **100%** |
 | untuned defaults | ~92% |
-| Easy / Medium / Hard | ~70% / ~86% / ~95% |
+| Easy / Medium / Hard | ~72% / ~86% / ~96% |
+| Assisted / Insane, each against its own ball | ~60% / ~99% |
+
+The last row is not comparable with the others and the sweep marks it so. Those
+two modes also change how hard the ball is for the **player**, which this harness
+does not measure at all — it only ever asks whether the ai saved. Half of what
+makes Insane hard is invisible to the number.
 
 That 100% is the entry worth remembering. Making the AI feel human made it
 **unbeatable**, and nothing but playing it revealed that. The cause: a read that
@@ -225,6 +249,18 @@ because it only moves an AI between perfect and useless.
 shots at the AI and asserts it misses some and saves most. The band is wide on
 purpose, because these are meant to be tuned by feel and the test exists to catch
 "unbeatable" and "hopeless", not to pin a setting.
+
+## The win score
+
+`WIN_SCORE` is chosen in the menu alongside the difficulty and stored the same
+way. It is orthogonal to difficulty on purpose: a long game on Easy and a short
+one on Insane are both reasonable things to want, and folding the target into the
+presets would have taken that away for no gain.
+
+The trap is the `?` panel, which states the target and reads it from the constant
+rather than hardcoding it. That was correct while the value could not change, and
+became a lie the moment it could: filling the element in once at load leaves it
+confidently wrong. It is refreshed wherever the win score is set, not at startup.
 
 ## Reading the game without seeing it
 

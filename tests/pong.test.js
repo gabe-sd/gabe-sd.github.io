@@ -1120,7 +1120,7 @@ const { check, report } = makeChecks();
       (await page.evaluate(() => phase)) === "menu" && await page.isVisible("#menu"));
     check("it actually reaches the ai",
       (await page.evaluate(() => AI.reactionTicks))
-        === (await page.evaluate(() => DIFFICULTY.easy.reactionTicks)));
+        === (await page.evaluate(() => DIFFICULTY.easy.ai.reactionTicks)));
 
     await page.click("#play");
     await page.waitForTimeout(80);
@@ -1254,6 +1254,139 @@ const { check, report } = makeChecks();
     check("Play from the load menu still starts a rally",
       (await page.evaluate(() => phase)) === "play",
       await page.evaluate(() => phase));
+  }
+
+  console.log("25. the joke modes, and a configurable win score");
+  {
+    await page.reload();
+    await page.waitForSelector("#board");
+    const levels = () => page.evaluate(() =>
+      [...document.querySelectorAll("#difficulty [data-level]")].map((b) => b.dataset.level));
+    check("five difficulties are offered",
+      (await levels()).join(",") === "assisted,easy,medium,hard,insane",
+      (await levels()).join(","));
+
+    // Easy/Medium/Hard must keep playing the identical game, or the save rates
+    // recorded in DESIGN.md stop meaning anything.
+    const ballOf = (level) => page.evaluate((l) => {
+      applyDifficulty(l);
+      return { speed: BALL_SPEED, max: BALL_SPEED_MAX };
+    }, level);
+    const mid = await Promise.all(["easy", "medium", "hard"].map(ballOf));
+    check("the three fair presets play the same ball",
+      mid.every((b) => b.speed === mid[0].speed && b.max === mid[0].max),
+      JSON.stringify(mid));
+
+    const assisted = await ballOf("assisted");
+    const insane = await ballOf("insane");
+    check("Assisted slows the ball down",
+      assisted.speed < mid[0].speed && assisted.max < mid[0].max,
+      JSON.stringify(assisted));
+    check("Insane speeds it up",
+      insane.speed > mid[0].speed && insane.max > mid[0].max,
+      JSON.stringify(insane));
+
+    // The failure this guards: applyGame writing only the overridden fields would
+    // leave Insane's ball behind when you switched back down.
+    const back = await ballOf("medium");
+    check("switching back off Insane restores the default ball",
+      back.speed === mid[0].speed && back.max === mid[0].max,
+      JSON.stringify(back));
+    check("and does not leave junk on the ai",
+      (await page.evaluate(() => AI.speed)) === (await page.evaluate(() => AI_DEFAULTS.speed)));
+
+    // Insane must stay beatable in principle. An ai that never misses means the
+    // player can never take a point, so the match can only ever be lost.
+    const insaneSaves = await page.evaluate((n) => {
+      cancelAnimationFrame(rafId);
+      applyDifficulty("insane");
+      let saves = 0;
+      for (let i = 0; i < n; i++) {
+        restart();
+        phase = "play";
+        ai.y = (HEIGHT - PADDLE_HEIGHT) / 2;
+        const a = (Math.random() * 2 - 1) * MAX_BOUNCE_ANGLE;
+        const sp = BALL_SPEED + Math.random() * (BALL_SPEED_MAX - BALL_SPEED);
+        ball = { x: PLAYER_PLANE, y: Math.random() * (HEIGHT - BALL_SIZE),
+                 vx: sp * Math.cos(a), vy: sp * Math.sin(a) };
+        let g = 0;
+        while (ball.vx > 0 && player.score === 0 && g++ < 800) update();
+        if (player.score === 0) saves++;
+      }
+      return (100 * saves) / n;
+    }, 400);
+    check("Insane is brutal", insaneSaves > 90, `${insaneSaves.toFixed(1)}%`);
+    check("but not literally unbeatable", insaneSaves < 100, `${insaneSaves.toFixed(1)}%`);
+
+    // --- win score ---------------------------------------------------------
+    await page.reload();
+    await page.waitForSelector("#board");
+    const scoreBtns = () => page.evaluate(() =>
+      [...document.querySelectorAll("#win-score-choice [data-score]")]
+        .filter((b) => b.getAttribute("aria-checked") === "true")
+        .map((b) => b.dataset.score));
+    check("exactly one win score is selected", (await scoreBtns()).length === 1,
+      (await scoreBtns()).join(","));
+    check("the ? panel states it",
+      (await page.textContent("#win-score")) === (await scoreBtns())[0],
+      await page.textContent("#win-score"));
+
+    await page.click('#win-score-choice [data-score="11"]');
+    check("clicking one selects it", (await scoreBtns())[0] === "11");
+    check("and the ? panel follows it rather than staying at load-time",
+      (await page.textContent("#win-score")) === "11",
+      await page.textContent("#win-score"));
+    check("choosing does not start the game",
+      (await page.evaluate(() => phase)) === "menu");
+
+    await page.click("#play");
+    const at5 = await page.evaluate(() => {
+      cancelAnimationFrame(rafId);
+      player.score = 4;
+      phase = "play";
+      ball = { x: WIDTH - 2, y: HEIGHT / 2, vx: 30, vy: 0 };
+      update();
+      return { score: player.score, gameOver };
+    });
+    check("first to 11 does not end at 5", at5.score === 5 && !at5.gameOver,
+      JSON.stringify(at5));
+    const at11 = await page.evaluate(() => {
+      player.score = 10;
+      phase = "play";
+      ball = { x: WIDTH - 2, y: HEIGHT / 2, vx: 30, vy: 0 };
+      update();
+      return { score: player.score, gameOver };
+    });
+    check("and does end at 11", at11.score === 11 && at11.gameOver,
+      JSON.stringify(at11));
+
+    await page.reload();
+    await page.waitForSelector("#board");
+    check("the win score survives a reload",
+      (await page.evaluate(() => WIN_SCORE)) === 11,
+      await page.evaluate(() => WIN_SCORE));
+
+    const noStore = await browser.newPage();
+    await noStore.addInitScript(() => {
+      Object.defineProperty(window, "localStorage", {
+        get() { throw new Error("site data blocked"); },
+      });
+    });
+    const noStoreErrors = [];
+    noStore.on("pageerror", (e) => noStoreErrors.push(String(e)));
+    await noStore.goto(PAGE);
+    await noStore.waitForSelector("#board");
+    check("a blocked localStorage still does not break the page",
+      noStoreErrors.length === 0, noStoreErrors.join("; "));
+    check("and the win score falls back to the default",
+      (await noStore.evaluate(() => WIN_SCORE)) === 5,
+      await noStore.evaluate(() => WIN_SCORE));
+    await noStore.close();
+
+    await page.evaluate(() => {
+      localStorage.removeItem("pong.winScore");
+      localStorage.removeItem("pong.difficulty");
+    });
   }
 
   check("no page errors", errors.length === 0, errors.join("; "));
