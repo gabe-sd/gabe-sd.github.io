@@ -679,3 +679,18 @@ worth knowing if something else forces that area open.
 A canvas cannot read CSS custom properties, so the theme tokens are copied into a
 plain object and re-copied from a `prefers-color-scheme` change listener. Only the
 background is re-read per frame.
+
+**A colour that is not a token has to earn it, and white did not.** Effects are
+drawn with a bright core over a coloured glow — the paddle flash, the meter pop,
+the squeeze bolt. White works for the first two because they are drawn *on a
+paddle*, which is dark in the light theme. The bolt crosses the empty board, and
+the light theme's board is pure `#ffffff`, so its core was invisible in exactly
+the place it mattered: the effect read as a red outline of a bolt rather than as
+a bolt. `boltCore()` picks it from the board's own luminance instead, and the
+light theme gained about half again as much visible bolt.
+
+Testing it is harder than it looks. A check that counts pixels unlike the board
+passes with the fixed white core still in, because the red glow alone clears any
+reasonable threshold — it says the bolt is there, not that it has a core. The
+check counts pixels at the *opposite end of the luminance scale from the board*,
+which is the only thing a core can supply.

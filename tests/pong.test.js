@@ -2375,25 +2375,31 @@ const { check, report } = makeChecks();
         player.y = 100;
         ai.y = 260;
         const m = getComputedStyle(canvas).backgroundColor.match(/\d+/g).map(Number);
-        const lit = () => {
+        const lumOf = (r, g, b) => (r * 299 + g * 587 + b * 114) / 1000;
+        const boardLum = lumOf(m[0], m[1], m[2]);
+        // Count pixels at the *opposite* end of the luminance scale from the
+        // board. The red glow alone sits in the middle, so a threshold on "any
+        // change" is cleared by the glow and says nothing about the core - which
+        // is the part that goes missing when it is a fixed white on white.
+        const contrast = () => {
           const d = ctx.getImageData(150, 0, 300, HEIGHT).data;
           let n = 0;
           for (let i = 0; i < d.length; i += 4) {
-            if (Math.abs(d[i] - m[0]) + Math.abs(d[i + 1] - m[1])
-                + Math.abs(d[i + 2] - m[2]) > 12) n++;
+            const l = lumOf(d[i], d[i + 1], d[i + 2]);
+            if (boardLum > 140 ? l < 90 : l > 200) n++;
           }
           return n;
         };
         draw();
-        const before = lit();
+        const before = contrast();
         armMove("squeeze");
         for (let i = 0; i < ABILITY.squeeze.telegraphTicks + 1; i++) tickAbilities();
         tickLightning();
         draw();
-        return { before, after: lit() };
+        return { before, after: contrast() };
       });
-      check(`the bolt is visible against a ${scheme} board`,
-        seen.after > seen.before + 2000, `${seen.before} -> ${seen.after}`);
+      check(`the bolt has a bright core against a ${scheme} board`,
+        seen.after > seen.before + 200, `${seen.before} -> ${seen.after}`);
       await themed.close();
     }
 
