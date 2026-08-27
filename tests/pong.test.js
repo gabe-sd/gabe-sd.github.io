@@ -2422,21 +2422,29 @@ const { check, report } = makeChecks();
         ball = { x: PLAYER_PLANE + 20, y: HEIGHT / 2, vx: BALL_SPEED, vy: 0 };
         armMove("squeeze");
         for (const m of ["blink", "overdrive"]) ABILITY[m].chance = 0;
+        // Both paddles glued to the ball, and the ai's own mover stubbed out.
+        // This measures how long the shrink lasts, so the rally must not end for
+        // any other reason - and it did: with only the player tracking, the *ai*
+        // missed often enough to end the point before the ball ever came back,
+        // which reads as zero contacts and looks like the shrink failing.
+        const realUpdateAi = updateAi;
+        updateAi = () => {};
         let contacts = 0, smallAtContact = 0, guard = 0;
-        const s0 = player.score + ai.score;
-        while (player.score + ai.score === s0 && guard++ < 6000) {
+        const glue = (p) => {
+          p.y = Math.max(0, Math.min(HEIGHT - p.h,
+            ball.y + BALL_SIZE / 2 - p.h / 2));
+        };
+        while (contacts < 3 && guard++ < 6000) {
           const before = Math.sign(ball.vx);
-          // Track the ball so the rally keeps going rather than ending early.
-          const want = ball.y + BALL_SIZE / 2 - player.h / 2;
-          player.y += Math.max(-6, Math.min(6, want - player.y));
-          player.y = Math.max(0, Math.min(HEIGHT - player.h, player.y));
+          glue(player);
+          glue(ai);
           update();
           if (before < 0 && Math.sign(ball.vx) > 0) {
             contacts++;
             if (player.h < baseHeight(player) * 0.95) smallAtContact++;
-            if (contacts >= 3) break;
           }
         }
+        updateAi = realUpdateAi;
         return { contacts, smallAtContact };
       }, level);
       check(`the shrink is still on when the ball comes back in ${level}`,
@@ -2565,6 +2573,12 @@ const { check, report } = makeChecks();
       const windUpOnly = (charged) => {
         stage("insane");
         for (const m of ["blink"]) ABILITY[m].chance = 0;
+        // Silence everything that moves on its own, or the comparison measures
+        // it instead: the wind-up shakes the paddle and the crackle is generated
+        // fresh each flicker, and together they swing the count by more than the
+        // aura contributes. stage() restores both from the pristine copy.
+        ABILITY.vibratePx = 0;
+        ABILITY.squeeze.arcPx = 0;
         if (charged) { armMove("overdrive"); startMove("overdrive"); }
         armMove("squeeze");
         for (let i = 0; i < 6; i++) { tickAbilities(); tickLightning(); }

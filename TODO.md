@@ -93,9 +93,9 @@ a beginner, which is the only audience that matters here.
 The `?` panel lists the controls and the win score and nothing else. It has never
 mentioned the difficulty modes, and it is silently missing the half of the game
 that is hardest to work out by looking at it: a three-pip meter fills, a paddle
-turns green and grows, the opponent teleports and glows and shrinks your paddle
-and fires a shot above the speed the ball otherwise reaches. None of it is named
-anywhere in the game.
+turns green and grows, the opponent teleports, throws lightning that leaves your
+paddle shrunken and crackling, and fires a shot well above the speed the ball
+otherwise reaches. None of it is named anywhere in the game.
 
 Every mode has powerups now, so this is no longer a note about two odd modes — it
 is missing from all three. It matters most on Assisted, which exists so a child
@@ -197,8 +197,8 @@ no-dependencies rule.
   try/catch treatment as the difficulty.
 - Browsers refuse to start an AudioContext before a user gesture, and there is an
   obvious one to hang it off: the Play button.
-- The menu is now five difficulty buttons, a win score row and Play, so a mute
-  control most likely sits with Restart and `?` rather than in it.
+- The menu is a three-button difficulty row, a three-button win score row and
+  Play, so a mute control most likely sits with Restart and `?` rather than in it.
 
 ### pong-hit-feedback — Visual feedback on contact
 
@@ -210,9 +210,14 @@ in `draw()`.
 - **Most of this is already written, for the abilities rather than for contact.**
   `aiGhosts` keeps the last few paddle positions and draws them fading behind a
   blink, which is exactly the shape a ball trail wants; `paddleFlash` already
-  flashes a band across a paddle when the clutch meter fills. Extend those rather
-  than building parallel machinery beside them — their knobs live in
-  `ABILITY.afterimages` and `ABILITY.pop`.
+  flashes a band across a paddle; `drawCharged` draws a pulsing aura; and
+  `makeBolt`/`strokePath` will draw a jagged glowing path between any two points.
+  Extend those rather than building parallel machinery beside them — the knobs
+  live in `ABILITY.afterimages`, `ABILITY.pop` and `ABILITY.squeeze`.
+- Read the Theme section of `games/pong/DESIGN.md` first. A white core is
+  invisible on the light theme's board, which is pure white, and effects drawn
+  over the *board* rather than over a paddle have to pick their colour from the
+  background's luminance.
 - Anything that flashes has to be driven by the tick count rather than by wall
   time, or it will run at different speeds on different monitors.
 
@@ -224,9 +229,9 @@ the storage and the counting are not.
 Longest rally, or wins and losses, stored the same way as the Minesweeper best
 time: one namespaced key, every access wrapped in try/catch.
 
-- Where it displays is the open question. The menu was the obvious home when it
-  held three buttons; it now carries five difficulty buttons, a three-button win
-  score row and Play, so anything added there has to earn the space.
+- Where it displays is the open question. The menu is the obvious home and now
+  carries two rows of three buttons plus Play, so anything added there has to
+  earn its space rather than simply fit.
 
 ### pong-mobile-support — Make Pong work properly on a phone (deferred)
 

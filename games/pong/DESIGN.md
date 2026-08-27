@@ -286,7 +286,7 @@ and re-running it is how any new preset gets a comparable figure:
 | after the human-feel work, before tuning | **100%** |
 | untuned defaults | ~92% |
 | Easy / Medium / Hard, while they existed | ~72% / ~86% / ~96% |
-| Assisted / Normal / Insane, each against its own game | ~81% / ~86% / ~98% |
+| Assisted / Normal / Insane, each against its own game | ~82% / ~88% / ~99% |
 
 Assisted's ai saving more than Easy's did is not a mistake — see above. It is
 supposed to return the ball; the help is the player's paddle and the slow ball,
@@ -300,11 +300,18 @@ both — so each number answers "how often does *this* mode's ai save *this* mod
 ball" and nothing else. The harness never asks how hard the ball is for the
 **player**, which is most of what separates the three.
 
-Since the abilities landed the number understates Insane badly, and it is worth
-knowing why rather than trusting it. Two of its three moves — the charged shot and
-the paddle squeeze — do not touch whether the ai saves anything; they make the
-ball harder for *you*. The sweep cannot see them. Insane measures a shade **lower**
-than it did before the moves existed, and is much harder to play.
+The number understates every mode with moves in it, and it is worth knowing why
+rather than trusting it. Only one of the opponent's three moves changes whether
+it saves anything. The charged shot and the paddle squeeze make the ball harder
+for *you*, and the sweep never asks about you — it only ever asks whether the ai
+got a paddle to the ball. Insane is a great deal harder to play than the figure
+suggests, and always has been.
+
+Blink is the exception, and it moves the number: once it was bound to the ball
+rather than to a clock it became a guaranteed save on the approaches it fires, so
+the same preset reads higher than it used to. That is the whole of the change
+between the old ~98% and today's ~99% — the ai did not get better at reading the
+ball, one of its moves stopped expiring early.
 
 That 100% is the entry worth remembering. Making the AI feel human made it
 **unbeatable**, and nothing but playing it revealed that. The cause: a read that
@@ -373,6 +380,26 @@ forever.
 The general rule: **a move whose effect lands somewhere else is drawn in three
 parts — the wind-up where it comes from, something crossing, and the effect where
 it lands.** Drawing only the effect makes the target look like the beneficiary.
+
+#### An effect timed against the ball, not against the clock
+
+The squeeze shipped shrinking you by a fifth for a couple of seconds and was
+reported as making no noticeable difference and usually ending before the ball
+came back. Both were true, and the second is the general lesson: **an effect that
+starts while the ball is heading away from you spends part of its life before you
+can feel it.**
+
+The bolt lands as the ball crosses to the opponent, so roughly half a volley
+passes before the ball is coming at you again. A duration that looks generous
+against a stopwatch can overlap the part that matters by nothing at all — with
+the original values, measured, the paddle was small at **zero** of the player's
+next two contacts.
+
+Durations for anything aimed at the player are therefore set in **volleys** —
+your contact to your next contact — with the lead-in budgeted for. The volley is
+worth measuring rather than assuming: it varies by more than a factor of two
+across the modes, because they play different balls. The test counts contacts for
+the same reason, so retuning a speed cannot quietly invalidate it.
 
 #### Three wind-ups, one colour
 
@@ -645,9 +672,9 @@ A test drives a real edge collision rather than calling the hook, because callin
 the hook directly cannot catch this.
 
 `applyDifficulty()` resets paddle sizes and disarms everything. Without it,
-choosing Insane and then Easy left you playing Easy with Insane's short paddle —
-the same class of bug as a preset leaking through `AI`, and invisible until
-somebody wonders why Easy felt wrong.
+picking Insane and then a gentler mode left you playing the gentler one with
+Insane's short paddle — the same class of bug as a preset leaking through `AI`,
+and invisible until somebody wonders why the easy mode felt wrong.
 
 ### Everything is switchable
 
@@ -659,9 +686,9 @@ paddle ever changes size. All of this is tuned by feel, and feel changes.
 ## The win score
 
 `WIN_SCORE` is chosen in the menu alongside the difficulty and stored the same
-way. It is orthogonal to difficulty on purpose: a long game on Easy and a short
-one on Insane are both reasonable things to want, and folding the target into the
-presets would have taken that away for no gain.
+way. It is orthogonal to difficulty on purpose: a long game on Assisted and a
+short one on Insane are both reasonable things to want, and folding the target
+into the presets would have taken that away for no gain.
 
 The trap is the `?` panel, which states the target and reads it from the constant
 rather than hardcoding it. That was correct while the value could not change, and
