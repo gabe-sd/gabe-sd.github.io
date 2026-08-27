@@ -2214,6 +2214,33 @@ const { check, report } = makeChecks();
     });
   }
 
+  console.log("27b. a selected mode button is readable");
+  {
+    await page.reload();
+    await page.waitForSelector("#board");
+    // A whole class of bug rather than one: the mode colours and the generic
+    // "selected" rule have identical specificity, so whichever is written last
+    // wins. Normal shipped blue-on-blue for exactly that reason.
+    const levels = await page.evaluate(() =>
+      [...document.querySelectorAll("#difficulty [data-level]")].map((b) => b.dataset.level));
+    for (const level of levels) {
+      const seen = await page.evaluate((l) => {
+        const btn = document.querySelector(`#difficulty [data-level="${l}"]`);
+        btn.click();
+        const css = getComputedStyle(btn);
+        return { fg: css.color, bg: css.backgroundColor,
+                 checked: btn.getAttribute("aria-checked") };
+      }, level);
+      check(`${level} is actually selected by the click`, seen.checked === "true");
+      check(`${level}'s label is not the same colour as its background`,
+        seen.fg !== seen.bg, `${seen.fg} on ${seen.bg}`);
+    }
+    await page.evaluate(() => {
+      localStorage.removeItem("pong.difficulty");
+      applyDifficulty("normal");
+    });
+  }
+
   console.log("28. the squeeze attack, and blink lasting as long as the ball");
   {
     await page.reload();

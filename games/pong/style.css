@@ -74,6 +74,16 @@
   color: var(--accent);
 }
 
+/* Needed even though the generic selected rule above already says white: this
+   block has the same specificity as that one and comes after it, so without an
+   explicit selected rule the mode colour wins and the label goes blue-on-blue.
+   Each mode carries its own for that reason - do not "simplify" them away. */
+.difficulty .btn[data-level="normal"][aria-checked="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
 .difficulty .btn[data-level="assisted"] {
   border-color: var(--win);
   color: var(--win);
