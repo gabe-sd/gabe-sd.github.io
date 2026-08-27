@@ -353,6 +353,40 @@ invisible.
 A test separates the two by sampling a pixel just outside the paddle: a glow
 bleeds past the rect and a tint does not.
 
+#### Three wind-ups, one colour
+
+Red means *the opponent is doing something to you*, and all three of its moves
+are red. That was fine while only two of them lived on its paddle; moving
+Squeeze's tell across made three identical wind-ups, and the reported symptom was
+exactly that — "what is it doing?".
+
+They stay one colour and differ in **behaviour**, which `windUp` names.
+**Overdrive swells**: one long steady build, the slowest and largest of the
+three. **Blink stutters**: it flickers hard on and off, reading as something
+misfiring, which it needs to do because its wind-up is the shortest. **Squeeze
+barely moves**: the lightning gathering on the paddle is the tell, and shaking
+underneath it only muddied that.
+
+The test cannot count lit pixels to tell a stutter from a swell — the paddle
+shakes on purpose, and the jitter is bigger than the signal. `drawPaddle` records
+what it computed in `lastTell` for that reason, and the check compares how far
+the glow moves *from one tick to the next*: a stutter swings, a swell creeps.
+The obvious version, comparing the range across a window, fails — a swell travels
+a long way in total.
+
+#### A held charge is a layer, not a tell
+
+A paddle draws one tell. An opponent holding a charged shot therefore stopped
+looking charged the instant it wound up something else, and a charge you cannot
+see is a shot you cannot brace for. It is drawn separately, on top of whatever
+tell is showing, and stays until the shot is spent. Both sides get it: the
+opponent's Overdrive and the player's Clutch are the same idea pointed in
+opposite directions.
+
+The test has to isolate that layer rather than assert the paddle is red, because
+a wind-up reddens it anyway — the first version of the check passed with the
+layer deleted.
+
 ### Lean into it
 
 A standing instruction for anything in this section: **these are supposed to be
@@ -375,6 +409,32 @@ warning.
 
 A cooldown runs in every phase, so nothing chains into itself.
 
+### Blink, and the second time a timer was the wrong answer
+
+Blink teleports the opponent up and down the board while the ball crosses, then
+hops onto the real intercept once it is close. The showing-off half is what makes
+it read as a villain move rather than as a fast paddle.
+
+It shipped on a `durationTicks` timer and that could not work, for a reason worth
+recording because it is the *same* reason the Expand timer failed. Blink arms when
+the ball turns towards the opponent, but how long the ball takes to cross depends
+on its speed — which varies by mode and by rally. No fixed number tracks that.
+Measured over 300 approaches per mode, the paddle was still blinking when the ball
+arrived **0% of the time in Normal and 41% in Insane**. It dashed about, stopped,
+and then played the point completely normally: a move that could neither save nor
+miss, which is to say decoration.
+
+It now ends when the ball stops coming. `durationTicks: Infinity` says so, and
+`updateAi` ends it on the tick the ball turns round. The general rule had already
+been written down for Expand — *bind an effect to its situation, not to a clock* —
+and was not applied here because nothing about Blink looked like a state. What
+made it one is that it exists to answer a specific ball.
+
+The cost is real and was measured: Insane's save rate went 98.9% → ~99.1%, because
+a blink that lasts the whole flight is a guaranteed save on the approaches it
+fires. Normal moved 86.4% → 88.4%. That is close enough to the softlock line to
+watch — see **Insane must never save everything** above.
+
 ### Charged shots
 
 A charged shot leaves at a flat multiple of **the mode's own speed cap**, not a
@@ -382,6 +442,14 @@ multiple of whatever arrived. Scaling off the incoming ball meant a charge earne
 during a slow rally fired a slow shot — the same move measured 5.2 or 9.7
 depending on nothing the player did, which is the opposite of drama. It is now the
 same every time, and far enough above the cap that it is unmistakable.
+
+**Far enough above the cap** is the part that is easy to get wrong, and was. The
+opponent's shot shipped at barely over 1, which looks fine in isolation: it was
+still much faster than an ordinary shot early in a rally. But an ordinary shot's
+speed depends on what arrived, and late in a rally it is already *at* the cap — so
+the move was dramatic on the first exchange and invisible on the tenth, which is
+when it is being watched for. A multiplier close to 1 does not mean "slightly
+weaker", it means "works at the start of a point and nowhere else".
 
 **Nothing lifts the cap for the return of it.** If the opponent gets a paddle to a
 charged shot, the ball comes back at ordinary speed, because the outgoing branch
