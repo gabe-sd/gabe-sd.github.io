@@ -2437,27 +2437,38 @@ const { check, report } = makeChecks();
 
     // --- and it must stay visible until it is spent ----------------------
     const held = await page.evaluate(() => {
+      // Compared against a squeeze winding up *without* a charge behind it, not
+      // against a quiet paddle: a wind-up reddens the paddle by itself, so "still
+      // red" would pass with the charge layer deleted. The charge's own
+      // contribution is the difference between the two.
+      const windUpOnly = (charged) => {
+        stage("insane");
+        for (const m of ["blink"]) ABILITY[m].chance = 0;
+        if (charged) { armMove("overdrive"); startMove("overdrive"); }
+        armMove("squeeze");
+        for (let i = 0; i < 6; i++) { tickAbilities(); tickLightning(); }
+        draw();
+        return { band: aiBand(), still: moveActive("overdrive") };
+      };
       stage("insane");
       draw();
       const quiet = aiBand();
+      stage("insane");
       armMove("overdrive");
       startMove("overdrive");
       draw();
       const charged = aiBand();
-      // Now wind up something else on the same paddle. A paddle draws one tell,
-      // so this is where a charge drawn *as* a tell would disappear.
-      armMove("squeeze");
-      for (let i = 0; i < 6; i++) { tickAbilities(); tickLightning(); }
-      draw();
-      const alsoWinding = aiBand();
-      return { quiet, charged, alsoWinding,
-               stillCharged: moveActive("overdrive") };
+      const bare = windUpOnly(false);
+      const both = windUpOnly(true);
+      return { quiet, charged, bare: bare.band, both: both.band,
+               stillCharged: both.still };
     });
     check("a charged opponent paddle looks different from a quiet one",
       held.charged > held.quiet, `${held.charged} vs ${held.quiet}`);
-    check("and stays lit while it winds up something else on top",
-      held.alsoWinding > held.quiet && held.stillCharged,
-      `${held.alsoWinding} vs quiet ${held.quiet}`);
+    check("the charge survives it winding up something else on top",
+      held.stillCharged);
+    check("and is still drawn underneath that wind-up",
+      held.both > held.bare, `${held.both} charged vs ${held.bare} not`);
 
     const spent = await page.evaluate(() => {
       // Land the charged shot; the paddle should go quiet the moment it is used.
