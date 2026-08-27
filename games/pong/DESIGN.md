@@ -192,12 +192,21 @@ changes.
 
 ### Difficulty
 
-There are two kinds of preset and the difference matters.
+Three modes, each a character rather than a notch on a scale.
 
-**Easy, Medium and Hard override the `AI` object and nothing else.** All three
-play the identical game — same ball speed, same paddle sizes — which is the only
-reason the share of shots the ai saves is a fair measure of the gap between them.
-Nothing may be added to these three that changes the game itself.
+There used to be five. Easy, Medium and Hard differed in `AI` settings alone and
+were the only modes *without* powerups, which is precisely what killed them: once
+every mode had powerups the thing that distinguished the middle three was gone,
+and five names described three real differences. They are worth remembering for
+what they cost — while they existed, the middle three all played an identical
+ball, which was the only reason the share of shots the ai saves compared honestly
+between them. Nothing does now. Every mode is measured against its own game, and
+`tests/ai-sweep.js` is a reading of one mode, not a ranking across them.
+
+**Normal is the one you are meant to play.** It is the only mode with no `game`
+half at all: stock ball, stock paddles, no handicap on either side. Its ai sits
+where Medium's did, and it has every move in the game, tuned well below Insane's
+settings. The moves are the show; they are not the difficulty.
 
 **Assisted is for someone who has barely played, and what makes that fun is
 rallies — not a scoreline.** Its ai is therefore *competent*, and deliberately
@@ -218,21 +227,25 @@ still takes 79% of the points**. Strengthening the ai alone drops them to winnin
 half their points; enlarging the paddle alone leaves a quarter of points untouched.
 Neither lever works without the other.
 
-**Insane deliberately breaks the fair-preset rule too**, which is why both are a
-separate kind rather than two more entries in the same list. They move ball speed as well
-as the ai, so each is measured against its own ball and their percentages are not
-on the same scale as the middle three. A preset therefore has an `ai` half and an
-optional `game` half, and the menu colours these two differently — green and red
-against the accent that means "selected" — so it is visible at a glance that they
-are not more of the same.
+**Assisted and Insane change the game itself**, not just the opponent: both move
+ball speed and paddle sizes. The menu colours those two — green and red against
+the accent that means "selected" — and leaves Normal plain, so it is visible
+before you press anything that two of the three are doing something unusual.
 
-Both halves are applied over a pristine copy of the defaults each time.
-`applyGame()` writes **every** field on every call rather than only the overridden
-ones, for the same reason `AI` is rebuilt from `AI_DEFAULTS`: applying one preset
-on top of another otherwise leaves whatever the previous one set. Switching from
-Easy back to Hard would keep Easy's bounce lookahead, and switching off Insane
-would keep its faster ball — invisible in play, and it makes every later
-measurement a lie.
+A preset has three optional halves, and each has a pristine copy behind it:
+`ai` (how well the opponent reads the ball), `game` (the ball and paddles both
+sides get) and `ability` (how this mode tunes the moves). `applyGame()`,
+`applyAbility()` and the rebuild of `AI` from `AI_DEFAULTS` all write **every**
+field on every call rather than only the overridden ones. Applying one preset on
+top of another otherwise leaves whatever the previous one set: switching off
+Insane would keep its faster ball, and — a real failure caught by a test —
+Normal's earned-Expand trigger would follow you into Assisted and start handing
+out big paddles for rallying well, which is the exact behaviour Assisted had
+removed. Invisible in play, and it makes every later measurement a lie.
+
+`applyAbility()` replaces each nested move spec wholesale rather than merging into
+it, and clones with `structuredClone` rather than `JSON` — `durationTicks` is
+`Infinity` in three places, and JSON turns that into `null`.
 
 **Insane must never save everything.** Its first tuning did: 400 shots, 400 saves.
 An ai that never concedes means the player can never take a point, so the match
@@ -271,16 +284,20 @@ and re-running it is how any new preset gets a comparable figure:
 | first predictive AI | 91% |
 | after the human-feel work, before tuning | **100%** |
 | untuned defaults | ~92% |
-| Easy / Medium / Hard | ~72% / ~86% / ~96% |
-| Assisted / Insane, each against its own ball | ~80% / ~98% |
+| Easy / Medium / Hard, while they existed | ~72% / ~86% / ~96% |
+| Assisted / Normal / Insane, each against its own game | ~81% / ~86% / ~98% |
 
-Assisted's ai saving *more* than Easy's is not a mistake — see above. It is
+Assisted's ai saving more than Easy's did is not a mistake — see above. It is
 supposed to return the ball; the help is the player's paddle and the slow ball,
-neither of which this number can see.
+neither of which this number can see. Normal landing where Medium did is
+deliberate: it is the mode that replaced it.
 
-The last row is not comparable with the others and the sweep marks it so. Those
-two modes also change how hard the ball is for the **player**, which this harness
-does not measure at all — it only ever asks whether the ai saved.
+**These are three separate readings, not a ranking.** While Easy, Medium and Hard
+existed they all played one ball, so their figures could be set against each
+other. Nothing does now — every surviving mode changes the ball, the paddles or
+both — so each number answers "how often does *this* mode's ai save *this* mode's
+ball" and nothing else. The harness never asks how hard the ball is for the
+**player**, which is most of what separates the three.
 
 Since the abilities landed the number understates Insane badly, and it is worth
 knowing why rather than trusting it. Two of its three moves — the charged shot and
@@ -450,12 +467,12 @@ game and a struggling one still sees it, which is what the mode was for.
 If a run of good returns should be rewarded at all, it belongs to Clutch, which is
 already the half of this that pays out for skill.
 
-**Expand is a state, not an event.** You have the big paddle for exactly as long
-as you are in trouble: it appears when the gap or the losing run reaches its
-threshold and goes when it does not. `syncExpand()` holds the move to the
-condition at every point, and both halves of it are no-ops when the state already
-matches. `durationTicks` and `cooldownTicks` are neutral, because nothing about it
-expires.
+**In Assisted, Expand is a state, not an event.** You have the big paddle for
+exactly as long as you are in trouble: it appears when the gap or the losing run
+reaches its threshold and goes when it does not. `syncExpand()` holds the move to
+the condition at every point, and both halves of it are no-ops when the state
+already matches. `durationTicks` and `cooldownTicks` are neutral, because nothing
+about it expires.
 
 It took two wrong answers to get there, and both are worth knowing because they
 are the obvious ones:
@@ -471,6 +488,39 @@ are the obvious ones:
 The lesson generalises: an effect that exists to answer a *situation* has to be
 bound to that situation, not to a duration or a budget. Ask what makes it stop
 being needed, and end it on that.
+
+#### The same move, answering a different question
+
+In Normal, Expand is a **reward**, and the whole shape inverts. There is no
+trouble for it to be bound to — Normal has no comeback help by design — so it is
+earned by a run of returns, runs on a timer, and is taken away by conceding.
+`expandIsState()` is what tells the two apart: with either situation trigger set
+the move is a state and `syncExpand()` governs it; with neither set it is earned,
+and `syncExpand()` steps aside entirely.
+
+That last part is not decoration. Left running in a mode it does not govern,
+`syncExpand()` finds its condition false at every point and ends the move — so a
+paddle you earned would vanish on the next point *including one you won*. The
+check that catches it is "winning a point keeps the paddle you earned"; the
+obvious check, that losing does not grant one, passes with the guard removed and
+proves nothing.
+
+The timer here is the one rejected above, and it works for the opposite reason: a
+reward that overstays stops reading as a reward. It is set several times longer
+than the rejected value, because the failure then was expiring before the ball
+came back, and it is bounded at the other end by conceding.
+
+How long it should last was measured rather than guessed. Simulating a weak, a
+middling and a strong player, the pair that was shipped puts the big paddle on for
+roughly **12%, 23% and 47%** of ticks respectively, arriving about every other
+point. A longer timer took the strong player past 70%, at which point it is not a
+reward any more — it is the paddle.
+
+Two smaller decisions fall out of it. The streak resets when the move is earned,
+or one long rally hands it straight back the moment it expires. And arriving as a
+reward has to *look* different from arriving as help, so the earned version bursts
+on the paddle — the same white flash the meter uses — while Assisted's simply
+grows. `entranceTicks: 0` is the Assisted look.
 
 ### Paddle sizes
 

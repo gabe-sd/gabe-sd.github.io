@@ -161,7 +161,7 @@ legality in the click handler.
 
 **Pong** (`games/pong/script.js`) keeps its model, its measurements and its
 rejected alternatives in `games/pong/DESIGN.md` — read that before changing how it
-plays. Five things will bite you without it:
+plays. Six things will bite you without it:
 
 - The loop only *paces*: `advance()` drains real time into whole `TICK_MS` ticks
   and calls `update()` once per tick, so every speed constant is per tick. Nothing
@@ -179,6 +179,12 @@ plays. Five things will bite you without it:
   its feature off. Two tests hold that up: all of `AI` off reproduces the old
   direct mover, and all of `ABILITY` off gives back the plain game. Keep both
   true — it is all tuned by feel, and feel changes.
+- A difficulty preset has three optional halves — `ai`, `game` and `ability` —
+  and each is applied over a **pristine copy** by a function that writes every
+  field on every call (`AI_DEFAULTS`, `applyGame`, `applyAbility`). Adding a
+  fourth means adding a fourth pristine copy. Skipping that does not fail
+  loudly: the previous mode's values simply survive into the next one, which is
+  invisible in play and quietly falsifies every measurement taken afterwards.
 
 **Minesweeper** (`games/minesweeper/script.js`) places mines lazily on the first
 reveal, excluding the 3x3 around that cell, so the first click is always safe —

@@ -2138,8 +2138,11 @@ const { check, report } = makeChecks();
       }
       for (let i = 0; i < spec.telegraphTicks + 2; i++) tickAbilities();
       const armed = moveState.expand.phase;
-      // Well past the duration, and nothing else touched.
-      for (let i = 0; i < spec.durationTicks + 5; i++) tickAbilities();
+      // Well past the duration, and nothing else touched. Bounded rather than
+      // durationTicks + 5, because a broken preset can set that to Infinity and
+      // a test that hangs is worse than one that fails.
+      const cap = Math.min(spec.durationTicks + 5, 5000);
+      for (let i = 0; i < cap; i++) tickAbilities();
       return { armed, after: moveState.expand.phase, dur: spec.durationTicks };
     });
     check("the earned paddle was actually active", expiry.armed === "active",
