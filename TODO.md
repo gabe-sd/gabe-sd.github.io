@@ -80,7 +80,10 @@ before adding anything else to the opponent's side.
   here, or they will fire at different rates on different monitors.
 - Slowing the ai means a live multiplier on `AI.speed`/`panicSpeed` rather than a
   write to them — those are restored from `AI_DEFAULTS` on every mode change, so a
-  debuff written into them would either be wiped or would leak.
+  debuff written into them would either be wiped or would leak. It is the same
+  trap `syncPaddleSize()` exists to close on the player's side: two effects
+  writing one field means whichever ends last wins. Derive the value from what is
+  active rather than assigning it.
 - It is a move like any other: it belongs in `ABILITY` with a `modes` list and an
   off value for every knob, and both "everything off" tests have to still pass.
 

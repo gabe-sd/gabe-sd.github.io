@@ -177,6 +177,10 @@ plays. Six things will bite you without it:
 - `PADDLE_HEIGHT` is the size a paddle *starts* at, not its size. Each paddle
   carries its own `h`, which the abilities stretch and shrink, so anything reading
   a live paddle reads `.h` — collision, drawing and the ai's own target included.
+  `syncPaddleSize()` is the only thing that writes `hTarget`, and it decides by
+  precedence. Letting each move write it directly is a shipped bug: whichever
+  *ended* last reset the paddle to its base size, overruling an effect that was
+  still running.
 - Every knob in the `AI` and `ABILITY` objects documents the value that switches
   its feature off. Two tests hold that up: all of `AI` off reproduces the old
   direct mover, and all of `ABILITY` off gives back the plain game. Keep both

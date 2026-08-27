@@ -644,6 +644,25 @@ grows. `entranceTicks: 0` is the Assisted look.
 
 ### Paddle sizes
 
+**One function owns `hTarget`.** `syncPaddleSize()` looks at what is active and
+works out the size; nothing else writes it. That is not tidiness, it is a bug
+that shipped: Squeeze and Expand each set `hTarget` when they started and reset
+it to the base size when they ended, so whichever *ended* last won. Shrunk by the
+lightning, then handed the bigger paddle, and when the bigger paddle wore off you
+were back at normal size with the lightning still crackling over you — an effect
+that was still running had been silently overruled by an unrelated one finishing.
+
+The rule that replaces last-writer is **precedence: an attack outranks a gift.**
+Being squeezed while expanded leaves you small, and when the squeeze ends the
+expand takes the paddle back if it is still running. Anything else that resizes a
+paddle joins that function rather than writing the field.
+
+Two things follow from the same idea. Expand cannot *arm* while Squeeze is active
+— `blockedBy` says so, with `""` as its off value — because being handed a bigger
+paddle mid-attack reads as the attack having failed. And a blocked move does not
+draw its tell either: a green paddle that is also small claims a gift you are not
+getting.
+
 Each paddle carries its own `h`, eased towards `hTarget` over `resizeTicks` about
 its own centre. It is animated because an instant resize reads as a rendering
 glitch rather than as something happening — the paddle appears to *pop*, and the
