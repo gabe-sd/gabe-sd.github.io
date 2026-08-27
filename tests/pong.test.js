@@ -2266,10 +2266,13 @@ const { check, report } = makeChecks();
       // Well past the bolt's life, but while the squeeze itself is still on.
       for (let i = 0; i < ABILITY.squeeze.boltTicks + 2; i++) tickLightning();
       draw();
-      return { onFire, after: redIn(150, 300), still: moveActive("squeeze") };
+      return { onFire, after: redIn(150, 300), still: moveActive("squeeze"),
+               opponent: redIn(WIDTH - PADDLE_WIDTH - 12, 12) };
     });
     check("firing throws a bolt across the board", fired.onFire > 100,
       fired.onFire);
+    check("and the opponent stops charging once it has fired",
+      fired.opponent === 0, fired.opponent);
     check("and the bolt does not hang around", fired.after < fired.onFire / 4,
       `${fired.onFire} -> ${fired.after}`);
     check("while the squeeze itself is still running", fired.still);
