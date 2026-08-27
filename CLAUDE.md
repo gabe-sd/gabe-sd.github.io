@@ -67,8 +67,9 @@ stale-base cost.
 
 ```bash
 npm run serve                   # http.server on 8934, the port the tests expect
-npm test                        # all browser suites; non-zero exit on failure
+npm test                        # every browser suite, then the docs check
 node tests/chording.test.js     # one suite on its own
+node tests/docs-check.js        # do the docs still describe this repo? no browser
 node tests/ai-sweep.js          # how often Pong's ai saves; a ruler, not a test
 node --check games/<name>/script.js   # syntax only - proves nothing about behaviour
 ```
@@ -220,6 +221,16 @@ Drive the real page and assert on game state. Reading the code and reasoning abo
 it is not verification, and `node --check` only catches syntax errors. Run
 `npm test` before merging; add cases for what you changed.
 
+**Reread the docs before merging, not after.** Grep the files you touched for
+their own names and see what the docs claim about them. One Pong branch left four
+separate claims wrong across three files — that a menu had three buttons in it,
+that `draw()` kept no history, that Minesweeper held the only stored data, that
+the speed cap was a fixed number — and every one of them would have sent the next
+reader somewhere wrong. `tests/docs-check.js` runs inside `npm test` and catches
+the mechanical half: a name that no longer exists, a path that does not resolve,
+an id or a storage key nobody wrote down. It cannot read a sentence. A doc that
+passes it can still be describing a game you deleted.
+
 Four principles underneath that, each of which has already paid for itself here:
 
 - **A test that has never failed has not been shown to test anything.** Prove
@@ -278,11 +289,12 @@ pointer while the button is held. Do not delete it.
 
 ## Machine-specific: driving a real browser on the dev box
 
-> **This describes one specific machine** — a Wayland session with XWayland on
-> `DISPLAY=:0`, using snap-packaged browsers. On any other system (X11, macOS, a
-> container, non-snap browsers) most of it will not apply and following it will
-> waste time. Check `echo $WAYLAND_DISPLAY` and whether the browsers are snaps
-> before assuming any of it holds.
+> **This is the dev box**, and development happens on it: a Wayland session with
+> XWayland on `DISPLAY=:0`, using snap-packaged browsers. Everything below was
+> learned the hard way here and holds here. None of it is portable — on X11,
+> macOS, in a container or with non-snap browsers, most of it is wrong and
+> following it wastes time. If the machine ever changes, `echo $WAYLAND_DISPLAY`
+> and whether the browsers are snaps are what to check first.
 
 - **Snap Chromium works on X11** with `--ozone-platform=x11` and
   `GDK_BACKEND=x11`. Without them it runs as a Wayland client and

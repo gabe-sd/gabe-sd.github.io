@@ -1,7 +1,8 @@
 # Tests
 
-Browser-driven checks for the games. They open real pages and assert on real
-game state — there is nothing to unit test in isolation.
+Mostly browser-driven checks for the games: they open real pages and assert on
+real game state, because there is nothing to unit test in isolation. The one
+exception is `docs-check.js`, which reads the docs instead.
 
 The site itself still has no dependencies; these scripts are the only thing that
 needs anything installed, and they are deliberately kept out of the site tree.
@@ -57,13 +58,35 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
 - **pong.test.js** — the physics and controls: paddle collisions, wall bounces,
   scoring, the round lifecycle (serve prompt, the pause after a point, serving
   back at whoever conceded), the win condition, paddle clamping, and the hidden
-  live region that carries the score to a screen reader. It cancels
+  live region that carries the score to a screen reader. Then the things layered
+  on top: the five difficulty presets and that switching between them leaks
+  nothing, the chosen win score and its storage, and every ability — including
+  the two contracts that say turning all of `AI` off gives back the old direct
+  mover and turning all of `ABILITY` off gives back the plain game. It cancels
   the animation frame and steps `update()` by hand, so it does not race a live
   loop or depend on frame timing. Nothing is pinned in it at the moment — when
   something is knowingly left broken it goes in as a passing assertion describing
   the wrong behaviour, so that fixing it turns a check red and the before/after
   evidence arrives without anyone having to remember to look for it. Rewrite such
   an assertion as part of the fix rather than deleting it.
+- **docs-check.js** — the odd one out. No browser, no `npm install`, and it
+  asserts about prose rather than about a game: that every file path and
+  function name the docs mention still resolves, and that every element id and
+  `localStorage` key in the code is written down in `CLAUDE.md`. It runs last in
+  `npm test`.
+
+  It only catches what is mechanically decidable, which is about half of what
+  goes stale. It cannot tell that "the menu is three buttons and Play" stopped
+  being true, and a clean run is not evidence the docs are right.
+
+  Two things were tried and dropped while writing it, both because a checker
+  that cries wolf is worse than none. Checking every backticked word against the
+  code flags `pkill`, `pynput`, `mouseleave` and `devicePixelRatio` — external
+  names and browser APIs the repo legitimately mentions without using — so it
+  only checks names written with `()`. And matching a TODO slug against merge
+  commits with a bare `--grep` flags `pong-mobile-support` because
+  `pong-mobile-support-entry` was merged; the pattern includes the surrounding
+  quotes for that reason.
 
 ## Tuning, not testing
 

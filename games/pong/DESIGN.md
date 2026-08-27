@@ -112,6 +112,33 @@ The pointer only takes control after moving far enough to look deliberate, becau
 the problem it guards against is the mouse being *brushed* mid-rally rather than
 moved. Handing over on any pointer movement would not have fixed anything.
 
+## On a phone
+
+Not designed for, but measured. An emulated phone with real touch events was
+driven through a game, and the result is worth keeping because it is not what
+anyone expected: **it already works.** Tapping the board serves, dragging moves
+the paddle, `touch-action: none` stops the page scrolling under the drag, the
+layout does not overflow and nothing errors. Three things are genuinely wrong.
+
+**There is no way to pause.** Escape and `p` are the only manual bindings and a
+phone has no keyboard. Auto-pause on a hidden tab still fires and tapping the
+board resumes, so you can get out of a pause but never into one. That is a
+functional hole rather than polish.
+
+**The `?` panel lies to a touch device.** It lists W/S, the arrow keys and Space,
+none of which exist on a phone, and never mentions dragging. Fixing it means
+showing the right controls to the right device without sniffing the user agent; a
+pointer media query is the usual answer.
+
+**Your finger covers the paddle.** The player's paddle sits on the left edge,
+exactly where you drag. Nothing fixes that except moving the control somewhere
+else, which is a design question and not a bug.
+
+One consequence of a decision made for the mouse: touch **teleports** the paddle,
+because pointer control is not rate-limited (see Controls above). On a mouse that
+is a curiosity. On touch, lifting a finger and putting it down elsewhere is the
+normal way to move, so it happens constantly.
+
 ## The AI
 
 The AI predicts where the ball will reach its side of the board and is then
