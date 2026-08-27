@@ -47,6 +47,70 @@ here rather than batched.
 
 Entries with no gate need nothing from him and can run back to back.
 
+### pong-three-modes-with-powerups — Three difficulties, and powerups in all of them
+
+**Gate: playtest, its own, and the biggest one left.** This changes what every
+mode feels like. It cannot share a session with another feel change.
+
+Two halves of the same job. Cut the five difficulties down to three, and give
+every level powerups instead of only the two joke modes.
+
+They are one entry because the second forces the first. The five exist because
+Assisted and Insane are *characters* rather than points on a scale: they own a
+`game` half that changes the ball and the paddles, and they are the only modes
+with abilities, while Easy, Medium and Hard differ in `ai` settings alone and all
+play an identical ball. Give every level powerups and that distinction is gone —
+at which point five names describe three real differences.
+
+The measurements say the same thing. Save rates run Easy 72%, Medium 87%,
+Hard 95% — but Assisted measures 80% and Insane 98% against their *own* ball, so
+the five do not form one scale and never have. `tests/ai-sweep.js` marks those two
+with a `*` for exactly this reason. Three modes that all play a comparable game
+would make the sweep's numbers mean one thing again.
+
+**The question to settle first is where Assisted's spec goes.** Assisted exists so
+a child who has not played Pong before has fun — not so the game is hard to lose.
+That is why its AI is deliberately *stronger* than Easy's while the handicap sits
+on the player's side, and it is the least obvious thing in the current design. If
+Assisted becomes "the easy one" on a three-point scale, decide deliberately
+whether that spec survives, moves, or is dropped. Answer this before writing code;
+everything else follows from it.
+
+Then the mechanical parts:
+
+- **`modes` arrays are the whole gating mechanism.** Every move carries one
+  (`blink`, `overdrive` and `squeeze` are `["insane"]`; `expand` and `clutch` are
+  `["assisted"]`). Powerups everywhere means every one of those lists changes.
+  `modes: []` must keep disabling a move outright — a test asserts that all of
+  `ABILITY` off gives back the plain game, and another that all of `AI` off gives
+  back the old direct mover. Both have to stay true.
+- **Decide whether both sides get moves at every level.** Today the split is
+  thematic, not symmetric: the player gets `expand` and `clutch`, the ai gets
+  `blink` and `overdrive`, and `squeeze` is an ai move that shrinks *the player's*
+  paddle. `PLAYER_TELLS` and `AI_TELLS` colour them hero-green and villain-red per
+  side, so a mode where both sides fire everything needs that scheme to still read
+  at a glance.
+- **Presets have two shapes and `applyGame()` writes every field on every call**
+  so one cannot leak into the next. If all three modes gain a `game` half, keep
+  that property — it is what stops choosing Insane and then Easy leaving you on
+  Insane's ball.
+- **`pong.difficulty` stores a level name that is about to stop existing.**
+  `loadDifficulty()` already returns `null` for a name not in `DIFFICULTY`, so an
+  old value degrades to the default rather than breaking. Worth a test, not worth
+  a migration.
+- `tests/ai-sweep.js` iterates `Object.keys(DIFFICULTY)` and follows automatically.
+
+`games/pong/DESIGN.md` needs updating in the same commit — "Difficulty", "What
+actually changes difficulty" and the Abilities section all describe the five-mode
+world. So does the `ABILITY` bullet in `CLAUDE.md` if the modes contract changes
+shape.
+
+Ordering: this lands before `pong-explain-the-modes`, which would otherwise write
+panel text about five modes and the two that have powerups, and have to rewrite
+it a week later. It also shrinks the difficulty row from five buttons to three,
+which is part of what `pong-visual-overhaul` is unhappy about — worth seeing the
+three-button row before art-directing that menu.
+
 ### pong-explain-the-modes — Say what the modes and the powerups actually do
 
 **Gate: read the wording.** Text in a panel rather than a feel change, so it does
