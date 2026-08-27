@@ -192,12 +192,21 @@ changes.
 
 ### Difficulty
 
-There are two kinds of preset and the difference matters.
+Three modes, each a character rather than a notch on a scale.
 
-**Easy, Medium and Hard override the `AI` object and nothing else.** All three
-play the identical game — same ball speed, same paddle sizes — which is the only
-reason the share of shots the ai saves is a fair measure of the gap between them.
-Nothing may be added to these three that changes the game itself.
+There used to be five. Easy, Medium and Hard differed in `AI` settings alone and
+were the only modes *without* powerups, which is precisely what killed them: once
+every mode had powerups the thing that distinguished the middle three was gone,
+and five names described three real differences. They are worth remembering for
+what they cost — while they existed, the middle three all played an identical
+ball, which was the only reason the share of shots the ai saves compared honestly
+between them. Nothing does now. Every mode is measured against its own game, and
+`tests/ai-sweep.js` is a reading of one mode, not a ranking across them.
+
+**Normal is the one you are meant to play.** It is the only mode with no `game`
+half at all: stock ball, stock paddles, no handicap on either side. Its ai sits
+where Medium's did, and it has every move in the game, tuned well below Insane's
+settings. The moves are the show; they are not the difficulty.
 
 **Assisted is for someone who has barely played, and what makes that fun is
 rallies — not a scoreline.** Its ai is therefore *competent*, and deliberately
@@ -218,21 +227,26 @@ still takes 79% of the points**. Strengthening the ai alone drops them to winnin
 half their points; enlarging the paddle alone leaves a quarter of points untouched.
 Neither lever works without the other.
 
-**Insane deliberately breaks the fair-preset rule too**, which is why both are a
-separate kind rather than two more entries in the same list. They move ball speed as well
-as the ai, so each is measured against its own ball and their percentages are not
-on the same scale as the middle three. A preset therefore has an `ai` half and an
-optional `game` half, and the menu colours these two differently — green and red
-against the accent that means "selected" — so it is visible at a glance that they
-are not more of the same.
+**Assisted and Insane change the game itself**, not just the opponent: both move
+ball speed and paddle sizes; Normal changes neither. The menu gives each mode a
+colour — green, blue, red — so the three read as characters rather than as three
+settings of one slider. Normal's blue is also the colour a selected button fills
+with, which works only because selected is filled and unselected is an outline.
 
-Both halves are applied over a pristine copy of the defaults each time.
-`applyGame()` writes **every** field on every call rather than only the overridden
-ones, for the same reason `AI` is rebuilt from `AI_DEFAULTS`: applying one preset
-on top of another otherwise leaves whatever the previous one set. Switching from
-Easy back to Hard would keep Easy's bounce lookahead, and switching off Insane
-would keep its faster ball — invisible in play, and it makes every later
-measurement a lie.
+A preset has three optional halves, and each has a pristine copy behind it:
+`ai` (how well the opponent reads the ball), `game` (the ball and paddles both
+sides get) and `ability` (how this mode tunes the moves). `applyGame()`,
+`applyAbility()` and the rebuild of `AI` from `AI_DEFAULTS` all write **every**
+field on every call rather than only the overridden ones. Applying one preset on
+top of another otherwise leaves whatever the previous one set: switching off
+Insane would keep its faster ball, and — a real failure caught by a test —
+Normal's earned-Expand trigger would follow you into Assisted and start handing
+out big paddles for rallying well, which is the exact behaviour Assisted had
+removed. Invisible in play, and it makes every later measurement a lie.
+
+`applyAbility()` replaces each nested move spec wholesale rather than merging into
+it, and clones with `structuredClone` rather than `JSON` — `durationTicks` is
+`Infinity` in three places, and JSON turns that into `null`.
 
 **Insane must never save everything.** Its first tuning did: 400 shots, 400 saves.
 An ai that never concedes means the player can never take a point, so the match
@@ -271,22 +285,33 @@ and re-running it is how any new preset gets a comparable figure:
 | first predictive AI | 91% |
 | after the human-feel work, before tuning | **100%** |
 | untuned defaults | ~92% |
-| Easy / Medium / Hard | ~72% / ~86% / ~96% |
-| Assisted / Insane, each against its own ball | ~80% / ~98% |
+| Easy / Medium / Hard, while they existed | ~72% / ~86% / ~96% |
+| Assisted / Normal / Insane, each against its own game | ~82% / ~88% / ~99% |
 
-Assisted's ai saving *more* than Easy's is not a mistake — see above. It is
+Assisted's ai saving more than Easy's did is not a mistake — see above. It is
 supposed to return the ball; the help is the player's paddle and the slow ball,
-neither of which this number can see.
+neither of which this number can see. Normal landing where Medium did is
+deliberate: it is the mode that replaced it.
 
-The last row is not comparable with the others and the sweep marks it so. Those
-two modes also change how hard the ball is for the **player**, which this harness
-does not measure at all — it only ever asks whether the ai saved.
+**These are three separate readings, not a ranking.** While Easy, Medium and Hard
+existed they all played one ball, so their figures could be set against each
+other. Nothing does now — every surviving mode changes the ball, the paddles or
+both — so each number answers "how often does *this* mode's ai save *this* mode's
+ball" and nothing else. The harness never asks how hard the ball is for the
+**player**, which is most of what separates the three.
 
-Since the abilities landed the number understates Insane badly, and it is worth
-knowing why rather than trusting it. Two of its three moves — the charged shot and
-the paddle squeeze — do not touch whether the ai saves anything; they make the
-ball harder for *you*. The sweep cannot see them. Insane measures a shade **lower**
-than it did before the moves existed, and is much harder to play.
+The number understates every mode with moves in it, and it is worth knowing why
+rather than trusting it. Only one of the opponent's three moves changes whether
+it saves anything. The charged shot and the paddle squeeze make the ball harder
+for *you*, and the sweep never asks about you — it only ever asks whether the ai
+got a paddle to the ball. Insane is a great deal harder to play than the figure
+suggests, and always has been.
+
+Blink is the exception, and it moves the number: once it was bound to the ball
+rather than to a clock it became a guaranteed save on the approaches it fires, so
+the same preset reads higher than it used to. That is the whole of the change
+between the old ~98% and today's ~99% — the ai did not get better at reading the
+ball, one of its moves stopped expiring early.
 
 That 100% is the entry worth remembering. Making the AI feel human made it
 **unbeatable**, and nothing but playing it revealed that. The cause: a read that
@@ -307,12 +332,17 @@ purpose, because these are meant to be tuned by feel and the test exists to catc
 
 ## Abilities
 
-Assisted and Insane are **characters, not points on a scale**. Tuning numbers
-harder and softer produced two more difficulties; what makes these two worth
-having is that the opponent has *moves* — Insane blinks up and down the board
-like a cartoon villain, charges a shot that comes back faster than the game
-normally permits, and squeezes your paddle. Assisted hands the same kind of thing
-to you.
+The modes are **characters, not points on a scale**, and the moves are what makes
+that true. Tuning numbers harder and softer only ever produced more difficulties;
+what distinguishes a character is that it *does things* — the opponent blinks up
+and down the board like a cartoon villain, charges a shot that comes back faster
+than the game normally permits, and throws lightning that leaves your paddle
+shrunken and crackling. You get moves of your own back.
+
+Every mode has them. That was not always so: they were built for Assisted and
+Insane while the middle three had none, which is exactly what left five names
+describing three differences. What varies between modes now is the *tuning* — a
+preset's `ability` half — not whether the moves exist.
 
 ### Two kinds of tell
 
@@ -322,9 +352,9 @@ paddle, and `tell` in its config says which.
 The distinction is not decoration. A charge tell is a *warning*: something is
 about to happen that you should brace for, or a thing you are holding that you
 have to remember to spend. A tint is a *statement*: this is what you have now.
-Expand grows the paddle to nearly twice its size, which announces itself without
-help, and — unlike Squeeze, which shrinks you and genuinely is a threat — there is
-nothing to brace for. Given the charge treatment as well, it read as a second,
+Expand makes the paddle visibly bigger, which announces itself without help, and
+— unlike Squeeze, which shrinks you and genuinely is a threat — there is nothing
+to brace for. Given the charge treatment as well, it read as a second,
 different thing happening on top of the growth.
 
 `PLAYER_TELLS` checks Clutch **before** Expand, because Expand's real tell is the
@@ -335,11 +365,81 @@ invisible.
 A test separates the two by sampling a pixel just outside the paddle: a glow
 bleeds past the rect and a tint does not.
 
+#### An attack is drawn on the attacker, and travels
+
+Squeeze shrinks your paddle, and shipped drawn entirely on *your* paddle: red
+glow, shaking, the same treatment Clutch uses for a reward. The reported symptom
+was "what is that powerup?" — the victim looked like the owner.
+
+The move is now staged the way the fiction says it happens. The opponent charges
+on its own paddle, a bolt of lightning crosses the board, and your paddle arrives
+shrunken and crackling. `tellWhile` keeps the wind-up on the attacker only, so
+once the bolt is away the opponent stops glowing rather than appearing to channel
+forever.
+
+The general rule: **a move whose effect lands somewhere else is drawn in three
+parts — the wind-up where it comes from, something crossing, and the effect where
+it lands.** Drawing only the effect makes the target look like the beneficiary.
+
+#### An effect timed against the ball, not against the clock
+
+The squeeze shipped shrinking you by a fifth for a couple of seconds and was
+reported as making no noticeable difference and usually ending before the ball
+came back. Both were true, and the second is the general lesson: **an effect that
+starts while the ball is heading away from you spends part of its life before you
+can feel it.**
+
+The bolt lands as the ball crosses to the opponent, so roughly half a volley
+passes before the ball is coming at you again. A duration that looks generous
+against a stopwatch can overlap the part that matters by nothing at all — with
+the original values, measured, the paddle was small at **zero** of the player's
+next two contacts.
+
+Durations for anything aimed at the player are therefore set in **volleys** —
+your contact to your next contact — with the lead-in budgeted for. The volley is
+worth measuring rather than assuming: it varies by more than a factor of two
+across the modes, because they play different balls. The test counts contacts for
+the same reason, so retuning a speed cannot quietly invalidate it.
+
+#### Three wind-ups, one colour
+
+Red means *the opponent is doing something to you*, and all three of its moves
+are red. That was fine while only two of them lived on its paddle; moving
+Squeeze's tell across made three identical wind-ups, and the reported symptom was
+exactly that — "what is it doing?".
+
+They stay one colour and differ in **behaviour**, which `windUp` names.
+**Overdrive swells**: one long steady build, the slowest and largest of the
+three. **Blink stutters**: it flickers hard on and off, reading as something
+misfiring, which it needs to do because its wind-up is the shortest. **Squeeze
+barely moves**: the lightning gathering on the paddle is the tell, and shaking
+underneath it only muddied that.
+
+The test cannot count lit pixels to tell a stutter from a swell — the paddle
+shakes on purpose, and the jitter is bigger than the signal. `drawPaddle` records
+what it computed in `lastTell` for that reason, and the check compares how far
+the glow moves *from one tick to the next*: a stutter swings, a swell creeps.
+The obvious version, comparing the range across a window, fails — a swell travels
+a long way in total.
+
+#### A held charge is a layer, not a tell
+
+A paddle draws one tell. An opponent holding a charged shot therefore stopped
+looking charged the instant it wound up something else, and a charge you cannot
+see is a shot you cannot brace for. It is drawn separately, on top of whatever
+tell is showing, and stays until the shot is spent. Both sides get it: the
+opponent's Overdrive and the player's Clutch are the same idea pointed in
+opposite directions.
+
+The test has to isolate that layer rather than assert the paddle is red, because
+a wind-up reddens it anyway — the first version of the check passed with the
+layer deleted.
+
 ### Lean into it
 
 A standing instruction for anything in this section: **these are supposed to be
-chaotic, exciting and loud.** The moves are the reason the two joke modes exist,
-and a restrained powerup is a wasted one. When a choice is between tasteful and
+chaotic, exciting and loud.** The moves are most of the reason to play any of the
+modes, and a restrained powerup is a wasted one. When a choice is between tasteful and
 obvious, take obvious — flash white, throw a ring, shake the paddle, stack the
 effects up. The rest of the game is two rectangles and a square, so there is
 plenty of quiet to spend.
@@ -357,6 +457,32 @@ warning.
 
 A cooldown runs in every phase, so nothing chains into itself.
 
+### Blink, and the second time a timer was the wrong answer
+
+Blink teleports the opponent up and down the board while the ball crosses, then
+hops onto the real intercept once it is close. The showing-off half is what makes
+it read as a villain move rather than as a fast paddle.
+
+It shipped on a `durationTicks` timer and that could not work, for a reason worth
+recording because it is the *same* reason the Expand timer failed. Blink arms when
+the ball turns towards the opponent, but how long the ball takes to cross depends
+on its speed — which varies by mode and by rally. No fixed number tracks that.
+Measured over 300 approaches per mode, the paddle was still blinking when the ball
+arrived **0% of the time in Normal and 41% in Insane**. It dashed about, stopped,
+and then played the point completely normally: a move that could neither save nor
+miss, which is to say decoration.
+
+It now ends when the ball stops coming. `durationTicks: Infinity` says so, and
+`updateAi` ends it on the tick the ball turns round. The general rule had already
+been written down for Expand — *bind an effect to its situation, not to a clock* —
+and was not applied here because nothing about Blink looked like a state. What
+made it one is that it exists to answer a specific ball.
+
+The cost is real and was measured: Insane's save rate went 98.9% → ~99.1%, because
+a blink that lasts the whole flight is a guaranteed save on the approaches it
+fires. Normal moved 86.4% → 88.4%. That is close enough to the softlock line to
+watch — see **Insane must never save everything** above.
+
 ### Charged shots
 
 A charged shot leaves at a flat multiple of **the mode's own speed cap**, not a
@@ -364,6 +490,14 @@ multiple of whatever arrived. Scaling off the incoming ball meant a charge earne
 during a slow rally fired a slow shot — the same move measured 5.2 or 9.7
 depending on nothing the player did, which is the opposite of drama. It is now the
 same every time, and far enough above the cap that it is unmistakable.
+
+**Far enough above the cap** is the part that is easy to get wrong, and was. The
+opponent's shot shipped at barely over 1, which looks fine in isolation: it was
+still much faster than an ordinary shot early in a rally. But an ordinary shot's
+speed depends on what arrived, and late in a rally it is already *at* the cap — so
+the move was dramatic on the first exchange and invisible on the tenth, which is
+when it is being watched for. A multiplier close to 1 does not mean "slightly
+weaker", it means "works at the start of a point and nowhere else".
 
 **Nothing lifts the cap for the return of it.** If the opponent gets a paddle to a
 charged shot, the ball comes back at ordinary speed, because the outgoing branch
@@ -415,21 +549,24 @@ paddle; a moving one reads as something waiting to go off. The pulse counts
 
 ### Who fires, and why
 
-**The villain rolls; you earn.** Insane's moves are a random chance per approach,
-raised by however many points it is behind — it stops playing around exactly when
-you start winning, which is both the drama and a self-balancing property: it
-cannot bully you while you are already losing.
+**The villain rolls; you earn.** The opponent's moves are a random chance per
+approach, raised by however many points it is behind — it stops playing around
+exactly when you start winning, which is both the drama and a self-balancing
+property: it cannot bully you while you are already losing.
 
 Yours are never random, and the two of them mean **different things**:
 
 - **Clutch is a reward.** Three close calls fill the meter; it exists to pay out
   for playing well.
-- **Expand is mercy.** Falling behind on the scoreboard, or losing three points on
-  the trot. It exists to help when the game is going badly, and for no other
-  reason.
+- **Expand depends on the mode.** In Assisted it is *mercy*: falling behind on the
+  scoreboard, or losing three points on the trot. In Normal there is no mercy to
+  give — the mode has no handicap on either side — so it is a *reward* there
+  instead, earned by a run of returns. One move, two meanings, and the section
+  below is about how it tells them apart.
 
-Keeping those apart is the whole design. A handout that arrives while you are
-winning is not a handicap, it is noise.
+Keeping reward and mercy apart is the whole design. A handout that arrives while
+you are winning is not a handicap, it is noise — which is why Assisted has no
+earned trigger and Normal has no situation one.
 
 The losing run and the score gap are **separate triggers on purpose**. Dropping
 three in a row while still level is a different kind of trouble from being two
@@ -450,12 +587,12 @@ game and a struggling one still sees it, which is what the mode was for.
 If a run of good returns should be rewarded at all, it belongs to Clutch, which is
 already the half of this that pays out for skill.
 
-**Expand is a state, not an event.** You have the big paddle for exactly as long
-as you are in trouble: it appears when the gap or the losing run reaches its
-threshold and goes when it does not. `syncExpand()` holds the move to the
-condition at every point, and both halves of it are no-ops when the state already
-matches. `durationTicks` and `cooldownTicks` are neutral, because nothing about it
-expires.
+**In Assisted, Expand is a state, not an event.** You have the big paddle for
+exactly as long as you are in trouble: it appears when the gap or the losing run
+reaches its threshold and goes when it does not. `syncExpand()` holds the move to
+the condition at every point, and both halves of it are no-ops when the state
+already matches. `durationTicks` and `cooldownTicks` are neutral, because nothing
+about it expires.
 
 It took two wrong answers to get there, and both are worth knowing because they
 are the obvious ones:
@@ -472,7 +609,59 @@ The lesson generalises: an effect that exists to answer a *situation* has to be
 bound to that situation, not to a duration or a budget. Ask what makes it stop
 being needed, and end it on that.
 
+#### The same move, answering a different question
+
+In Normal, Expand is a **reward**, and the whole shape inverts. There is no
+trouble for it to be bound to — Normal has no comeback help by design — so it is
+earned by a run of returns, runs on a timer, and is taken away by conceding.
+`expandIsState()` is what tells the two apart: with either situation trigger set
+the move is a state and `syncExpand()` governs it; with neither set it is earned,
+and `syncExpand()` steps aside entirely.
+
+That last part is not decoration. Left running in a mode it does not govern,
+`syncExpand()` finds its condition false at every point and ends the move — so a
+paddle you earned would vanish on the next point *including one you won*. The
+check that catches it is "winning a point keeps the paddle you earned"; the
+obvious check, that losing does not grant one, passes with the guard removed and
+proves nothing.
+
+The timer here is the one rejected above, and it works for the opposite reason: a
+reward that overstays stops reading as a reward. It is set several times longer
+than the rejected value, because the failure then was expiring before the ball
+came back, and it is bounded at the other end by conceding.
+
+How long it should last was measured rather than guessed. Simulating a weak, a
+middling and a strong player, the pair that was shipped puts the big paddle on for
+roughly **12%, 23% and 47%** of ticks respectively, arriving about every other
+point. A longer timer took the strong player past 70%, at which point it is not a
+reward any more — it is the paddle.
+
+Two smaller decisions fall out of it. The streak resets when the move is earned,
+or one long rally hands it straight back the moment it expires. And arriving as a
+reward has to *look* different from arriving as help, so the earned version bursts
+on the paddle — the same white flash the meter uses — while Assisted's simply
+grows. `entranceTicks: 0` is the Assisted look.
+
 ### Paddle sizes
+
+**One function owns `hTarget`.** `syncPaddleSize()` looks at what is active and
+works out the size; nothing else writes it. That is not tidiness, it is a bug
+that shipped: Squeeze and Expand each set `hTarget` when they started and reset
+it to the base size when they ended, so whichever *ended* last won. Shrunk by the
+lightning, then handed the bigger paddle, and when the bigger paddle wore off you
+were back at normal size with the lightning still crackling over you — an effect
+that was still running had been silently overruled by an unrelated one finishing.
+
+The rule that replaces last-writer is **precedence: an attack outranks a gift.**
+Being squeezed while expanded leaves you small, and when the squeeze ends the
+expand takes the paddle back if it is still running. Anything else that resizes a
+paddle joins that function rather than writing the field.
+
+Two things follow from the same idea. Expand cannot *arm* while Squeeze is active
+— `blockedBy` says so, with `""` as its off value — because being handed a bigger
+paddle mid-attack reads as the attack having failed. And a blocked move does not
+draw its tell either: a green paddle that is also small claims a gift you are not
+getting.
 
 Each paddle carries its own `h`, eased towards `hTarget` over `resizeTicks` about
 its own centre. It is animated because an instant resize reads as a rendering
@@ -502,9 +691,9 @@ A test drives a real edge collision rather than calling the hook, because callin
 the hook directly cannot catch this.
 
 `applyDifficulty()` resets paddle sizes and disarms everything. Without it,
-choosing Insane and then Easy left you playing Easy with Insane's short paddle —
-the same class of bug as a preset leaking through `AI`, and invisible until
-somebody wonders why Easy felt wrong.
+picking Insane and then a gentler mode left you playing the gentler one with
+Insane's short paddle — the same class of bug as a preset leaking through `AI`,
+and invisible until somebody wonders why the easy mode felt wrong.
 
 ### Everything is switchable
 
@@ -516,9 +705,9 @@ paddle ever changes size. All of this is tuned by feel, and feel changes.
 ## The win score
 
 `WIN_SCORE` is chosen in the menu alongside the difficulty and stored the same
-way. It is orthogonal to difficulty on purpose: a long game on Easy and a short
-one on Insane are both reasonable things to want, and folding the target into the
-presets would have taken that away for no gain.
+way. It is orthogonal to difficulty on purpose: a long game on Assisted and a
+short one on Insane are both reasonable things to want, and folding the target
+into the presets would have taken that away for no gain.
 
 The trap is the `?` panel, which states the target and reads it from the constant
 rather than hardcoding it. That was correct while the value could not change, and
@@ -560,3 +749,18 @@ worth knowing if something else forces that area open.
 A canvas cannot read CSS custom properties, so the theme tokens are copied into a
 plain object and re-copied from a `prefers-color-scheme` change listener. Only the
 background is re-read per frame.
+
+**A colour that is not a token has to earn it, and white did not.** Effects are
+drawn with a bright core over a coloured glow — the paddle flash, the meter pop,
+the squeeze bolt. White works for the first two because they are drawn *on a
+paddle*, which is dark in the light theme. The bolt crosses the empty board, and
+the light theme's board is pure `#ffffff`, so its core was invisible in exactly
+the place it mattered: the effect read as a red outline of a bolt rather than as
+a bolt. `boltCore()` picks it from the board's own luminance instead, and the
+light theme gained about half again as much visible bolt.
+
+Testing it is harder than it looks. A check that counts pixels unlike the board
+passes with the fixed white core still in, because the red glow alone clears any
+reasonable threshold — it says the bolt is there, not that it has a core. The
+check counts pixels at the *opposite end of the luminance scale from the board*,
+which is the only thing a core can supply.

@@ -32,9 +32,11 @@ still describes what it names in both places.
 step with the code, in the same commit as the change.
 
 `tests/pong.test.js` covers the physics, the round lifecycle, the ai, the
-controls, the panels, the difficulty presets, the win score and every ability —
-add to it rather than around it. Nothing is currently pinned there, but if you
-knowingly leave something broken, pin it as described in `CLAUDE.md`.
+controls, the panels, the difficulty presets, the win score, every ability, how
+the effects are drawn (by reading canvas pixels, in both colour schemes) and a
+soak that plays whole matches in each mode — add to it rather than around it.
+Nothing is currently pinned there, but if you knowingly leave something broken,
+pin it as described in `CLAUDE.md`.
 
 Anything that changes how the game feels gets played before it merges. Not
 designing for mobile at this point.
@@ -47,69 +49,45 @@ here rather than batched.
 
 Entries with no gate need nothing from him and can run back to back.
 
-### pong-three-modes-with-powerups — Three difficulties, and powerups in all of them
+### pong-shooter-powerup — A collectable that turns your paddle into a gun
 
-**Gate: playtest, its own, and the biggest one left.** This changes what every
-mode feels like. It cannot share a session with another feel change.
+**Gate: playtest, its own.** Fire rate, bullet speed and how hard the debuff bites
+are all pure feel, and this is the first mechanic in the game that is not the ball.
 
-Two halves of the same job. Cut the five difficulties down to three, and give
-every level powerups instead of only the two joke modes.
+Design decided; this entry is the record of it:
 
-They are one entry because the second forces the first. The five exist because
-Assisted and Insane are *characters* rather than points on a scale: they own a
-`game` half that changes the ball and the paddles, and they are the only modes
-with abilities, while Easy, Medium and Hard differ in `ai` settings alone and all
-play an identical ball. Give every level powerups and that distinction is gone —
-at which point five names describe three real differences.
+- **You collect it.** A second object is served into play mid-match, visibly not
+  the ball. Miss it and nothing happens. Hit it and a spectacle fires, and your
+  paddle starts shooting.
+- **The paddle auto-fires straight ahead** while it lasts. No aiming, no button:
+  you position, it shoots.
+- **A bullet that reaches the opponent's paddle slows it down** for a while. Not
+  shrinking — Squeeze already shrinks a paddle, and two moves doing the same thing
+  read as one move. Slow is a new axis and it is legible: the paddle visibly
+  cannot get there.
+- **Bullets pass straight through the ball.** They do not deflect it. The ai reads
+  the ball by simulating clean physics (`predictInterceptY`), so a bullet that
+  moved the ball would make the opponent misread shots for a reason the player
+  cannot see — a bug from where you are sitting, not a mechanic.
 
-The measurements say the same thing. Save rates run Easy 72%, Medium 87%,
-Hard 95% — but Assisted measures 80% and Insane 98% against their *own* ball, so
-the five do not form one scale and never have. `tests/ai-sweep.js` marks those two
-with a `*` for exactly this reason. Three modes that all play a comparable game
-would make the sweep's numbers mean one thing again.
+Why it exists: the moves are asymmetric today. You get Expand and Clutch; the
+opponent gets Blink, Overdrive and Squeeze — and Squeeze is aimed at *your*
+paddle. This is the move that evens it up, which is why it is worth building
+before adding anything else to the opponent's side.
 
-**The question to settle first is where Assisted's spec goes.** Assisted exists so
-a child who has not played Pong before has fun — not so the game is hard to lose.
-That is why its AI is deliberately *stronger* than Easy's while the handicap sits
-on the player's side, and it is the least obvious thing in the current design. If
-Assisted becomes "the easy one" on a three-point scale, decide deliberately
-whether that spec survives, moves, or is dropped. Answer this before writing code;
-everything else follows from it.
-
-Then the mechanical parts:
-
-- **`modes` arrays are the whole gating mechanism.** Every move carries one
-  (`blink`, `overdrive` and `squeeze` are `["insane"]`; `expand` and `clutch` are
-  `["assisted"]`). Powerups everywhere means every one of those lists changes.
-  `modes: []` must keep disabling a move outright — a test asserts that all of
-  `ABILITY` off gives back the plain game, and another that all of `AI` off gives
-  back the old direct mover. Both have to stay true.
-- **Decide whether both sides get moves at every level.** Today the split is
-  thematic, not symmetric: the player gets `expand` and `clutch`, the ai gets
-  `blink` and `overdrive`, and `squeeze` is an ai move that shrinks *the player's*
-  paddle. `PLAYER_TELLS` and `AI_TELLS` colour them hero-green and villain-red per
-  side, so a mode where both sides fire everything needs that scheme to still read
-  at a glance.
-- **Presets have two shapes and `applyGame()` writes every field on every call**
-  so one cannot leak into the next. If all three modes gain a `game` half, keep
-  that property — it is what stops choosing Insane and then Easy leaving you on
-  Insane's ball.
-- **`pong.difficulty` stores a level name that is about to stop existing.**
-  `loadDifficulty()` already returns `null` for a name not in `DIFFICULTY`, so an
-  old value degrades to the default rather than breaking. Worth a test, not worth
-  a migration.
-- `tests/ai-sweep.js` iterates `Object.keys(DIFFICULTY)` and follows automatically.
-
-`games/pong/DESIGN.md` needs updating in the same commit — "Difficulty", "What
-actually changes difficulty" and the Abilities section all describe the five-mode
-world. So does the `ABILITY` bullet in `CLAUDE.md` if the modes contract changes
-shape.
-
-Ordering: this lands before `pong-explain-the-modes`, which would otherwise write
-panel text about five modes and the two that have powerups, and have to rewrite
-it a week later. It also shrinks the difficulty row from five buttons to three,
-which is part of what `pong-visual-overhaul` is unhappy about — worth seeing the
-three-button row before art-directing that menu.
+- The collectable is a second moving object, which the game has never had. `draw()`
+  and `update()` both assume one ball. Decide early whether it goes in `update()`
+  beside the ball or in its own step.
+- Bullets are a third. They need a spawn cadence in **ticks**, like everything else
+  here, or they will fire at different rates on different monitors.
+- Slowing the ai means a live multiplier on `AI.speed`/`panicSpeed` rather than a
+  write to them — those are restored from `AI_DEFAULTS` on every mode change, so a
+  debuff written into them would either be wiped or would leak. It is the same
+  trap `syncPaddleSize()` exists to close on the player's side: two effects
+  writing one field means whichever ends last wins. Derive the value from what is
+  active rather than assigning it.
+- It is a move like any other: it belongs in `ABILITY` with a `modes` list and an
+  off value for every knob, and both "everything off" tests have to still pass.
 
 ### pong-explain-the-modes — Say what the modes and the powerups actually do
 
@@ -118,21 +96,26 @@ not need its own playtest — but nobody except Gabriel can say whether it reads
 a beginner, which is the only audience that matters here.
 
 The `?` panel lists the controls and the win score and nothing else. It has never
-mentioned the difficulty modes, and since the abilities landed it is silently
-missing the half of the game that is hardest to work out by looking at it: on
-Assisted a three-pip meter fills and the paddle turns green and grows, on Insane
-the opponent teleports, glows, shrinks your paddle and fires a shot above the
-speed the ball otherwise reaches. None of it is named anywhere in the game.
+mentioned the difficulty modes, and it is silently missing the half of the game
+that is hardest to work out by looking at it: a three-pip meter fills, a paddle
+turns green and grows, the opponent teleports, throws lightning that leaves your
+paddle shrunken and crackling, and fires a shot well above the speed the ball
+otherwise reaches. None of it is named anywhere in the game.
 
-It matters most for the mode it was built for. Assisted exists so a child who has
-not played Pong before has fun, and a child is exactly who will not work out
-unaided that hitting the ball with the very end of their own paddle, three times,
-is what fills the meter.
+Every mode has powerups now, so this is no longer a note about two odd modes — it
+is missing from all three. It matters most on Assisted, which exists so a child
+who has not played Pong before has fun, and a child is exactly who will not work
+out unaided that hitting the ball with the very end of their own paddle, three
+times, is what fills the meter.
+
+The same paddle growth also means two different things depending on the mode:
+help in Assisted, a reward for a long rally in Normal. If the panel says only "your
+paddle gets bigger" it will be wrong in one of them.
 
 - The panel is per-mode content in a game that can change mode from the menu at
-  any time. Decide whether it lists every mode at once or only the current one —
+  any time. Decide whether it lists all three at once or only the current one —
   the second reads better and means the text has to be rebuilt in
-  `applyDifficulty()`, alongside the paddle reset it already does there.
+  `applyDifficulty()`, alongside the paddle and ability reset it already does.
 - Naming what fills the clutch meter tells the player to aim with the edge of
   their own paddle, which is a real strategy the game currently hides. Worth
   deciding whether revealing it is the intent.
@@ -172,13 +155,14 @@ Three things have accumulated here, all of them placeholder-by-agreement rather
 than oversights:
 
 - **The menu does not feel right.** Called functional-for-now when the three-row
-  version shipped. It is a heading, five difficulty buttons, a "first to" row and
-  Play, stacked centred over the board.
-- **The ability colours are placeholders.** Assisted is green and Insane red,
-  taken from `--win` and `--lose`. Blue was asked for and could not be used:
-  `--accent` is blue and already means "this button is selected", so a blue
-  Assisted reads as chosen before you touch it. Changing that means deciding what
-  selected looks like first.
+  version shipped. It is a heading, three difficulty buttons, a "first to" row and
+  Play, stacked centred over the board. It was five buttons when that complaint
+  was made, so re-look before assuming it still applies.
+- **The mode colours are placeholders.** Assisted green, Normal blue, Insane red,
+  from `--win`, `--accent` and `--lose`. Blue doubling as "selected" is survivable
+  only because selected is a filled button and unselected is an outline; if the
+  art pass changes what selected looks like, check that Normal still reads as
+  unchosen.
 - **Real art assets**, which the game has never had — everything is `fillRect`
   against theme tokens.
 
@@ -218,8 +202,8 @@ no-dependencies rule.
   try/catch treatment as the difficulty.
 - Browsers refuse to start an AudioContext before a user gesture, and there is an
   obvious one to hang it off: the Play button.
-- The menu is now five difficulty buttons, a win score row and Play, so a mute
-  control most likely sits with Restart and `?` rather than in it.
+- The menu is a three-button difficulty row, a three-button win score row and
+  Play, so a mute control most likely sits with Restart and `?` rather than in it.
 
 ### pong-hit-feedback — Visual feedback on contact
 
@@ -231,9 +215,14 @@ in `draw()`.
 - **Most of this is already written, for the abilities rather than for contact.**
   `aiGhosts` keeps the last few paddle positions and draws them fading behind a
   blink, which is exactly the shape a ball trail wants; `paddleFlash` already
-  flashes a band across a paddle when the clutch meter fills. Extend those rather
-  than building parallel machinery beside them — their knobs live in
-  `ABILITY.afterimages` and `ABILITY.pop`.
+  flashes a band across a paddle; `drawCharged` draws a pulsing aura; and
+  `makeBolt`/`strokePath` will draw a jagged glowing path between any two points.
+  Extend those rather than building parallel machinery beside them — the knobs
+  live in `ABILITY.afterimages`, `ABILITY.pop` and `ABILITY.squeeze`.
+- Read the Theme section of `games/pong/DESIGN.md` first. A white core is
+  invisible on the light theme's board, which is pure white, and effects drawn
+  over the *board* rather than over a paddle have to pick their colour from the
+  background's luminance.
 - Anything that flashes has to be driven by the tick count rather than by wall
   time, or it will run at different speeds on different monitors.
 
@@ -245,9 +234,9 @@ the storage and the counting are not.
 Longest rally, or wins and losses, stored the same way as the Minesweeper best
 time: one namespaced key, every access wrapped in try/catch.
 
-- Where it displays is the open question. The menu was the obvious home when it
-  held three buttons; it now carries five difficulty buttons, a three-button win
-  score row and Play, so anything added there has to earn the space.
+- Where it displays is the open question. The menu is the obvious home and now
+  carries two rows of three buttons plus Play, so anything added there has to
+  earn its space rather than simply fit.
 
 ### pong-mobile-support — Make Pong work properly on a phone (deferred)
 
@@ -291,6 +280,17 @@ the best time.
 See the Human Benchmark version for the shape of it.
 
 ## Site-wide
+
+### site-favicon — The site has no favicon
+
+Every page 404s `/favicon.ico`, because browsers ask for it whether or not you
+reference one and there is no file to serve. Nothing is broken — it costs a
+generic page icon in the tab and a 404 in the console — but it is the sort of
+thing that reads as unfinished on a live site.
+
+One file at the repo root is enough; browsers find `/favicon.ico` without a link
+tag, which also keeps it out of every game page's `<head>`. An SVG referenced
+from `shared.css`'s owning pages would need markup in all five instead.
 
 ### site-visual-design — Improve the site's design and visual appeal
 

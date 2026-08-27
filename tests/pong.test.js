@@ -208,6 +208,11 @@ const { check, report } = makeChecks();
       // ai.y a few pixels a tick and the ball starts clipping the paddle ends.
       const realUpdateAi = typeof updateAi === "function" ? updateAi : null;
       if (realUpdateAi) updateAi = () => {};
+      // A charged shot leaves *above* the cap on purpose, and since powerups
+      // reached every mode one can fire in the middle of this rally. This case
+      // is about vy not compounding, so take the moves out of it.
+      const savedModes = MOVES.map((m) => ABILITY[m].modes);
+      for (const m of MOVES) ABILITY[m].modes = [];
       for (let i = 0; i < n; i++) {
         const was = Math.sign(ball.vx);
         update();
@@ -220,6 +225,7 @@ const { check, report } = makeChecks();
         minAbsVx = Math.min(minAbsVx, Math.abs(ball.vx));
       }
       if (realUpdateAi) updateAi = realUpdateAi;
+      MOVES.forEach((m, i) => { ABILITY[m].modes = savedModes[i]; });
       return { maxSpeed, maxSteep, minAbsVx, hits, points: player.score + ai.score };
     }, 5000);
 
@@ -635,6 +641,16 @@ const { check, report } = makeChecks();
     check("restart clears the pause", !(await page.evaluate(() => paused)));
   }
 
+  // Sections 16-18 describe how the ai *moves*. Blink teleports it, and since
+  // powerups reached every mode it can fire in the middle of any of these on a
+  // random roll - which would show up as a flaky suite rather than an honest
+  // failure. Silence the moves while the mover is under test.
+  const savedModes = await page.evaluate(() => {
+    const was = Object.fromEntries(MOVES.map((m) => [m, ABILITY[m].modes]));
+    for (const m of MOVES) ABILITY[m].modes = [];
+    return was;
+  });
+
   console.log("16. how the ai behaves");
   {
     // These two describe the old chasing ai's behaviour by contradiction, so they
@@ -942,6 +958,11 @@ const { check, report } = makeChecks();
       rate !== null && `saves ${rate.toFixed(1)}%`);
   }
 
+  // The mover has been characterised; hand the moves back.
+  await page.evaluate((was) => {
+    for (const m of MOVES) ABILITY[m].modes = was[m];
+  }, savedModes);
+
   console.log("19. paddle collision is a crossing, not a position");
   {
     // Already past the plane when the paddle arrives. The old half-plane test
@@ -1112,15 +1133,15 @@ const { check, report } = makeChecks();
     check("exactly one difficulty is selected", (await checked()).length === 1,
       (await checked()).join(","));
 
-    await page.click('#difficulty [data-level="easy"]');
-    check("clicking one selects it", (await checked())[0] === "easy",
+    await page.click('#difficulty [data-level="assisted"]');
+    check("clicking one selects it", (await checked())[0] === "assisted",
       (await checked()).join(","));
     check("and deselects the others", (await checked()).length === 1);
     check("selecting does not start the game",
       (await page.evaluate(() => phase)) === "menu" && await page.isVisible("#menu"));
     check("it actually reaches the ai",
       (await page.evaluate(() => AI.reactionTicks))
-        === (await page.evaluate(() => DIFFICULTY.easy.ai.reactionTicks)));
+        === (await page.evaluate(() => DIFFICULTY.assisted.ai.reactionTicks)));
 
     await page.click("#play");
     await page.waitForTimeout(80);
@@ -1140,9 +1161,9 @@ const { check, report } = makeChecks();
     await page.reload();
     await page.waitForSelector("#board");
     check("the choice is remembered across a reload",
-      (await page.evaluate(() => difficulty)) === "easy",
+      (await page.evaluate(() => difficulty)) === "assisted",
       await page.evaluate(() => difficulty));
-    check("and the button shows it", (await checked())[0] === "easy");
+    check("and the button shows it", (await checked())[0] === "assisted");
 
     // ...and an unavailable localStorage falls back rather than throwing.
     const blocked = await browser.newPage();
@@ -1158,7 +1179,7 @@ const { check, report } = makeChecks();
     check("a blocked localStorage does not break the page",
       blockedErrors.length === 0, blockedErrors.join("; "));
     check("and falls back to the default difficulty",
-      (await blocked.evaluate(() => difficulty)) === "medium",
+      (await blocked.evaluate(() => difficulty)) === "normal",
       await blocked.evaluate(() => difficulty));
     await blocked.close();
 
@@ -1187,14 +1208,17 @@ const { check, report } = makeChecks();
       }
       Object.assign(AI, saved);
       return out;
-    }, 300);
+    }, 600);
     const shown = Object.entries(rates)
       .map(([k, v]) => `${k} ${v.toFixed(0)}%`).join(", ");
-    check("harder difficulties save more", rates.easy < rates.medium
-      && rates.medium < rates.hard, shown);
-    check("easy is genuinely beatable", rates.easy < 85, shown);
-    check("hard is not a formality", rates.hard > 88, shown);
-    await page.evaluate(() => { restart(); applyDifficulty("medium"); });
+    // Each mode plays its own ball now, so these are not on one scale and the
+    // old "harder saves more" ordering across all three would be comparing
+    // different games. What still has to be true is that the mode you are meant
+    // to play is winnable, and that the joke mode is harder than it.
+    check("Normal is genuinely beatable", rates.normal < 93, shown);
+    check("Normal is not a walkover either", rates.normal > 70, shown);
+    check("Insane is harder than Normal", rates.insane > rates.normal, shown);
+    await page.evaluate(() => { restart(); applyDifficulty("normal"); });
   }
 
   console.log("24. Play starts a match, including after one has ended");
@@ -1262,20 +1286,23 @@ const { check, report } = makeChecks();
     await page.waitForSelector("#board");
     const levels = () => page.evaluate(() =>
       [...document.querySelectorAll("#difficulty [data-level]")].map((b) => b.dataset.level));
-    check("five difficulties are offered",
-      (await levels()).join(",") === "assisted,easy,medium,hard,insane",
+    check("three difficulties are offered",
+      (await levels()).join(",") === "assisted,normal,insane",
       (await levels()).join(","));
 
-    // Easy/Medium/Hard must keep playing the identical game, or the save rates
-    // recorded in DESIGN.md stop meaning anything.
+    // Normal is the only mode with no `game` half, which is what makes it the
+    // one with no handicap on either side: stock ball, stock paddles.
     const ballOf = (level) => page.evaluate((l) => {
       applyDifficulty(l);
-      return { speed: BALL_SPEED, max: BALL_SPEED_MAX };
+      return { speed: BALL_SPEED, max: BALL_SPEED_MAX,
+               player: PLAYER_PADDLE_SCALE, ai: AI_PADDLE_SCALE };
     }, level);
-    const mid = await Promise.all(["easy", "medium", "hard"].map(ballOf));
-    check("the three fair presets play the same ball",
-      mid.every((b) => b.speed === mid[0].speed && b.max === mid[0].max),
-      JSON.stringify(mid));
+    const mid = [await ballOf("normal")];
+    check("Normal plays the stock ball and stock paddles",
+      await page.evaluate((b) => b.speed === GAME_DEFAULTS.BALL_SPEED
+        && b.max === GAME_DEFAULTS.BALL_SPEED_MAX
+        && b.player === 1 && b.ai === 1, mid[0]),
+      JSON.stringify(mid[0]));
 
     const assisted = await ballOf("assisted");
     const insane = await ballOf("insane");
@@ -1288,7 +1315,7 @@ const { check, report } = makeChecks();
 
     // The failure this guards: applyGame writing only the overridden fields would
     // leave Insane's ball behind when you switched back down.
-    const back = await ballOf("medium");
+    const back = await ballOf("normal");
     check("switching back off Insane restores the default ball",
       back.speed === mid[0].speed && back.max === mid[0].max,
       JSON.stringify(back));
@@ -1314,8 +1341,12 @@ const { check, report } = makeChecks();
         if (player.score === 0) saves++;
       }
       return (100 * saves) / n;
-    }, 400);
+    }, 900);
     check("Insane is brutal", insaneSaves > 90, `${insaneSaves.toFixed(1)}%`);
+    // The sample is 900 rather than 400 because this is the check that would
+    // flake: Insane really does save ~99%, so a smaller run of pure saves is a
+    // coin toss that reads as a softlock. Blink now lasting the whole flight
+    // pushed it close enough to matter.
     check("but not literally unbeatable", insaneSaves < 100, `${insaneSaves.toFixed(1)}%`);
 
     // --- win score ---------------------------------------------------------
@@ -1402,14 +1433,18 @@ const { check, report } = makeChecks();
       phase = "play";
     }, level);
 
-    // The fair presets must stay fair: no move may exist outside its own mode.
-    await setup("medium");
-    const fairArmed = await page.evaluate(() => {
-      let armed = 0;
-      for (const name of MOVES) if (armMove(name)) armed++;
-      return armed;
-    });
-    check("no move can be armed in the fair presets", fairArmed === 0, fairArmed);
+    // Every mode has moves now, so the gate that matters is which ones. Assisted
+    // is the player's mode: it must never get the opponent's three.
+    await setup("assisted");
+    const inAssisted = await page.evaluate(() =>
+      MOVES.filter((name) => armMove(name)));
+    check("Assisted gets your moves and not the opponent's",
+      inAssisted.join(",") === "expand,clutch", inAssisted.join(","));
+
+    await setup("normal");
+    const inNormal = await page.evaluate(() =>
+      MOVES.filter((name) => armMove(name)));
+    check("Normal gets all five", inNormal.length === 5, inNormal.join(","));
 
     // --- blink -------------------------------------------------------------
     await setup("insane");
@@ -1983,7 +2018,7 @@ const { check, report } = makeChecks();
       applyDifficulty("insane");
       armMove("squeeze");
       const shrunk = player.hTarget;
-      applyDifficulty("easy");
+      applyDifficulty("normal");
       return { shrunk, afterSwitch: player.h, armed: moveState.squeeze.phase };
     });
     check("switching mode restores the paddle", sizes.afterSwitch === 80,
@@ -1994,9 +2029,11 @@ const { check, report } = makeChecks();
     // The same contract the AI object carries: turning it all off has to give
     // back the plain game, so any of this can be isolated by setting numbers.
     const off = await page.evaluate(() => {
+      applyDifficulty("insane");
+      // After applyDifficulty, not before: it restores ABILITY from its pristine
+      // copy, which would put the modes straight back.
       const saved = {};
       for (const name of MOVES) { saved[name] = ABILITY[name].modes; ABILITY[name].modes = []; }
-      applyDifficulty("insane");
       restart();
       document.getElementById("menu").hidden = true;
       phase = "play";
@@ -2016,7 +2053,890 @@ const { check, report } = makeChecks();
       off.heights.join(","));
 
     await page.evaluate(() => {
-      applyDifficulty("medium");
+      applyDifficulty("normal");
+      localStorage.removeItem("pong.difficulty");
+      restart();
+    });
+  }
+
+  console.log("27. Expand answers two different questions");
+  {
+    await page.reload();
+    await page.waitForSelector("#board");
+    const setup = (level) => page.evaluate((l) => {
+      cancelAnimationFrame(rafId);
+      applyDifficulty(l);
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = "play";
+    }, level);
+    const phaseOf = () => page.evaluate(() => moveState.expand.phase);
+
+    // --- Normal: earned, and only earned --------------------------------
+    await setup("normal");
+    const losing = await page.evaluate(() => {
+      // Four points down and four conceded in a row: everything that hands the
+      // paddle over in Assisted, and none of it may do anything here.
+      for (let i = 0; i < 4; i++) { ai.score += 1; onScore("ai"); }
+      return { phase: moveState.expand.phase, gap: ai.score - player.score };
+    });
+    check("losing badly does not hand you a bigger paddle in Normal",
+      losing.phase === "idle", `${losing.phase}, ${losing.gap} down`);
+
+    await setup("normal");
+    const earned = await page.evaluate(() => {
+      const need = ABILITY.expand.returnsToTrigger;
+      const before = [];
+      for (let i = 0; i < need - 1; i++) {
+        onPlayerReturn(player.y + player.h / 2);
+        before.push(moveState.expand.phase);
+      }
+      onPlayerReturn(player.y + player.h / 2);
+      return { before, at: moveState.expand.phase, need };
+    });
+    check("a rally short of the target earns nothing",
+      earned.before.every((p) => p === "idle"), earned.before.join(","));
+    check("and the return that reaches it arms Expand",
+      earned.at !== "idle", `${earned.at} after ${earned.need}`);
+
+    // The whole point of the entrance: a reward has to look like one.
+    const flash = await page.evaluate(() => {
+      for (let i = 0; i < ABILITY.expand.telegraphTicks + 2; i++) tickAbilities();
+      return { phase: moveState.expand.phase, flash: paddleFlash.t,
+               grew: player.hTarget > baseHeight(player) };
+    });
+    check("it grows the paddle", flash.grew, flash.phase);
+    check("and bursts on arrival, which Assisted's version does not",
+      flash.flash > 0, flash.flash);
+
+    // Winning a point must NOT take it away. This is the check that catches
+    // syncExpand running in a mode it does not govern: with the guard gone it
+    // ends the move at every point, whoever won it.
+    const kept = await page.evaluate(() => {
+      player.score += 1;
+      onScore("player");
+      return { phase: moveState.expand.phase, big: player.hTarget > baseHeight(player) };
+    });
+    check("winning a point keeps the paddle you earned",
+      kept.phase === "active", kept.phase);
+    check("and it is still the big one", kept.big);
+
+    // --- ...and taken away by the two things that should take it away ---
+    const conceded = await page.evaluate(() => {
+      ai.score += 1;
+      onScore("ai");
+      return { phase: moveState.expand.phase, size: player.hTarget };
+    });
+    check("conceding a point takes the earned paddle back",
+      conceded.phase === "idle", conceded.phase);
+    check("and the paddle goes back to normal", 
+      await page.evaluate((s) => s === baseHeight(player), conceded.size),
+      conceded.size);
+
+    await setup("normal");
+    const expiry = await page.evaluate(() => {
+      const spec = ABILITY.expand;
+      for (let i = 0; i < spec.returnsToTrigger; i++) {
+        onPlayerReturn(player.y + player.h / 2);
+      }
+      for (let i = 0; i < spec.telegraphTicks + 2; i++) tickAbilities();
+      const armed = moveState.expand.phase;
+      // Well past the duration, and nothing else touched. Bounded rather than
+      // durationTicks + 5, because a broken preset can set that to Infinity and
+      // a test that hangs is worse than one that fails.
+      const cap = Math.min(spec.durationTicks + 5, 5000);
+      for (let i = 0; i < cap; i++) tickAbilities();
+      return { armed, after: moveState.expand.phase, dur: spec.durationTicks };
+    });
+    check("the earned paddle was actually active", expiry.armed === "active",
+      expiry.armed);
+    check("and it does run out on its own", expiry.after === "idle",
+      `${expiry.after} after ${expiry.dur} ticks`);
+
+    // --- Assisted: the state model, unchanged ----------------------------
+    await setup("assisted");
+    const held = await page.evaluate(() => {
+      const need = ABILITY.expand.behindToTrigger;
+      for (let i = 0; i < need; i++) { ai.score += 1; onScore("ai"); }
+      const on = moveState.expand.phase;
+      // Far longer than Normal's timer: a state does not expire.
+      for (let i = 0; i < 2000; i++) tickAbilities();
+      return { on, later: moveState.expand.phase };
+    });
+    check("Assisted still hands it over for falling behind", held.on !== "idle",
+      held.on);
+    check("and holds it there rather than timing out", held.later !== "idle",
+      held.later);
+
+    await setup("assisted");
+    const rally = await page.evaluate(() => {
+      for (let i = 0; i < 12; i++) onPlayerReturn(player.y + player.h / 2);
+      return moveState.expand.phase;
+    });
+    check("a long rally earns nothing in Assisted - it is not a reward there",
+      rally === "idle", rally);
+
+    // --- presets must not leak into one another --------------------------
+    const leak = await page.evaluate(() => {
+      applyDifficulty("insane");
+      const insane = ABILITY.blink.chance;
+      applyDifficulty("normal");
+      const normal = ABILITY.blink.chance;
+      applyDifficulty("insane");
+      return { insane, normal, back: ABILITY.blink.chance,
+               spec: DIFFICULTY.normal.ability.blink.chance };
+    });
+    check("a preset's ability tuning actually lands",
+      leak.normal === leak.spec, `${leak.normal} vs ${leak.spec}`);
+    check("Normal's moves are tuned below Insane's", leak.normal < leak.insane,
+      `${leak.normal} vs ${leak.insane}`);
+    check("and switching back restores Insane's, not Normal's",
+      leak.back === leak.insane, `${leak.back} vs ${leak.insane}`);
+
+    // Assisted names no ability overrides at all, so it must land on the
+    // pristine values rather than on whatever the last mode left behind.
+    const pristine = await page.evaluate(() => {
+      applyDifficulty("normal");
+      applyDifficulty("assisted");
+      return { got: ABILITY.expand.durationTicks,
+               want: ABILITY_DEFAULTS.expand.durationTicks,
+               returns: ABILITY.expand.returnsToTrigger };
+    });
+    check("a mode with no ability half gets the pristine copy",
+      pristine.got === pristine.want, `${pristine.got} vs ${pristine.want}`);
+    check("so Normal's earned trigger does not follow it there",
+      pristine.returns === 0, pristine.returns);
+
+    await page.evaluate(() => {
+      applyDifficulty("normal");
+      localStorage.removeItem("pong.difficulty");
+      restart();
+    });
+  }
+
+  console.log("27b. a selected mode button is readable");
+  {
+    await page.reload();
+    await page.waitForSelector("#board");
+    // A whole class of bug rather than one: the mode colours and the generic
+    // "selected" rule have identical specificity, so whichever is written last
+    // wins. Normal shipped blue-on-blue for exactly that reason.
+    const levels = await page.evaluate(() =>
+      [...document.querySelectorAll("#difficulty [data-level]")].map((b) => b.dataset.level));
+    for (const level of levels) {
+      const seen = await page.evaluate((l) => {
+        const btn = document.querySelector(`#difficulty [data-level="${l}"]`);
+        btn.click();
+        const css = getComputedStyle(btn);
+        return { fg: css.color, bg: css.backgroundColor,
+                 checked: btn.getAttribute("aria-checked") };
+      }, level);
+      check(`${level} is actually selected by the click`, seen.checked === "true");
+      check(`${level}'s label is not the same colour as its background`,
+        seen.fg !== seen.bg, `${seen.fg} on ${seen.bg}`);
+    }
+    await page.evaluate(() => {
+      localStorage.removeItem("pong.difficulty");
+      applyDifficulty("normal");
+    });
+  }
+
+  console.log("28. the squeeze attack, and blink lasting as long as the ball");
+  {
+    await page.reload();
+    await page.waitForSelector("#board");
+    await page.evaluate(() => {
+      cancelAnimationFrame(rafId);
+      // Counts red-dominant pixels in a vertical strip. Brightness will not do:
+      // the light theme's background is near-white, so it lights up every pixel.
+      window.redIn = (x, w) => {
+        const d = ctx.getImageData(x, 0, w, HEIGHT).data;
+        let n = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i] > d[i + 1] + 40 && d[i] > d[i + 2] + 40 && d[i + 3] > 0) n++;
+        }
+        return n;
+      };
+      window.stage = () => {
+        applyDifficulty("insane");
+        restart();
+        document.getElementById("menu").hidden = true;
+        phase = "play";
+        ball = { x: 300, y: 200, vx: 6, vy: 0 };
+        player.y = 100;
+        ai.y = 260;
+      };
+    });
+
+    // --- the wind-up belongs to the attacker -----------------------------
+    const windup = await page.evaluate(() => {
+      stage();
+      draw();
+      const quiet = { mid: redIn(150, 300), you: redIn(0, PADDLE_WIDTH) };
+      armMove("squeeze");
+      for (let i = 0; i < 8; i++) tickAbilities();
+      draw();
+      return { quiet, opponent: redIn(WIDTH - PADDLE_WIDTH - 12, 12),
+               you: redIn(0, PADDLE_WIDTH), mid: redIn(150, 300) };
+    });
+    check("nothing is red before it starts",
+      windup.quiet.mid === 0 && windup.quiet.you === 0, JSON.stringify(windup.quiet));
+    check("the wind-up lights the opponent's paddle", windup.opponent > 0,
+      windup.opponent);
+    check("and leaves yours alone - you are the target, not the owner",
+      windup.you === 0, windup.you);
+    check("nothing has crossed the board yet", windup.mid === 0, windup.mid);
+
+    // --- then the bolt crosses -------------------------------------------
+    const fired = await page.evaluate(() => {
+      for (let i = 0; i < ABILITY.squeeze.telegraphTicks; i++) tickAbilities();
+      tickLightning();
+      draw();
+      const onFire = redIn(150, 300);
+      // Well past the bolt's life, but while the squeeze itself is still on.
+      for (let i = 0; i < ABILITY.squeeze.boltTicks + 2; i++) tickLightning();
+      draw();
+      return { onFire, after: redIn(150, 300), still: moveActive("squeeze"),
+               opponent: redIn(WIDTH - PADDLE_WIDTH - 12, 12) };
+    });
+    check("firing throws a bolt across the board", fired.onFire > 100,
+      fired.onFire);
+    check("and the opponent stops charging once it has fired",
+      fired.opponent === 0, fired.opponent);
+    check("and the bolt does not hang around", fired.after < fired.onFire / 4,
+      `${fired.onFire} -> ${fired.after}`);
+    check("while the squeeze itself is still running", fired.still);
+
+    // --- and your paddle is left crackling -------------------------------
+    const hit = await page.evaluate(() => {
+      for (let i = 0; i < 30; i++) { tickAbilities(); tickLightning(); easePaddles(); }
+      draw();
+      return { beside: redIn(PADDLE_WIDTH + 1, 20),
+               smaller: player.h < baseHeight(player), arcs: arcs.length };
+    });
+    check("your paddle is left crackling", hit.beside > 0, hit.beside);
+    check("and smaller", hit.smaller);
+
+    // Every knob names its off value, and these are no exception.
+    const off = await page.evaluate(() => {
+      // After stage(), not before: it calls applyDifficulty, which restores
+      // ABILITY from the pristine copy and would undo both of these.
+      stage();
+      const spec = ABILITY.squeeze;
+      const was = { bolt: spec.boltTicks, arc: spec.arcPx };
+      spec.boltTicks = 0;
+      spec.arcPx = 0;
+      armMove("squeeze");
+      for (let i = 0; i < spec.telegraphTicks + 2; i++) { tickAbilities(); tickLightning(); }
+      draw();
+      const out = { mid: redIn(150, 300), beside: redIn(PADDLE_WIDTH + 1, 20),
+                    shrank: player.hTarget < baseHeight(player) };
+      spec.boltTicks = was.bolt;
+      spec.arcPx = was.arc;
+      return out;
+    });
+    check("boltTicks 0 draws no bolt", off.mid === 0, off.mid);
+
+    const thin = await page.evaluate(() => {
+      stage();
+      const was = ABILITY.squeeze.boltWidthPx;
+      ABILITY.squeeze.boltWidthPx = 0;
+      armMove("squeeze");
+      for (let i = 0; i < ABILITY.squeeze.telegraphTicks + 2; i++) {
+        tickAbilities();
+        tickLightning();
+      }
+      draw();
+      const mid = redIn(150, 300);
+      ABILITY.squeeze.boltWidthPx = was;
+      return mid;
+    });
+    check("boltWidthPx 0 draws no bolt either", thin === 0, thin);
+    check("arcPx 0 draws no crackle", off.beside === 0, off.beside);
+    check("and it still shrinks the paddle - the effect is not the visuals",
+      off.shrank);
+
+    // The board is pure white in the light theme and near-black in the dark one,
+    // and the bolt's core is the brightest thing in it. A fixed white core is
+    // invisible on a white board - the effect loses the part that makes it read
+    // as lightning, in the theme most people are using.
+    for (const scheme of ["light", "dark"]) {
+      const themed = await browser.newPage();
+      await themed.emulateMedia({ colorScheme: scheme });
+      await themed.goto(PAGE);
+      await themed.waitForSelector("#board");
+      const seen = await themed.evaluate(() => {
+        cancelAnimationFrame(rafId);
+        applyDifficulty("insane");
+        restart();
+        document.getElementById("menu").hidden = true;
+        phase = "play";
+        ball = { x: 300, y: 200, vx: 6, vy: 0 };
+        player.y = 100;
+        ai.y = 260;
+        const m = getComputedStyle(canvas).backgroundColor.match(/\d+/g).map(Number);
+        const lumOf = (r, g, b) => (r * 299 + g * 587 + b * 114) / 1000;
+        const boardLum = lumOf(m[0], m[1], m[2]);
+        // Count pixels at the *opposite* end of the luminance scale from the
+        // board. The red glow alone sits in the middle, so a threshold on "any
+        // change" is cleared by the glow and says nothing about the core - which
+        // is the part that goes missing when it is a fixed white on white.
+        const contrast = () => {
+          const d = ctx.getImageData(150, 0, 300, HEIGHT).data;
+          let n = 0;
+          for (let i = 0; i < d.length; i += 4) {
+            const l = lumOf(d[i], d[i + 1], d[i + 2]);
+            if (boardLum > 140 ? l < 90 : l > 200) n++;
+          }
+          return n;
+        };
+        draw();
+        const before = contrast();
+        armMove("squeeze");
+        for (let i = 0; i < ABILITY.squeeze.telegraphTicks + 1; i++) tickAbilities();
+        tickLightning();
+        draw();
+        return { before, after: contrast() };
+      });
+      check(`the bolt has a bright core against a ${scheme} board`,
+        seen.after > seen.before + 200, `${seen.before} -> ${seen.after}`);
+      await themed.close();
+    }
+
+    // --- the shrink has to outlive its own lead-in -----------------------
+    // The bolt lands while the ball is still heading *away* from you, so a
+    // duration that looks generous on paper can be over before you next face the
+    // ball. The reported symptom was exactly that: "it often ends before the
+    // player can hit the ball". Counted in volleys rather than ticks, so tuning
+    // the speeds does not silently invalidate it.
+    for (const level of ["normal", "insane"]) {
+      const volleys = await page.evaluate((lvl) => {
+        cancelAnimationFrame(rafId);
+        applyDifficulty(lvl);
+        restart();
+        document.getElementById("menu").hidden = true;
+        phase = "play";
+        player.y = HEIGHT / 2 - player.h / 2;
+        ai.y = HEIGHT / 2 - ai.h / 2;
+        // Fire it at the moment a real approach would: ball heading away.
+        ball = { x: PLAYER_PLANE + 20, y: HEIGHT / 2, vx: BALL_SPEED, vy: 0 };
+        armMove("squeeze");
+        for (const m of ["blink", "overdrive"]) ABILITY[m].chance = 0;
+        // Both paddles glued to the ball, and the ai's own mover stubbed out.
+        // This measures how long the shrink lasts, so the rally must not end for
+        // any other reason - and it did: with only the player tracking, the *ai*
+        // missed often enough to end the point before the ball ever came back,
+        // which reads as zero contacts and looks like the shrink failing.
+        const realUpdateAi = updateAi;
+        updateAi = () => {};
+        let contacts = 0, smallAtContact = 0, guard = 0;
+        const glue = (p) => {
+          p.y = Math.max(0, Math.min(HEIGHT - p.h,
+            ball.y + BALL_SIZE / 2 - p.h / 2));
+        };
+        while (contacts < 3 && guard++ < 6000) {
+          const before = Math.sign(ball.vx);
+          glue(player);
+          glue(ai);
+          update();
+          if (before < 0 && Math.sign(ball.vx) > 0) {
+            contacts++;
+            if (player.h < baseHeight(player) * 0.95) smallAtContact++;
+          }
+        }
+        updateAi = realUpdateAi;
+        return { contacts, smallAtContact };
+      }, level);
+      check(`the shrink is still on when the ball comes back in ${level}`,
+        volleys.smallAtContact >= 1,
+        `small at ${volleys.smallAtContact} of ${volleys.contacts} contacts`);
+      check(`and covers about two volleys in ${level}`,
+        volleys.smallAtContact >= 2 && volleys.smallAtContact <= 3,
+        `small at ${volleys.smallAtContact} of ${volleys.contacts} contacts`);
+    }
+
+    // --- blink lasts exactly as long as the ball is coming ---------------
+    const flight = await page.evaluate((n) => {
+      cancelAnimationFrame(rafId);
+      const out = {};
+      for (const level of ["normal", "insane"]) {
+        applyDifficulty(level);
+        let alive = 0, endedAfter = 0;
+        for (let i = 0; i < n; i++) {
+          restart();
+          document.getElementById("menu").hidden = true;
+          phase = "play";
+          ai.y = (HEIGHT - ai.h) / 2;
+          const a = (Math.random() * 2 - 1) * MAX_BOUNCE_ANGLE;
+          const sp = BALL_SPEED + Math.random() * (BALL_SPEED_MAX - BALL_SPEED);
+          ball = { x: PLAYER_PLANE, y: Math.random() * (HEIGHT - BALL_SIZE),
+                   vx: sp * Math.cos(a), vy: sp * Math.sin(a) };
+          armMove("blink");
+          let guard = 0;
+          while (ball.vx > 0 && guard++ < 900) update();
+          if (moveState.blink.phase === "active") alive++;
+          update();          // one tick past the ball turning round
+          if (moveState.blink.phase === "idle") endedAfter++;
+        }
+        out[level] = { alive, endedAfter, n };
+      }
+      applyDifficulty("normal");
+      return out;
+    }, 60);
+    for (const level of ["normal", "insane"]) {
+      const f = flight[level];
+      check(`blink is still there when the ball arrives in ${level}`,
+        f.alive === f.n, `${f.alive}/${f.n}`);
+      check(`and lets go once it has been dealt with in ${level}`,
+        f.endedAfter === f.n, `${f.endedAfter}/${f.n}`);
+    }
+
+    await page.evaluate(() => {
+      applyDifficulty("normal");
+      localStorage.removeItem("pong.difficulty");
+      restart();
+    });
+  }
+
+  console.log("29. the opponent's charge: visible, readable, and worth bracing for");
+  {
+    await page.reload();
+    await page.waitForSelector("#board");
+    await page.evaluate(() => {
+      cancelAnimationFrame(rafId);
+      window.redIn = (x, w) => {
+        const d = ctx.getImageData(x, 0, w, HEIGHT).data;
+        let n = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i] > d[i + 1] + 40 && d[i] > d[i + 2] + 40 && d[i + 3] > 0) n++;
+        }
+        return n;
+      };
+      // Anything unlike the board background. Counting red alone breaks as soon
+      // as a bright core is drawn over the red: the core is not red, so making
+      // the effect stronger lowers the count.
+      window.litIn = (x, w) => {
+        const m = getComputedStyle(canvas).backgroundColor.match(/\d+/g).map(Number);
+        const d = ctx.getImageData(x, 0, w, HEIGHT).data;
+        let n = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          const off = Math.abs(d[i] - m[0]) + Math.abs(d[i + 1] - m[1])
+            + Math.abs(d[i + 2] - m[2]);
+          if (off > 12) n++;
+        }
+        return n;
+      };
+      // A band over the opponent's paddle and a little of the board beside it,
+      // so an aura that spills past the paddle edge is counted.
+      window.aiBand = () => litIn(WIDTH - PADDLE_WIDTH - 20, 20 + PADDLE_WIDTH);
+      window.stage = (lvl) => {
+        applyDifficulty(lvl);
+        restart();
+        document.getElementById("menu").hidden = true;
+        phase = "play";
+        ball = { x: 300, y: 200, vx: 6, vy: 0 };
+        player.y = 100;
+        ai.y = 160;
+      };
+    });
+
+    // --- the shot has to be worth the wind-up ----------------------------
+    for (const level of ["normal", "insane"]) {
+      const shot = await page.evaluate((lvl) => {
+        const fire = (charged) => {
+          stage(lvl);
+          ai.y = 150;
+          ball = { x: AI_PLANE - 6, y: ai.y + ai.h / 2, vx: 6, vy: 0 };
+          if (charged) { armMove("overdrive"); startMove("overdrive"); }
+          let g = 0;
+          while (ball.vx > 0 && g++ < 60) update();
+          return Math.hypot(ball.vx, ball.vy);
+        };
+        return { plain: fire(false), charged: fire(true), cap: BALL_SPEED_MAX };
+      }, level);
+      check(`the charged shot clears the speed cap in ${level}`,
+        shot.charged > shot.cap * 1.3,
+        `${shot.charged.toFixed(1)} vs cap ${shot.cap}`);
+      // The failure this guards: a multiplier close to 1 looks dramatic on the
+      // first exchange and vanishes once the rally is already at the cap.
+      check(`and is clearly faster than an ordinary one in ${level}`,
+        shot.charged > shot.plain * 1.8,
+        `${shot.charged.toFixed(1)} vs ${shot.plain.toFixed(1)}`);
+    }
+
+    // --- and it must stay visible until it is spent ----------------------
+    const held = await page.evaluate(() => {
+      // Compared against a squeeze winding up *without* a charge behind it, not
+      // against a quiet paddle: a wind-up reddens the paddle by itself, so "still
+      // red" would pass with the charge layer deleted. The charge's own
+      // contribution is the difference between the two.
+      const windUpOnly = (charged) => {
+        stage("insane");
+        for (const m of ["blink"]) ABILITY[m].chance = 0;
+        // Silence everything that moves on its own, or the comparison measures
+        // it instead: the wind-up shakes the paddle and the crackle is generated
+        // fresh each flicker, and together they swing the count by more than the
+        // aura contributes. stage() restores both from the pristine copy.
+        ABILITY.vibratePx = 0;
+        ABILITY.squeeze.arcPx = 0;
+        if (charged) { armMove("overdrive"); startMove("overdrive"); }
+        armMove("squeeze");
+        for (let i = 0; i < 6; i++) { tickAbilities(); tickLightning(); }
+        draw();
+        return { band: aiBand(), still: moveActive("overdrive") };
+      };
+      stage("insane");
+      draw();
+      const quiet = aiBand();
+      stage("insane");
+      armMove("overdrive");
+      startMove("overdrive");
+      draw();
+      const charged = aiBand();
+      const bare = windUpOnly(false);
+      const both = windUpOnly(true);
+      return { quiet, charged, bare: bare.band, both: both.band,
+               stillCharged: both.still };
+    });
+    check("a charged opponent paddle looks different from a quiet one",
+      held.charged > held.quiet, `${held.charged} vs ${held.quiet}`);
+    check("the charge survives it winding up something else on top",
+      held.stillCharged);
+    check("and is still drawn underneath that wind-up",
+      held.both > held.bare, `${held.both} charged vs ${held.bare} not`);
+
+    const spent = await page.evaluate(() => {
+      // Land the charged shot; the paddle should go quiet the moment it is used.
+      // Chances to zero first: the opponent rolls for a new move every time the
+      // ball turns towards it, and a fresh wind-up would light the paddle again.
+      for (const m of ["blink", "overdrive", "squeeze"]) ABILITY[m].chance = 0;
+      ball = { x: AI_PLANE - 6, y: ai.y + ai.h / 2, vx: 6, vy: 0 };
+      endMove("squeeze");
+      let g = 0;
+      while (ball.vx > 0 && g++ < 60) update();
+      draw();
+      return { band: aiBand(), phase: moveState.overdrive.phase };
+    });
+    check("spending the charge puts the paddle out", spent.phase === "idle",
+      spent.phase);
+    // Against the charged reading rather than the quiet one: the band counts the
+    // paddle itself, which is still easing back to size a tick after the shot.
+    check("and the aura goes with it", spent.band < held.charged,
+      `${spent.band} vs charged ${held.charged}`);
+
+    // Off switches, same contract as everything else here.
+    // The aura is a layer on top of the move's own tell, so switching it off
+    // does not make the paddle dark - it makes it less bright. Measure the layer.
+    const dark = await page.evaluate(() => {
+      const lit = (halo, core) => {
+        stage("insane");
+        ABILITY.chargedHaloPx = halo;
+        ABILITY.chargedCorePx = core;
+        armMove("overdrive");
+        startMove("overdrive");
+        draw();
+        return aiBand();
+      };
+      const on = lit(ABILITY_DEFAULTS.chargedHaloPx, ABILITY_DEFAULTS.chargedCorePx);
+      const off = lit(0, 0);
+      applyDifficulty("insane");   // restores both from the pristine copy
+      return { on, off };
+    });
+    check("the aura adds to what the tell already draws", dark.on > dark.off,
+      `${dark.on} with vs ${dark.off} without`);
+
+    // --- the three wind-ups have to be tellable apart --------------------
+    // Blink stutters, so its brightness swings inside a few ticks. Overdrive
+    // swells, so over the same window it barely moves. That difference is the
+    // whole point: three moves, one colour, three readings.
+    const jump = await page.evaluate(() => {
+      const watch = (name) => {
+        stage("insane");
+        armMove(name);
+        const seen = [];
+        for (let i = 0; i < ABILITY[name].telegraphTicks; i++) {
+          draw();
+          // The computed glow, not the lit pixels: the paddle shakes by design,
+          // so a pixel count of it measures the jitter and not the wind-up.
+          seen.push(lastTell.ai ? lastTell.ai.glow : 0);
+          tickAbilities();
+          tickCount += 1;
+        }
+        // Biggest change from one tick to the next. A stutter swings hard every
+        // few ticks; a swell creeps, however far it travels in total.
+        let biggest = 0;
+        for (let i = 1; i < seen.length; i++) {
+          biggest = Math.max(biggest, Math.abs(seen[i] - seen[i - 1]));
+        }
+        return biggest;
+      };
+      return { blink: watch("blink"), overdrive: watch("overdrive") };
+    });
+    check("a stuttering wind-up jumps from tick to tick", jump.blink > 0.5,
+      jump.blink.toFixed(3));
+    check("a swelling one creeps instead", jump.overdrive < jump.blink / 5,
+      `overdrive ${jump.overdrive.toFixed(3)} vs blink ${jump.blink.toFixed(3)}`);
+
+    // Squeeze announces itself with the lightning already gathering.
+    const gathering = await page.evaluate(() => {
+      stage("insane");
+      armMove("squeeze");
+      for (let i = 0; i < 6; i++) { tickAbilities(); tickLightning(); }
+      draw();
+      return { arcs: chargeArcs.length, mid: redIn(150, 300) };
+    });
+    check("a squeeze gathers lightning on the opponent while it winds up",
+      gathering.arcs > 0, gathering.arcs);
+    check("without anything crossing the board yet", gathering.mid === 0,
+      gathering.mid);
+
+    await page.evaluate(() => {
+      applyDifficulty("normal");
+      localStorage.removeItem("pong.difficulty");
+      restart();
+    });
+  }
+
+  console.log("30. two moves, one paddle");
+  {
+    await page.reload();
+    await page.waitForSelector("#board");
+    await page.evaluate(() => {
+      cancelAnimationFrame(rafId);
+      window.stage = () => {
+        applyDifficulty("normal");
+        restart();
+        document.getElementById("menu").hidden = true;
+        phase = "play";
+        player.y = HEIGHT / 2 - player.h / 2;
+      };
+      window.greenOnPlayer = () => {
+        const d = ctx.getImageData(0, 0, PADDLE_WIDTH, HEIGHT).data;
+        let n = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i + 1] > d[i] + 30 && d[i + 1] > d[i + 2] + 30 && d[i + 3] > 0) n++;
+        }
+        return n;
+      };
+    });
+
+    // The reported bug, exactly: shrunk by the lightning, then given the bigger
+    // paddle, and when *that* wore off the paddle went back to normal size with
+    // the lightning still crackling on it. Two moves wrote the same field and
+    // whichever ended last reset it to the base size.
+    const both = await page.evaluate(() => {
+      stage();
+      const base = baseHeight(player);
+      armMove("squeeze"); startMove("squeeze");
+      const squeezed = player.hTarget;
+      // Expand cannot start here any more, so drive it directly to reproduce the
+      // old collision: this is the state the bug needed.
+      startMove("expand");
+      const withBoth = player.hTarget;
+      endMove("expand");
+      const afterExpand = player.hTarget;
+      return { base, squeezed, withBoth, afterExpand,
+               stillSqueezed: moveActive("squeeze") };
+    });
+    check("the lightning shrinks you", both.squeezed < both.base,
+      `${both.squeezed} vs base ${both.base}`);
+    check("an attack outranks a gift while both are on",
+      both.withBoth === both.squeezed, `${both.withBoth} vs ${both.squeezed}`);
+    check("and when the gift ends you are still shrunk, not back to normal",
+      both.afterExpand === both.squeezed && both.stillSqueezed,
+      `${both.afterExpand} vs squeezed ${both.squeezed}, base ${both.base}`);
+
+    // ...and the other way round: the attack ending must hand the paddle back to
+    // whatever else still wants it, not to the base size.
+    const other = await page.evaluate(() => {
+      stage();
+      const base = baseHeight(player);
+      startMove("expand");
+      const grown = player.hTarget;
+      armMove("squeeze"); startMove("squeeze");
+      endMove("squeeze");
+      return { base, grown, afterSqueeze: player.hTarget,
+               stillExpanded: moveActive("expand") };
+    });
+    check("the gift grows you", other.grown > other.base,
+      `${other.grown} vs base ${other.base}`);
+    check("and when the attack ends the gift is still yours",
+      other.afterSqueeze === other.grown && other.stillExpanded,
+      `${other.afterSqueeze} vs grown ${other.grown}, base ${other.base}`);
+
+    // You cannot be handed a bigger paddle while the lightning has you.
+    const locked = await page.evaluate(() => {
+      stage();
+      armMove("squeeze"); startMove("squeeze");
+      const blocked = armMove("expand");
+      endMove("squeeze");
+      const allowed = armMove("expand");
+      return { blocked, allowed, off: ABILITY.expand.blockedBy };
+    });
+    check("Expand cannot arm while the lightning has you",
+      locked.blocked === false, locked.blocked);
+    check("and can again once it lets go", locked.allowed === true,
+      locked.allowed);
+
+    // A green paddle that is also small claims a gift you are not getting.
+    const tint = await page.evaluate(() => {
+      stage();
+      startMove("expand");
+      draw();
+      const gift = greenOnPlayer();
+      armMove("squeeze"); startMove("squeeze");
+      draw();
+      const attacked = greenOnPlayer();
+      endMove("squeeze");
+      draw();
+      return { gift, attacked, restored: greenOnPlayer() };
+    });
+    check("the bigger paddle shows green", tint.gift > 0, tint.gift);
+    check("but says nothing while the lightning outranks it",
+      tint.attacked === 0, tint.attacked);
+    check("and speaks again once the lightning ends", tint.restored > 0,
+      tint.restored);
+
+    // The off value has to work, like every other knob here.
+    const unblocked = await page.evaluate(() => {
+      stage();
+      ABILITY.expand.blockedBy = "";
+      armMove("squeeze"); startMove("squeeze");
+      const armed = armMove("expand");
+      applyDifficulty("normal");   // restores blockedBy from the pristine copy
+      return armed;
+    });
+    check("blockedBy \"\" lets it arm anyway", unblocked === true, unblocked);
+
+    await page.evaluate(() => {
+      applyDifficulty("normal");
+      localStorage.removeItem("pong.difficulty");
+      restart();
+    });
+  }
+
+  console.log("31. soak: whole matches in every mode, with everything on");
+  {
+    await page.reload();
+    await page.waitForSelector("#board");
+    // Everything above sets up a position and steps a few ticks. This plays the
+    // actual game - every move firing on its own rolls, points scored, matches
+    // finished - and checks the invariants on every tick rather than at the end.
+    // It is the only case here that would catch something that only goes wrong
+    // after the machinery has been running for a while.
+    for (const level of ["assisted", "normal", "insane"]) {
+      const soak = await page.evaluate(([lvl, lag]) => {
+        cancelAnimationFrame(rafId);
+        applyDifficulty(lvl);
+        restart();
+        document.getElementById("menu").hidden = true;
+        phase = "serve";
+        const bad = [];
+        const note = (why, detail) => {
+          if (bad.length < 5) bad.push(`${why}: ${detail}`);
+        };
+        // The largest speed anything is allowed to leave at, charged shots
+        // included. Above this the ball can skip a paddle between two ticks.
+        const ceiling = BALL_SPEED_MAX * Math.max(
+          ABILITY.overdrive.chargedMultiplier, ABILITY.clutch.chargedMultiplier) + 0.001;
+        let ticks = 0, matches = 0, points = 0, telegraphs = 0, actives = 0;
+        let aimFor = null;
+        const seen = new Set();
+        const wasIdle = Object.fromEntries(MOVES.map((m) => [m, true]));
+        while (matches < 2 && ticks < 120000) {
+          if (phase === "serve") serve();
+          // Aim off-centre, re-rolled each time the ball turns towards us. A
+          // dead-centre tracker never catches the ball on the paddle's edge, so
+          // it never makes a close call and never loses - which meant Assisted,
+          // whose moves are both earned, fired nothing at all across a match.
+          if (ball.vx < 0 && aimFor === null) {
+            // Half the approaches aim deliberately near a paddle end, because a
+            // close call is what earns Clutch and both of Assisted's moves are
+            // earned - spreading the aim evenly leaves whole matches with
+            // nothing firing, which is a flake rather than a finding.
+            aimFor = Math.random() < 0.5
+              ? (Math.random() < 0.5 ? -1 : 1) * player.h * 0.42
+              : (Math.random() * 2 - 1) * player.h * 0.55;
+          } else if (ball.vx > 0) {
+            aimFor = null;
+          }
+          const want = ball.y + BALL_SIZE / 2 - player.h / 2 + (aimFor || 0);
+          player.y += Math.max(-lag, Math.min(lag, want - player.y));
+          player.y = Math.max(0, Math.min(HEIGHT - player.h, player.y));
+          const before = player.score + ai.score;
+          update();
+          ticks += 1;
+          if (player.score + ai.score !== before) points += 1;
+
+          const speed = Math.hypot(ball.vx, ball.vy);
+          if (!Number.isFinite(ball.x) || !Number.isFinite(ball.y)
+              || !Number.isFinite(speed)) note("ball not finite", `${ball.x},${ball.y}`);
+          if (speed > ceiling) note("ball above the ceiling", speed.toFixed(1));
+          for (const pad of [player, ai]) {
+            if (!(pad.h > 4 && pad.h < PADDLE_HEIGHT * 4)) {
+              note("paddle size out of range", pad.h);
+            }
+            if (pad.y < -0.5 || pad.y > HEIGHT - pad.h + 0.5) {
+              note("paddle off the board", `${pad.y.toFixed(1)} h=${pad.h.toFixed(1)}`);
+            }
+          }
+          // hTarget has exactly one owner; anything else writing it shows up here.
+          let want2 = 1;
+          if (moveActive("expand")) want2 = ABILITY.expand.scale;
+          if (moveActive("squeeze")) want2 = ABILITY.squeeze.scale;
+          if (Math.abs(player.hTarget - baseHeight(player) * want2) > 0.001) {
+            note("hTarget disagrees with syncPaddleSize", player.hTarget);
+          }
+          for (const name of MOVES) {
+            const st = moveState[name];
+            if (!["idle", "telegraph", "active"].includes(st.phase)) {
+              note("bad move phase", `${name} ${st.phase}`);
+            }
+            if (st.phase === "telegraph") { telegraphs += 1; seen.add(name); }
+            if (st.phase === "active") { actives += 1; seen.add(name); }
+            // The standing contract: a move with a wind-up never skips it. Not
+            // "some move telegraphed" - Clutch has telegraphTicks 0 on purpose,
+            // because it is earned by a save that has already happened, so a
+            // mode where only Clutch fires legitimately shows no wind-up at all.
+            if (wasIdle[name] && st.phase === "active"
+                && ABILITY[name].telegraphTicks > 0) {
+              note("move skipped its wind-up", name);
+            }
+            // A blocked move must never *start* while its blocker is running.
+            // One already running is suppressed rather than cancelled - see
+            // "Paddle sizes" in DESIGN.md - so coexisting is fine and starting
+            // is not.
+            if (ABILITY[name].blockedBy && wasIdle[name] && st.phase !== "idle"
+                && moveActive(ABILITY[name].blockedBy)) {
+              note("blocked move started anyway", name);
+            }
+            wasIdle[name] = st.phase === "idle";
+          }
+          if (gameOver) {
+            matches += 1;
+            resetMatch();
+            phase = "serve";
+          }
+        }
+        applyDifficulty(lvl);
+        return { lvl, ticks, matches, points, telegraphs, actives,
+                 moves: [...seen].sort(), bad };
+      }, [level, 6]);
+
+      check(`${level}: matches play through to a result`, soak.matches === 2,
+        `${soak.matches} matches, ${soak.points} points, ${soak.ticks} ticks`);
+      check(`${level}: points are actually scored`, soak.points >= 8, soak.points);
+      check(`${level}: moves fire during real play`, soak.actives > 0,
+        `${soak.moves.join(",")} over ${soak.actives} active ticks`);
+      check(`${level}: a move with a wind-up never skips it`,
+        !soak.bad.some((b) => b.startsWith("move skipped")),
+        `${soak.telegraphs} wind-up ticks`);
+      check(`${level}: no invariant broken across the whole soak`,
+        soak.bad.length === 0, soak.bad.join(" | "));
+    }
+
+    await page.evaluate(() => {
+      applyDifficulty("normal");
       localStorage.removeItem("pong.difficulty");
       restart();
     });

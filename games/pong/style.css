@@ -63,12 +63,27 @@
   color: white;
 }
 
-/* Assisted and Insane change the game itself - ball speed, and eventually paddle
-   sizes - rather than only the opponent, so they are marked as a different kind
-   of thing. Deliberately not --accent: that already means "selected", and a blue
-   Assisted button would read as chosen at a glance. --win and --lose are the
-   existing theme tokens, so these follow the theme like everything else.
+/* All three modes carry a colour, from the existing theme tokens so they follow
+   the theme like everything else. Normal takes --accent, which is also what a
+   selected button fills with - that was the reason it was held back at first, and
+   it works because selected is a *filled* button and unselected is an outline, so
+   the two never look alike while exactly one is always filled.
    Placeholder styling until the game gets real art. */
+.difficulty .btn[data-level="normal"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Needed even though the generic selected rule above already says white: this
+   block has the same specificity as that one and comes after it, so without an
+   explicit selected rule the mode colour wins and the label goes blue-on-blue.
+   Each mode carries its own for that reason - do not "simplify" them away. */
+.difficulty .btn[data-level="normal"][aria-checked="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
 .difficulty .btn[data-level="assisted"] {
   border-color: var(--win);
   color: var(--win);

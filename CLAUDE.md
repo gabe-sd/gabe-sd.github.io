@@ -24,7 +24,7 @@ framework and one dependency.
 
 Both halves do work. The first rejects machinery whose cost outruns its benefit at
 this size: continuous integration was considered and dropped because the whole
-suite runs in fourteen seconds and can simply be run, and a file of completed
+suite runs in seconds and can simply be run, and a file of completed
 `TODO.md` entries was dropped because the deletion diff already is one. The second
 is what stops that becoming an excuse to under-build: Pong's fixed timestep is more
 machinery than scaling movement by a frame delta, and earns it by keeping the
@@ -161,24 +161,36 @@ legality in the click handler.
 
 **Pong** (`games/pong/script.js`) keeps its model, its measurements and its
 rejected alternatives in `games/pong/DESIGN.md` — read that before changing how it
-plays. Five things will bite you without it:
+plays. Six things will bite you without it:
 
 - The loop only *paces*: `advance()` drains real time into whole `TICK_MS` ticks
   and calls `update()` once per tick, so every speed constant is per tick. Nothing
   may accumulate into `ball.vy` either — `bounce()` owns velocity outright.
-- Two things exist for the test harness. `update()` returns before touching the
+- Three things exist for the test harness. `update()` returns before touching the
   ball outside `phase === "play"`, so a test placing the ball must set `phase`;
-  and loop scheduling is guarded by `running`, not by `rafId`, so a caller that
-  cancelled the pending frame does not get it restarted underneath them.
+  loop scheduling is guarded by `running`, not by `rafId`, so a caller that
+  cancelled the pending frame does not get it restarted underneath them; and
+  `drawPaddle` records what it computed in `lastTell`, because the paddle shakes
+  by design and counting its pixels measures the jitter rather than the tell.
 - Pointer control is deliberately *not* rate-limited, which makes a mouse faster
   than the keys. That was fixed once and reverted on play. It looks like a bug.
 - `PADDLE_HEIGHT` is the size a paddle *starts* at, not its size. Each paddle
   carries its own `h`, which the abilities stretch and shrink, so anything reading
   a live paddle reads `.h` — collision, drawing and the ai's own target included.
+  `syncPaddleSize()` is the only thing that writes `hTarget`, and it decides by
+  precedence. Letting each move write it directly is a shipped bug: whichever
+  *ended* last reset the paddle to its base size, overruling an effect that was
+  still running.
 - Every knob in the `AI` and `ABILITY` objects documents the value that switches
   its feature off. Two tests hold that up: all of `AI` off reproduces the old
   direct mover, and all of `ABILITY` off gives back the plain game. Keep both
   true — it is all tuned by feel, and feel changes.
+- A difficulty preset has three optional halves — `ai`, `game` and `ability` —
+  and each is applied over a **pristine copy** by a function that writes every
+  field on every call (`AI_DEFAULTS`, `applyGame`, `applyAbility`). Adding a
+  fourth means adding a fourth pristine copy. Skipping that does not fail
+  loudly: the previous mode's values simply survive into the next one, which is
+  invisible in play and quietly falsifies every measurement taken afterwards.
 
 **Minesweeper** (`games/minesweeper/script.js`) places mines lazily on the first
 reveal, excluding the 3x3 around that cell, so the first click is always safe —
@@ -247,6 +259,14 @@ Four principles underneath that, each of which has already paid for itself here:
 - **Write down what you ruled out.** A dead end nobody records gets explored again
   by the next person, or by you in a month. `tests/README.md` carries the ones
   found so far.
+- **A canvas measurement is a claim about pixels, not about the thing you meant.**
+  Every visual check here has had to be rewritten at least once because something
+  else in the scene produced the same signal: a wind-up reddens a paddle, so "is
+  it still red" passed with the charge layer deleted; the glow around a bolt
+  clears any "changed pixels" threshold, so a missing white core went unnoticed;
+  a bright core drawn over red *lowers* a red-pixel count, so strengthening an
+  effect made the number go down. Decide what only the thing under test could
+  produce, and measure that.
 
 Behaviour you are knowingly leaving broken should be pinned as a passing assertion
 that states the wrong result and says so. Fixing it then turns a check red, so the

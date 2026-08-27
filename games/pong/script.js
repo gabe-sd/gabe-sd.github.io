@@ -80,6 +80,13 @@ const ABILITY = {
                      // not milliseconds, or it would breathe at a different rate
                      // on a 144Hz monitor than on a 60Hz one; 0 = a steady glow
   afterimages: 4,    // ghosts left behind by a blink; 0 = none
+  stutterTicks: 6,   // period of a stuttering wind-up, in ticks; 0 = steady
+  // A held charge is drawn as its own layer, on top of whatever tell the paddle
+  // is showing. A paddle draws one tell at a time, so without this an opponent
+  // holding a charged shot stops looking charged the moment it winds up
+  // something else - and a charge you cannot see is a shot you cannot brace for.
+  chargedHaloPx: 14, // reach of the aura around a charged paddle; 0 = no aura
+  chargedCorePx: 4,  // width of the white-hot core down its face; 0 = none
 
   // The meter's celebration, all counted in ticks so it plays at the same rate on
   // any monitor. Filling the third pip runs: that pip's own pop, then a sweep
@@ -95,47 +102,94 @@ const ABILITY = {
     paddleSpreadPx: 28, // how far that flash spreads from the contact point
   },
 
-  // --- Insane's moves ------------------------------------------------------
+  // --- The opponent's moves ------------------------------------------------
+  // Every mode that lists them fires these; a preset's `ability` half tunes how
+  // often and how hard. Insane is the tuning they were designed at.
   blink: {
-    modes: ["insane"],
+    modes: ["normal", "insane"],
     tell: "charge",       // glows, pulses and shakes; "tint" only recolours
+    // All three of the opponent's moves are red, because red means it is doing
+    // something to you. What separates them is how they wind up, so you can read
+    // which is coming rather than only what it was afterwards. "swell" is the
+    // plain ramp and the default for anything that does not say otherwise.
+    windUp: "stutter",    // flickers on and off, like something misfiring
     chance: 0.4,          // per approach of the ball; 0 = never
     cooldownTicks: 150,
     telegraphTicks: 12,   // 0 = no warning at all
-    durationTicks: 50,
+    // Bound to the ball, not to a clock: it ends when the ball stops coming, so
+    // it is always still there for the save or the miss. A timer could not track
+    // this - flight time varies with ball speed, and the value that survived a
+    // fast ball ended less than halfway across a slow one. Measured before the
+    // change: still active on arrival 0% of the time in Normal, 41% in Insane.
+    // A finite number here caps it early again, which is the off switch.
+    durationTicks: Infinity,
     hopTicks: 3,          // ticks between teleports; higher = calmer
     lockPx: 150,          // within this of its plane it stops showing off and
                           // hops onto the real intercept; 0 = shows off throughout
     accuracyPx: 4,        // how close those on-target hops land
   },
   overdrive: {
-    modes: ["insane"],
+    modes: ["normal", "insane"],
     tell: "charge",       // glows, pulses and shakes; "tint" only recolours
+    windUp: "swell",      // one long steady build; the slowest and biggest tell
     chance: 0.3,
     cooldownTicks: 260,
     telegraphTicks: 45,   // long on purpose: the charge is the whole show
     durationTicks: Infinity, // held until it is spent on a shot; a number expires it
-    chargedMultiplier: 1.1,  // the charged shot leaves at this multiple of the
+    chargedMultiplier: 1.5,  // the charged shot leaves at this multiple of the
                              // mode's own speed cap, whatever arrived; 1 = an
-                             // ordinary shot at full pace
+                             // ordinary shot at full pace. Being a multiple of
+                             // the *cap* is the point: an ordinary shot's speed
+                             // depends on what arrived, so anything close to 1
+                             // is dramatic early in a rally and invisible late,
+                             // which is exactly when it is being watched for.
   },
   squeeze: {
-    modes: ["insane"],
+    modes: ["normal", "insane"],
     tell: "charge",       // glows, pulses and shakes; "tint" only recolours
+    windUp: "crackle",    // barely shakes; the gathering lightning is the tell
     chance: 0.25,
     cooldownTicks: 320,
     telegraphTicks: 26,
-    durationTicks: 210,
-    scale: 0.7,           // fraction of your paddle's *base* size it shrinks to,
+    // How long you are left small, and the knob that decides what the move
+    // actually costs you. Set in *volleys*, measured: a volley - your contact to
+    // your next contact - is about 280 ticks in Assisted, 185 in Normal and 125
+    // in Insane. Note the lead-in: the bolt lands while the ball is still headed
+    // away from you, so roughly half a volley of this is spent before you next
+    // face the ball. Budget for it, or the shrink is over before you can feel it.
+    durationTicks: 315,
+    scale: 0.55,          // fraction of your paddle's *base* size it shrinks to,
                           // not of PADDLE_HEIGHT: the base varies by mode, and an
                           // absolute target would shrink you by different amounts
                           // in different modes for no stated reason. 1 = no shrink
+    // The attack is drawn as something the opponent *does to you*: it charges on
+    // its own paddle, throws a bolt across the board, and your paddle arrives
+    // shrunken and crackling. The old version glowed and shook your paddle in
+    // villain red, which reads as a reward you were handed - see DESIGN.md.
+    tellWhile: "telegraph", // the charge is the wind-up only; after it fires the
+                            // effect is on the other paddle. "" = glow throughout
+    boltTicks: 45,        // how long the bolt hangs after it lands; 0 = no bolt
+    boltSegments: 18,     // joints along the bolt; 1 = a straight beam
+    boltSpreadPx: 46,     // how far it strays from the straight line; 0 = a beam
+    boltForks: 5,         // branches thrown off the main bolt; 0 = none
+    boltWidthPx: 4,       // width of the bolt's white core; the red glow around
+                          // it is drawn proportionally, so this is the one knob
+                          // for how heavy the whole thing looks. 0 = invisible
+    arcPx: 15,            // how far the crackle reaches off a squeezed paddle;
+                          // 0 = it shrinks silently, with no electricity at all
+    flickerTicks: 3,      // ticks between redraws of bolt and crackle. In ticks,
+                          // like everything that moves here, or it would flicker
+                          // twice as fast on a 144Hz monitor; 0 = frozen
   },
 
-  // --- Assisted's moves, which are yours -----------------------------------
+  // --- Your moves ----------------------------------------------------------
+  // Assisted is the tuning these were designed at. Expand answers two different
+  // questions depending on the mode - see returnsToTrigger below.
   expand: {
-    modes: ["assisted"],
-    // Growing to nearly twice its size is announcement enough, and unlike squeeze
+    modes: ["assisted", "normal", "insane"],
+    // You cannot be handed a bigger paddle while the lightning has you small.
+    blockedBy: "squeeze", // "" = never blocked
+    // The change in size is announcement enough, and unlike squeeze
     // this is not a warning about anything - there is nothing to brace for. The
     // charge treatment on top read as a second, different thing happening.
     tell: "tint",
@@ -148,13 +202,25 @@ const ABILITY = {
     durationTicks: Infinity,
     cooldownTicks: 0,
     scale: 1.35,          // multiple of your paddle's *base* size; 1 = no growth
+    // Two of these are *situation* triggers and one is a *reward* trigger, and
+    // the difference decides how the move ends. With either situation trigger set
+    // the move is a state: held exactly while the trouble lasts (see syncExpand).
+    // With neither set it is earned instead, runs on durationTicks, and is taken
+    // away the moment you concede.
     behindToTrigger: 3,   // held while this many points behind, and dropped once
                           // the gap is smaller; 0 = never from the score
     concededToTrigger: 3, // held after this many points lost in a row, and
                           // dropped the moment you win one; 0 = never from a run
+    returnsToTrigger: 0,  // earned by this many returns without conceding a
+                          // point; 0 = never earned, which is what makes the two
+                          // triggers above the only way in
+    // Arriving as a reward has to look different from arriving as help, so the
+    // earned version bursts on the paddle the way a filled meter does.
+    entranceTicks: 0,     // 0 = it simply appears, which is the Assisted look
   },
   clutch: {
-    modes: ["assisted"],
+    modes: ["assisted", "normal", "insane"],
+    blockedBy: "",        // no move locks this one out; "" = never blocked
     tell: "charge",
     chance: 0,
     cooldownTicks: 120,
@@ -179,11 +245,33 @@ const ABILITY = {
 
 const MOVES = ["blink", "overdrive", "squeeze", "expand", "clutch"];
 
-// Difficulty is overrides on AI, and for the two joke modes on GAME as well.
-// Easy/Medium/Hard touch `ai` only, which is what keeps their save rates
-// comparable: all three play the same ball with the same paddles, so the only
-// thing that differs is the opponent. Assisted and Insane deliberately break
-// that, and their percentages mean nothing next to the middle three.
+// Same discipline as AI_DEFAULTS: a pristine copy, restored in full on every
+// change of mode, so a preset that tunes a move down cannot leave it tuned down
+// in the next mode. structuredClone rather than a spread because the values are
+// nested one deep, and rather than JSON because durationTicks is Infinity, which
+// JSON turns into null.
+const ABILITY_DEFAULTS = structuredClone(ABILITY);
+
+// Writes *every* field on every call, not just the overridden ones - the same
+// reason applyGame() does. Nested move specs are replaced wholesale rather than
+// merged into, so nothing survives that the preset did not ask for.
+function applyAbility(overrides = {}) {
+  const fresh = structuredClone(ABILITY_DEFAULTS);
+  for (const key of Object.keys(fresh)) {
+    const base = fresh[key];
+    ABILITY[key] = base && typeof base === "object" && !Array.isArray(base)
+      ? Object.assign(base, overrides[key])
+      : overrides[key] ?? base;
+  }
+}
+
+// Three modes, each a character rather than a notch on a scale. A preset may
+// override three things, and each has a pristine copy behind it so nothing leaks
+// between modes: `ai` (how well the opponent reads the ball), `game` (the ball
+// and the paddles both sides get) and `ability` (how the moves are tuned here).
+// Every mode has moves. That is what removed Easy, Medium and Hard: they differed
+// in `ai` alone and were the only modes without powerups, so once powerups were
+// everywhere there were five names for three real differences.
 // The figures are what each preset measured at; they are starting points to tune
 // by feel, not settings to preserve.
 const DIFFICULTY = {
@@ -196,9 +284,36 @@ const DIFFICULTY = {
           readErrorNearPx: 45, aimSpread: 0.15, panicSpeed: 4.5 },
     game: { BALL_SPEED: 3.5, BALL_SPEED_MAX: 6.5, PLAYER_PADDLE_SCALE: 1.5 },
   },
-  easy: { ai: { readErrorNearPx: 60, reactionTicks: 24, lookaheadBounces: 0 } }, // ~73%
-  medium: { ai: { readErrorNearPx: 45, reactionTicks: 18 } },                    // ~87%
-  hard: { ai: { readErrorNearPx: 22, reactionTicks: 8 } },                       // ~95%
+  // Normal is the one you are meant to play: beatable without being handed to
+  // you, and no handicap on either side - it is the only mode with no `game`
+  // half, so both paddles are the stock size and the ball is the stock ball.
+  // Every move is available here, tuned well below Insane's settings: the moves
+  // are the show, not the difficulty.
+  normal: {                                                        // ~86% saves
+    ai: { readErrorNearPx: 45, reactionTicks: 18 },
+    ability: {
+      // No durationTicks override: blink ends when the ball is dealt with, and a
+      // number here would put the old early-expiry bug back in this mode alone.
+      blink: { chance: 0.16, cooldownTicks: 460, accuracyPx: 16, lockPx: 110 },
+      // No chargedMultiplier override: 1.05 made the wind-up promise a shot it
+      // did not deliver - 10.5 against a cap of 10, indistinguishable from an
+      // ordinary shot late in a rally, which is when it is being watched for.
+      overdrive: { chance: 0.16, cooldownTicks: 440 },
+      // ~3 volleys of Normal, less the lead-in, so about 2.5 of them are spent
+      // with the ball actually coming at you. The cooldown is longer than the
+      // effect for the same reason a charged shot is rare: a shrink you are
+      // under half the time stops registering as an attack.
+      squeeze: { chance: 0.13, cooldownTicks: 800, durationTicks: 460, scale: 0.62 },
+      // Earned, not given: no situation triggers at all, so this runs on a timer
+      // and is lost the moment you concede.
+      expand: { behindToTrigger: 0, concededToTrigger: 0, returnsToTrigger: 6,
+                durationTicks: 480, cooldownTicks: 240, scale: 1.3,
+                entranceTicks: 30 },
+      // Assisted's multiplier is deliberately far above its own low cap. Normal's
+      // cap is much higher, so the same number would be absurd here.
+      clutch: { chargedMultiplier: 1.9, cooldownTicks: 200 },
+    },
+  },
   insane: {
     ai: { speed: 6, reactionTicks: 2, lookaheadBounces: Infinity, resampleTicks: 2,
           resampleJitter: 1, readErrorFarPx: 24, readErrorNearPx: 28,
@@ -210,7 +325,7 @@ const DIFFICULTY = {
 // leave whatever the previous one had overridden.
 const AI_DEFAULTS = { ...AI };
 const DIFFICULTY_KEY = "pong.difficulty";
-let difficulty = "medium";
+let difficulty = "normal";
 const BALL_SIZE = 10;
 // Points needed to take the match. `let` because the menu sets it; the ? panel
 // reads it from here rather than hardcoding it, so it has to be refreshed
@@ -325,7 +440,22 @@ let clutchCharge = 0;
 // the instant the meter fills, and only the *telling* of it is delayed.
 let pips = [];                 // { t, max } per segment, counting down
 let meterSeq = -1;             // ticks into the completion sequence; -1 = idle
-let paddleFlash = { t: 0, y: 0 };
+// A white burst on your paddle. Shared: the meter fills one of these and so does
+// an earned Expand, at different lengths, so it carries its own `max` rather than
+// reading one from whichever knob happened to fire it.
+let paddleFlash = { t: 0, max: 1, y: 0 };
+// The squeeze bolt, and the crackle left on the paddle it hit. Both hold their
+// generated shape rather than regenerating per frame: draw() runs per rendered
+// frame, so a shape rebuilt there would flicker at the monitor's rate instead of
+// the game's.
+let bolt = { t: 0, max: 1, points: [], forks: [] };
+let arcs = [];
+// The lightning gathering on the opponent while a squeeze winds up, which is
+// what makes that wind-up readable as *this* move rather than one of the others.
+let chargeArcs = [];
+// Player returns since the last point conceded, which is what earns an Expand in
+// a mode that hands it out for playing well rather than for losing.
+let returnStreak = 0;
 // Points conceded back to back. Separate from the score gap: losing three on the
 // trot while still level is its own kind of trouble.
 let concededStreak = 0;
@@ -343,7 +473,92 @@ function resetAbilities() {
     ? Array.from({ length: ABILITY.clutch.segments }, () => ({ t: 0, max: 1 }))
     : [];
   meterSeq = -1;
-  paddleFlash = { t: 0, y: 0 };
+  paddleFlash = { t: 0, max: 1, y: 0 };
+  bolt = { t: 0, max: 1, points: [], forks: [] };
+  arcs = [];
+  chargeArcs = [];
+  returnStreak = 0;
+}
+
+// A jagged path between two points: walk the straight line and push each joint
+// sideways. The ends are pinned, so it always leaves the opponent's paddle and
+// lands on yours however far the middle wanders.
+function makeBolt(x0, y0, x1, y1, segments, spreadPx) {
+  const pts = [{ x: x0, y: y0 }];
+  for (let i = 1; i < segments; i++) {
+    const t = i / segments;
+    // Slack tapers to nothing at both ends, so it reads as one bolt rather than
+    // a line that happens to start and finish in the right places.
+    const slack = spreadPx * Math.sin(Math.PI * t);
+    pts.push({
+      x: x0 + (x1 - x0) * t,
+      y: y0 + (y1 - y0) * t + (Math.random() * 2 - 1) * slack,
+    });
+  }
+  pts.push({ x: x1, y: y1 });
+  return pts;
+}
+
+// Short branches thrown off the main path, which is most of what separates
+// lightning from a wobbly line.
+function makeForks(pts, count, spreadPx) {
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    const at = 1 + Math.floor(Math.random() * (pts.length - 2));
+    const from = pts[at];
+    out.push(makeBolt(
+      from.x, from.y,
+      from.x + (Math.random() * 2 - 1) * spreadPx * 2,
+      from.y + (Math.random() * 2 - 1) * spreadPx * 1.5,
+      3, spreadPx * 0.4
+    ));
+  }
+  return out;
+}
+
+// The crackle left on a paddle that has been hit: little arcs off its edges.
+// Always thrown *into* the board. Your paddle sits against the left wall, so an
+// arc aimed the other way is drawn off-screen and simply lost - and when a whole
+// batch happened to pick that direction the effect vanished for a moment, which
+// showed up as a test failing roughly one run in thirty.
+function makeArcs(p, x, reachPx, dir = 1) {
+  const out = [];
+  const edge = dir > 0 ? x + PADDLE_WIDTH : x;
+  const n = 3 + Math.floor(p.h / 22);
+  for (let i = 0; i < n; i++) {
+    const y = p.y + Math.random() * p.h;
+    out.push(makeBolt(
+      edge, y,
+      edge + dir * reachPx * (0.5 + Math.random()),
+      y + (Math.random() * 2 - 1) * reachPx,
+      3, reachPx * 0.5
+    ));
+  }
+  // And one off each end, which is where a paddle that just shrank draws the eye.
+  for (const end of [-1, 1]) {
+    const y = end < 0 ? p.y : p.y + p.h;
+    out.push(makeBolt(
+      x + PADDLE_WIDTH / 2, y,
+      x + PADDLE_WIDTH / 2 + (Math.random() * 2 - 1) * reachPx,
+      y + end * reachPx * (0.5 + Math.random()),
+      3, reachPx * 0.4
+    ));
+  }
+  return out;
+}
+
+function fireBolt() {
+  const spec = ABILITY.squeeze;
+  if (spec.boltTicks <= 0) return;
+  const pts = makeBolt(
+    WIDTH - PADDLE_WIDTH, ai.y + ai.h / 2,
+    PADDLE_WIDTH, player.y + player.h / 2,
+    Math.max(1, spec.boltSegments), spec.boltSpreadPx
+  );
+  bolt = {
+    t: spec.boltTicks, max: spec.boltTicks, points: pts,
+    forks: makeForks(pts, spec.boltForks, spec.boltSpreadPx),
+  };
 }
 
 function popPip(i, ticks) {
@@ -355,6 +570,7 @@ function popPip(i, ticks) {
 function tickMeterFx() {
   for (const pip of pips) if (pip.t > 0) pip.t -= 1;
   if (paddleFlash.t > 0) paddleFlash.t -= 1;
+  tickLightning();
   if (meterSeq < 0) return;
   const P = ABILITY.pop;
   const n = pips.length;
@@ -368,14 +584,67 @@ function tickMeterFx() {
   if (meterSeq >= flareAt + P.flareTicks) meterSeq = -1;
 }
 
+// Bolt and crackle are regenerated on a tick count rather than per frame, so
+// they flicker at the same rate on any monitor.
+function tickLightning() {
+  const spec = ABILITY.squeeze;
+  const every = Math.max(1, spec.flickerTicks);
+  if (bolt.t > 0) {
+    bolt.t -= 1;
+    if (spec.flickerTicks > 0 && bolt.t % every === 0 && bolt.points.length) {
+      const p = bolt.points;
+      bolt.points = makeBolt(p[0].x, p[0].y, p[p.length - 1].x, p[p.length - 1].y,
+        Math.max(1, spec.boltSegments), spec.boltSpreadPx);
+      bolt.forks = makeForks(bolt.points, spec.boltForks, spec.boltSpreadPx);
+    }
+  }
+  const winding = moveState.squeeze && moveState.squeeze.phase === "telegraph";
+  if (winding && spec.arcPx > 0) {
+    if (chargeArcs.length === 0 || spec.flickerTicks <= 0
+        || moveState.squeeze.ticks % every === 0) {
+      // Into the board from the right-hand paddle, hence the -1.
+      chargeArcs = makeArcs(ai, WIDTH - PADDLE_WIDTH, spec.arcPx * 0.8, -1);
+    }
+  } else {
+    chargeArcs = [];
+  }
+  if (!moveActive("squeeze") || spec.arcPx <= 0) {
+    arcs = [];
+    return;
+  }
+  if (arcs.length === 0 || spec.flickerTicks <= 0
+      || moveState.squeeze.ticks % every === 0) {
+    arcs = makeArcs(player, 0, spec.arcPx);
+  }
+}
+
 function moveActive(name) {
   return !!moveState[name] && moveState[name].phase === "active";
 }
 
 function moveAvailable(name) {
   const st = moveState[name];
-  return !!st && ABILITY[name].modes.includes(difficulty)
-    && st.phase === "idle" && st.cooldown <= 0;
+  const spec = ABILITY[name];
+  if (!st || !spec.modes.includes(difficulty)) return false;
+  // A move can be locked out by another being active. Expand uses it: being
+  // handed a bigger paddle while the lightning has you pinned small reads as the
+  // attack having failed, and the two then fight over the same paddle.
+  if (spec.blockedBy && moveActive(spec.blockedBy)) return false;
+  return st.phase === "idle" && st.cooldown <= 0;
+}
+
+// **One place decides how big a paddle is**, the way bounce() owns velocity.
+// Moves used to write hTarget themselves, so whichever ran last won - and worse,
+// endMove reset to the base size even when another move still wanted it changed.
+// Getting squeezed and then expanded left the paddle back at normal size with the
+// lightning still crackling over it, because Expand ending overwrote Squeeze.
+// Precedence, not last-writer: an attack outranks a gift.
+function syncPaddleSize() {
+  let scale = 1;
+  if (moveActive("expand")) scale = ABILITY.expand.scale;
+  if (moveActive("squeeze")) scale = ABILITY.squeeze.scale;
+  player.hTarget = baseHeight(player) * scale;
+  ai.hTarget = baseHeight(ai);
 }
 
 // A move gets likelier the further its owner is behind, which is what turns it
@@ -403,18 +672,26 @@ function startMove(name) {
     blinkHop = 0;
     aiGhosts = [];
   }
-  if (name === "squeeze" || name === "expand") {
-    player.hTarget = baseHeight(player) * spec.scale;
+  if (name === "squeeze" || name === "expand") syncPaddleSize();
+  // The wind-up happened on the opponent's paddle; this is the attack crossing.
+  if (name === "squeeze") fireBolt();
+  // Help arriving needs no announcement; a reward does. Assisted leaves this at
+  // 0 and the paddle simply grows, which is the difference between the two.
+  if (name === "expand" && spec.entranceTicks > 0) {
+    paddleFlash = {
+      t: spec.entranceTicks, max: spec.entranceTicks, y: player.y + player.h / 2,
+    };
   }
 }
 
 function endMove(name) {
   const st = moveState[name];
+  if (!st || st.phase === "idle") return;   // safe to call unconditionally
   st.phase = "idle";
   st.ticks = 0;
   st.cooldown = ABILITY[name].cooldownTicks;
   if (name === "blink") aiGhosts = [];
-  if (name === "squeeze" || name === "expand") player.hTarget = baseHeight(player);
+  if (name === "squeeze" || name === "expand") syncPaddleSize();
 }
 
 // Charged shots are spent on contact rather than running out, so a paddle stops
@@ -481,6 +758,14 @@ function blinkTeleport() {
 // Are you in trouble right now? Two separate kinds of it: a losing run, and a
 // gap on the scoreboard. Only checked when a point is scored, because neither can
 // change at any other time.
+// Which kind of Expand is this mode running? With a situation trigger set it is
+// a state, held while the trouble lasts. With none set it is a reward, and the
+// generic duration and the concede below are what take it away.
+function expandIsState() {
+  const ex = ABILITY.expand;
+  return ex.behindToTrigger > 0 || ex.concededToTrigger > 0;
+}
+
 function expandWanted() {
   const ex = ABILITY.expand;
   if (!ex.modes.includes(difficulty)) return false;
@@ -494,6 +779,7 @@ function expandWanted() {
 // calls are no-ops when the state already matches, so this is safe to run at
 // every point.
 function syncExpand() {
+  if (!expandIsState()) return;      // earned, not held: nothing to sync it to
   if (expandWanted()) armMove("expand");
   else if (moveState.expand && moveState.expand.phase !== "idle") endMove("expand");
 }
@@ -501,6 +787,16 @@ function syncExpand() {
 // Catching the ball on the very end of the paddle is the close call that fills
 // the meter. Returning it well is *not* rewarded here - see the design doc.
 function onPlayerReturn(hitY) {
+  // Counted before anything else can return early: the streak is a record of
+  // play, not of close calls.
+  returnStreak += 1;
+  const ex = ABILITY.expand;
+  if (!expandIsState() && ex.returnsToTrigger > 0
+      && returnStreak >= ex.returnsToTrigger && armMove("expand")) {
+    // Earned from scratch each time, rather than staying earned once the streak
+    // is long: otherwise one good rally hands it back the instant it expires.
+    returnStreak = 0;
+  }
   const cl = ABILITY.clutch;
   if (cl.edgeFraction <= 0 || moveActive("clutch")) return; // one in hand is enough
   const edge = baseHeight(player) * cl.edgeFraction;
@@ -514,7 +810,10 @@ function onPlayerReturn(hitY) {
   popPip(clutchCharge - 1, ABILITY.pop.pipTicks);
   // The meter is in the corner and your eye is on the ball, so the paddle says it
   // too, at the exact spot the ball landed.
-  paddleFlash = { t: ABILITY.pop.paddleTicks, y: hitY + BALL_SIZE / 2 };
+  paddleFlash = {
+    t: ABILITY.pop.paddleTicks, max: ABILITY.pop.paddleTicks,
+    y: hitY + BALL_SIZE / 2,
+  };
   if (clutchCharge >= cl.segments && armMove("clutch")) {
     clutchCharge = 0;
     meterSeq = 0;
@@ -587,10 +886,12 @@ function baseHeight(p) {
 }
 
 function applyDifficulty(level) {
-  difficulty = DIFFICULTY[level] ? level : "medium";
+  difficulty = DIFFICULTY[level] ? level : "normal";
   const preset = DIFFICULTY[difficulty];
   Object.assign(AI, AI_DEFAULTS, preset.ai);
   applyGame(preset.game);
+  // Before resetAbilities(), which sizes the meter from ABILITY.clutch.segments.
+  applyAbility(preset.ability);
   // Switching mode in the menu has to take the previous mode's paddles and any
   // armed move with it, or Insane's short paddle survives into Easy.
   resetAbilities();
@@ -748,6 +1049,8 @@ function updateAi() {
       if (Math.random() < moveChance(name, ai.score, player.score)) armMove(name);
     }
   }
+  // The ball has been dealt with, so the thing blink existed to answer is over.
+  if (!approaching && aiApproaching) endMove("blink");
   aiApproaching = approaching;
 
   // Blinking overrides everything, reaction delay included - that is the point.
@@ -899,6 +1202,14 @@ function onScore(scorer) {
     return;
   }
   concededStreak = scorer === "ai" ? concededStreak + 1 : 0;
+  if (scorer === "ai") {
+    returnStreak = 0;
+    // An earned Expand is lost by conceding. A situational one is not - being
+    // scored on is the very thing it is there for - so syncExpand owns that case.
+    if (!expandIsState() && moveState.expand && moveState.expand.phase !== "idle") {
+      endMove("expand");
+    }
+  }
   syncExpand();
   ball = centredBall();
   phase = "countdown";
@@ -910,15 +1221,26 @@ function onScore(scorer) {
 // move it is rather than what it does: red is the villain acting, green is yours.
 // Clutch first: its pulse is the only thing that says a charge is in hand, while
 // expand's tell is the paddle's own size and shows whatever is drawn over it.
-const PLAYER_TELLS = [["squeeze", "villain"], ["clutch", "hero"], ["expand", "hero"]];
-const AI_TELLS = [["overdrive", "villain"], ["blink", "villain"]];
+// Squeeze is listed on the *opponent's* paddle even though it lands on yours:
+// the wind-up is something it does, and the bolt carries it across. Listing it
+// on yours made the victim look like the one with the powerup.
+const PLAYER_TELLS = [["clutch", "hero"], ["expand", "hero"]];
+const AI_TELLS = [
+  ["squeeze", "villain"], ["overdrive", "villain"], ["blink", "villain"],
+];
 
 // A paddle winding up shakes and glows harder the closer it is to firing; one
 // that is charged and waiting glows steadily. Both are how you know it is coming.
+// What drawPaddle last worked out for each side. Exposed for the harness: the
+// wind-up styles differ in how the glow *moves* over time, and counting lit
+// pixels on a paddle that is deliberately shaking measures the shake instead.
+let lastTell = { player: null, ai: null };
+
 function drawPaddle(p, x, tells) {
   let shake = 0;
   let glow = 0;
   let tint = null;
+  let showing = null;
   for (const [name, who] of tells) {
     const st = moveState[name];
     if (!st || st.phase === "idle") continue;
@@ -926,11 +1248,33 @@ function drawPaddle(p, x, tells) {
     // payoff at the end of the sweep rather than halfway through it.
     if (name === "clutch" && meterSeq >= 0) continue;
     const spec = ABILITY[name];
+    // A move whose effect lands somewhere else only tells while it is winding up.
+    if (spec.tellWhile && st.phase !== spec.tellWhile) continue;
+    // ...and one that is outranked says nothing at all. Expand can already be
+    // running when the lightning lands; a green paddle that is also small claims
+    // a gift you are not getting.
+    if (spec.blockedBy && moveActive(spec.blockedBy)) continue;
     tint = colors[who];
     if (spec.tell === "tint") break;   // the colour is the whole tell
     if (st.phase === "telegraph") {
-      glow = spec.telegraphTicks > 0 ? 1 - st.ticks / spec.telegraphTicks : 1;
-      shake = ABILITY.vibratePx * glow;
+      const t = spec.telegraphTicks > 0 ? 1 - st.ticks / spec.telegraphTicks : 1;
+      if (spec.windUp === "stutter") {
+        // Flickering rather than building: it reads as something misfiring, and
+        // it is the shortest of the three so it has to register immediately.
+        const on = ABILITY.stutterTicks > 0
+          ? tickCount % ABILITY.stutterTicks < ABILITY.stutterTicks / 2
+          : true;
+        glow = on ? 1 : 0.12;
+        shake = ABILITY.vibratePx * (on ? 1.8 : 0.2);
+      } else if (spec.windUp === "crackle") {
+        // Nearly still. The arcs gathering on the paddle are the tell here, and
+        // a shaking paddle underneath them just muddies it.
+        glow = 0.35 + 0.65 * t;
+        shake = ABILITY.vibratePx * 0.25;
+      } else {
+        glow = t;
+        shake = ABILITY.vibratePx * t;
+      }
     } else {
       // A held charge pulses rather than glowing flat: a steady light reads as
       // part of the paddle, and a moving one reads as something waiting to go off.
@@ -939,8 +1283,12 @@ function drawPaddle(p, x, tells) {
         : 1;
       shake = ABILITY.activeVibratePx;
     }
+    showing = name;
     break;
   }
+  lastTell[p === ai ? "ai" : "player"] = showing
+    ? { name: showing, glow, shake }
+    : null;
   ctx.save();
   if (tint) {
     ctx.fillStyle = tint;
@@ -1016,8 +1364,8 @@ function drawClutchMeter() {
 // too - a white burst at the exact point of contact, spreading as it fades.
 function drawPaddleFlash() {
   const P = ABILITY.pop;
-  if (paddleFlash.t <= 0 || P.paddleTicks <= 0) return;
-  const p = paddleFlash.t / P.paddleTicks;
+  if (paddleFlash.t <= 0) return;
+  const p = paddleFlash.t / paddleFlash.max;
   const spread = (1 - p) * P.paddleSpreadPx;
   ctx.save();
   ctx.globalAlpha = p;
@@ -1026,6 +1374,107 @@ function drawPaddleFlash() {
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, paddleFlash.y - 3 - spread,
     PADDLE_WIDTH + spread * 0.5, 6 + spread * 2);
+  ctx.restore();
+}
+
+// One jagged path, drawn twice: a wide soft stroke for the glow and a thin white
+// core on top. That pairing is what stops it reading as a red scribble.
+function strokePath(pts, width, colour, alpha) {
+  if (pts.length < 2) return;
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = width;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.stroke();
+}
+
+// Which unspent charged shot, if any, this paddle is holding. Both sides have
+// one: the opponent's Overdrive and your Clutch are the same idea pointed in
+// opposite directions, so they are drawn the same way.
+function chargeHeldBy(p) {
+  const name = p === ai ? "overdrive" : "clutch";
+  if (!moveActive(name)) return null;
+  // Clutch arms the instant the meter fills, but the meter is still celebrating;
+  // the paddle lights up at the end of that sweep, not halfway through it.
+  if (name === "clutch" && meterSeq >= 0) return null;
+  return name;
+}
+
+// Drawn separately from the tell rather than as one of them, because a paddle
+// shows a single tell and a held charge has to survive the paddle winding up
+// something else on top of it.
+function drawCharged(p, x, who) {
+  if (!chargeHeldBy(p)) return;
+  const halo = ABILITY.chargedHaloPx;
+  const core = ABILITY.chargedCorePx;
+  if (halo <= 0 && core <= 0) return;
+  // Ticks, not milliseconds, so it breathes at the same rate on any monitor.
+  const pulse = ABILITY.pulseTicks > 0
+    ? 0.6 + 0.4 * Math.sin((tickCount / ABILITY.pulseTicks) * Math.PI * 2)
+    : 1;
+  ctx.save();
+  if (halo > 0) {
+    ctx.globalAlpha = 0.35 * pulse;
+    ctx.fillStyle = colors[who];
+    ctx.shadowColor = colors[who];
+    ctx.shadowBlur = halo * pulse;
+    ctx.fillRect(x - halo / 2, p.y - halo / 2, PADDLE_WIDTH + halo, p.h + halo);
+  }
+  if (core > 0) {
+    ctx.globalAlpha = 0.85 * pulse;
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = colors[who];
+    ctx.shadowBlur = 12;
+    const cx = x + (PADDLE_WIDTH - core) / 2;
+    ctx.fillRect(cx, p.y + 2, core, Math.max(0, p.h - 4));
+  }
+  ctx.restore();
+}
+
+// The bolt's core is the brightest thing in it, and white only reads as bright
+// against a dark board. In the light theme the board is pure white, so a white
+// core is simply absent and the effect loses the part that makes it lightning.
+// Picked from the board's own luminance, so it follows the theme like the rest.
+function boltCore() {
+  const m = getComputedStyle(canvas).backgroundColor.match(/\d+/g);
+  if (!m) return "#ffffff";
+  const lum = (Number(m[0]) * 299 + Number(m[1]) * 587 + Number(m[2]) * 114) / 1000;
+  return lum > 140 ? "#3d0208" : "#ffffff";
+}
+
+function drawLightning() {
+  const spec = ABILITY.squeeze;
+  // Explicit, because canvas *ignores* a lineWidth of 0 rather than drawing
+  // nothing - it keeps whatever width was set last, so the knob would silently
+  // do nothing instead of switching the effect off as its comment promises.
+  if (spec.boltWidthPx <= 0) return;
+  const core = boltCore();
+  ctx.save();
+  if (bolt.t > 0 && bolt.points.length > 1) {
+    const p = bolt.t / bolt.max;
+    ctx.shadowColor = colors.villain;
+    ctx.shadowBlur = 18 * p;
+    const w = spec.boltWidthPx;
+    ctx.shadowBlur = 26 * p;
+    for (const fork of bolt.forks) strokePath(fork, w * 0.6, colors.villain, 0.75 * p);
+    for (const fork of bolt.forks) strokePath(fork, w * 0.25, core, 0.9 * p);
+    strokePath(bolt.points, w * 2.6, colors.villain, 0.6 * p);
+    strokePath(bolt.points, w, core, p);
+  }
+  for (const set of [arcs, chargeArcs]) {
+    if (set.length === 0) continue;
+    ctx.shadowColor = colors.villain;
+    ctx.shadowBlur = 10;
+    const w = spec.boltWidthPx;
+    for (const arc of set) {
+      strokePath(arc, w * 1.1, colors.villain, 0.7);
+      strokePath(arc, w * 0.45, core, 0.95);
+    }
+  }
   ctx.restore();
 }
 
@@ -1054,6 +1503,11 @@ function draw() {
 
   drawPaddle(player, 0, PLAYER_TELLS);
   drawPaddle(ai, WIDTH - PADDLE_WIDTH, AI_TELLS);
+  // Over the paddles: the bolt starts and ends on them, and the crackle has to
+  // sit on top of the paddle it is crackling over.
+  drawCharged(player, 0, "hero");
+  drawCharged(ai, WIDTH - PADDLE_WIDTH, "villain");
+  drawLightning();
   drawPaddleFlash();
   drawClutchMeter();
 
@@ -1260,7 +1714,7 @@ playBtn.addEventListener("click", () => {
 });
 helpToggle.addEventListener("click", toggleHelp);
 
-applyDifficulty(loadDifficulty() ?? "medium");
+applyDifficulty(loadDifficulty() ?? "normal");
 applyWinScore(loadWinScore() ?? WIN_SCORES[0]);
 showMenu();
 start();
