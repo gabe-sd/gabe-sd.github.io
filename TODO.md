@@ -281,6 +281,17 @@ See the Human Benchmark version for the shape of it.
 
 ## Site-wide
 
+### site-favicon — The site has no favicon
+
+Every page 404s `/favicon.ico`, because browsers ask for it whether or not you
+reference one and there is no file to serve. Nothing is broken — it costs a
+generic page icon in the tab and a 404 in the console — but it is the sort of
+thing that reads as unfinished on a live site.
+
+One file at the repo root is enough; browsers find `/favicon.ico` without a link
+tag, which also keeps it out of every game page's `<head>`. An SVG referenced
+from `shared.css`'s owning pages would need markup in all five instead.
+
 ### site-visual-design — Improve the site's design and visual appeal
 
 ### highscore-backend — A backend for stored values
