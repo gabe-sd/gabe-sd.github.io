@@ -2211,6 +2211,145 @@ const { check, report } = makeChecks();
     });
   }
 
+  console.log("28. the squeeze attack, and blink lasting as long as the ball");
+  {
+    await page.reload();
+    await page.waitForSelector("#board");
+    await page.evaluate(() => {
+      cancelAnimationFrame(rafId);
+      // Counts red-dominant pixels in a vertical strip. Brightness will not do:
+      // the light theme's background is near-white, so it lights up every pixel.
+      window.redIn = (x, w) => {
+        const d = ctx.getImageData(x, 0, w, HEIGHT).data;
+        let n = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i] > d[i + 1] + 40 && d[i] > d[i + 2] + 40 && d[i + 3] > 0) n++;
+        }
+        return n;
+      };
+      window.stage = () => {
+        applyDifficulty("insane");
+        restart();
+        document.getElementById("menu").hidden = true;
+        phase = "play";
+        ball = { x: 300, y: 200, vx: 6, vy: 0 };
+        player.y = 100;
+        ai.y = 260;
+      };
+    });
+
+    // --- the wind-up belongs to the attacker -----------------------------
+    const windup = await page.evaluate(() => {
+      stage();
+      draw();
+      const quiet = { mid: redIn(150, 300), you: redIn(0, PADDLE_WIDTH) };
+      armMove("squeeze");
+      for (let i = 0; i < 8; i++) tickAbilities();
+      draw();
+      return { quiet, opponent: redIn(WIDTH - PADDLE_WIDTH - 12, 12),
+               you: redIn(0, PADDLE_WIDTH), mid: redIn(150, 300) };
+    });
+    check("nothing is red before it starts",
+      windup.quiet.mid === 0 && windup.quiet.you === 0, JSON.stringify(windup.quiet));
+    check("the wind-up lights the opponent's paddle", windup.opponent > 0,
+      windup.opponent);
+    check("and leaves yours alone - you are the target, not the owner",
+      windup.you === 0, windup.you);
+    check("nothing has crossed the board yet", windup.mid === 0, windup.mid);
+
+    // --- then the bolt crosses -------------------------------------------
+    const fired = await page.evaluate(() => {
+      for (let i = 0; i < ABILITY.squeeze.telegraphTicks; i++) tickAbilities();
+      tickLightning();
+      draw();
+      const onFire = redIn(150, 300);
+      // Well past the bolt's life, but while the squeeze itself is still on.
+      for (let i = 0; i < ABILITY.squeeze.boltTicks + 2; i++) tickLightning();
+      draw();
+      return { onFire, after: redIn(150, 300), still: moveActive("squeeze") };
+    });
+    check("firing throws a bolt across the board", fired.onFire > 100,
+      fired.onFire);
+    check("and the bolt does not hang around", fired.after < fired.onFire / 4,
+      `${fired.onFire} -> ${fired.after}`);
+    check("while the squeeze itself is still running", fired.still);
+
+    // --- and your paddle is left crackling -------------------------------
+    const hit = await page.evaluate(() => {
+      for (let i = 0; i < 30; i++) { tickAbilities(); tickLightning(); easePaddles(); }
+      draw();
+      return { beside: redIn(PADDLE_WIDTH + 1, 20),
+               smaller: player.h < baseHeight(player), arcs: arcs.length };
+    });
+    check("your paddle is left crackling", hit.beside > 0, hit.beside);
+    check("and smaller", hit.smaller);
+
+    // Every knob names its off value, and these are no exception.
+    const off = await page.evaluate(() => {
+      // After stage(), not before: it calls applyDifficulty, which restores
+      // ABILITY from the pristine copy and would undo both of these.
+      stage();
+      const spec = ABILITY.squeeze;
+      const was = { bolt: spec.boltTicks, arc: spec.arcPx };
+      spec.boltTicks = 0;
+      spec.arcPx = 0;
+      armMove("squeeze");
+      for (let i = 0; i < spec.telegraphTicks + 2; i++) { tickAbilities(); tickLightning(); }
+      draw();
+      const out = { mid: redIn(150, 300), beside: redIn(PADDLE_WIDTH + 1, 20),
+                    shrank: player.hTarget < baseHeight(player) };
+      spec.boltTicks = was.bolt;
+      spec.arcPx = was.arc;
+      return out;
+    });
+    check("boltTicks 0 draws no bolt", off.mid === 0, off.mid);
+    check("arcPx 0 draws no crackle", off.beside === 0, off.beside);
+    check("and it still shrinks the paddle - the effect is not the visuals",
+      off.shrank);
+
+    // --- blink lasts exactly as long as the ball is coming ---------------
+    const flight = await page.evaluate((n) => {
+      cancelAnimationFrame(rafId);
+      const out = {};
+      for (const level of ["normal", "insane"]) {
+        applyDifficulty(level);
+        let alive = 0, endedAfter = 0;
+        for (let i = 0; i < n; i++) {
+          restart();
+          document.getElementById("menu").hidden = true;
+          phase = "play";
+          ai.y = (HEIGHT - ai.h) / 2;
+          const a = (Math.random() * 2 - 1) * MAX_BOUNCE_ANGLE;
+          const sp = BALL_SPEED + Math.random() * (BALL_SPEED_MAX - BALL_SPEED);
+          ball = { x: PLAYER_PLANE, y: Math.random() * (HEIGHT - BALL_SIZE),
+                   vx: sp * Math.cos(a), vy: sp * Math.sin(a) };
+          armMove("blink");
+          let guard = 0;
+          while (ball.vx > 0 && guard++ < 900) update();
+          if (moveState.blink.phase === "active") alive++;
+          update();          // one tick past the ball turning round
+          if (moveState.blink.phase === "idle") endedAfter++;
+        }
+        out[level] = { alive, endedAfter, n };
+      }
+      applyDifficulty("normal");
+      return out;
+    }, 60);
+    for (const level of ["normal", "insane"]) {
+      const f = flight[level];
+      check(`blink is still there when the ball arrives in ${level}`,
+        f.alive === f.n, `${f.alive}/${f.n}`);
+      check(`and lets go once it has been dealt with in ${level}`,
+        f.endedAfter === f.n, `${f.endedAfter}/${f.n}`);
+    }
+
+    await page.evaluate(() => {
+      applyDifficulty("normal");
+      localStorage.removeItem("pong.difficulty");
+      restart();
+    });
+  }
+
   check("no page errors", errors.length === 0, errors.join("; "));
 
   await browser.close();

@@ -104,7 +104,13 @@ const ABILITY = {
     chance: 0.4,          // per approach of the ball; 0 = never
     cooldownTicks: 150,
     telegraphTicks: 12,   // 0 = no warning at all
-    durationTicks: 50,
+    // Bound to the ball, not to a clock: it ends when the ball stops coming, so
+    // it is always still there for the save or the miss. A timer could not track
+    // this - flight time varies with ball speed, and the value that survived a
+    // fast ball ended less than halfway across a slow one. Measured before the
+    // change: still active on arrival 0% of the time in Normal, 41% in Insane.
+    // A finite number here caps it early again, which is the off switch.
+    durationTicks: Infinity,
     hopTicks: 3,          // ticks between teleports; higher = calmer
     lockPx: 150,          // within this of its plane it stops showing off and
                           // hops onto the real intercept; 0 = shows off throughout
@@ -132,6 +138,21 @@ const ABILITY = {
                           // not of PADDLE_HEIGHT: the base varies by mode, and an
                           // absolute target would shrink you by different amounts
                           // in different modes for no stated reason. 1 = no shrink
+    // The attack is drawn as something the opponent *does to you*: it charges on
+    // its own paddle, throws a bolt across the board, and your paddle arrives
+    // shrunken and crackling. The old version glowed and shook your paddle in
+    // villain red, which reads as a reward you were handed - see DESIGN.md.
+    tellWhile: "telegraph", // the charge is the wind-up only; after it fires the
+                            // effect is on the other paddle. "" = glow throughout
+    boltTicks: 22,        // how long the bolt hangs after it lands; 0 = no bolt
+    boltSegments: 16,     // joints along the bolt; 1 = a straight beam
+    boltSpreadPx: 34,     // how far it strays from the straight line; 0 = a beam
+    boltForks: 3,         // branches thrown off the main bolt; 0 = none
+    arcPx: 9,             // how far the crackle reaches off a squeezed paddle;
+                          // 0 = it shrinks silently, with no electricity at all
+    flickerTicks: 3,      // ticks between redraws of bolt and crackle. In ticks,
+                          // like everything that moves here, or it would flicker
+                          // twice as fast on a 144Hz monitor; 0 = frozen
   },
 
   // --- Your moves ----------------------------------------------------------
@@ -241,8 +262,9 @@ const DIFFICULTY = {
   normal: {                                                        // ~86% saves
     ai: { readErrorNearPx: 45, reactionTicks: 18 },
     ability: {
-      blink: { chance: 0.16, cooldownTicks: 460, durationTicks: 28,
-               accuracyPx: 16, lockPx: 110 },
+      // No durationTicks override: blink ends when the ball is dealt with, and a
+      // number here would put the old early-expiry bug back in this mode alone.
+      blink: { chance: 0.16, cooldownTicks: 460, accuracyPx: 16, lockPx: 110 },
       overdrive: { chance: 0.16, cooldownTicks: 440, chargedMultiplier: 1.05 },
       squeeze: { chance: 0.13, cooldownTicks: 560, durationTicks: 150, scale: 0.82 },
       // Earned, not given: no situation triggers at all, so this runs on a timer
@@ -385,6 +407,12 @@ let meterSeq = -1;             // ticks into the completion sequence; -1 = idle
 // an earned Expand, at different lengths, so it carries its own `max` rather than
 // reading one from whichever knob happened to fire it.
 let paddleFlash = { t: 0, max: 1, y: 0 };
+// The squeeze bolt, and the crackle left on the paddle it hit. Both hold their
+// generated shape rather than regenerating per frame: draw() runs per rendered
+// frame, so a shape rebuilt there would flicker at the monitor's rate instead of
+// the game's.
+let bolt = { t: 0, max: 1, points: [], forks: [] };
+let arcs = [];
 // Player returns since the last point conceded, which is what earns an Expand in
 // a mode that hands it out for playing well rather than for losing.
 let returnStreak = 0;
@@ -406,7 +434,76 @@ function resetAbilities() {
     : [];
   meterSeq = -1;
   paddleFlash = { t: 0, max: 1, y: 0 };
+  bolt = { t: 0, max: 1, points: [], forks: [] };
+  arcs = [];
   returnStreak = 0;
+}
+
+// A jagged path between two points: walk the straight line and push each joint
+// sideways. The ends are pinned, so it always leaves the opponent's paddle and
+// lands on yours however far the middle wanders.
+function makeBolt(x0, y0, x1, y1, segments, spreadPx) {
+  const pts = [{ x: x0, y: y0 }];
+  for (let i = 1; i < segments; i++) {
+    const t = i / segments;
+    // Slack tapers to nothing at both ends, so it reads as one bolt rather than
+    // a line that happens to start and finish in the right places.
+    const slack = spreadPx * Math.sin(Math.PI * t);
+    pts.push({
+      x: x0 + (x1 - x0) * t,
+      y: y0 + (y1 - y0) * t + (Math.random() * 2 - 1) * slack,
+    });
+  }
+  pts.push({ x: x1, y: y1 });
+  return pts;
+}
+
+// Short branches thrown off the main path, which is most of what separates
+// lightning from a wobbly line.
+function makeForks(pts, count, spreadPx) {
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    const at = 1 + Math.floor(Math.random() * (pts.length - 2));
+    const from = pts[at];
+    out.push(makeBolt(
+      from.x, from.y,
+      from.x + (Math.random() * 2 - 1) * spreadPx * 2,
+      from.y + (Math.random() * 2 - 1) * spreadPx * 1.5,
+      3, spreadPx * 0.4
+    ));
+  }
+  return out;
+}
+
+// The crackle left on a paddle that has been hit: little arcs off its edges.
+function makeArcs(p, x, reachPx) {
+  const out = [];
+  const n = 3 + Math.floor(p.h / 22);
+  for (let i = 0; i < n; i++) {
+    const y = p.y + Math.random() * p.h;
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    out.push(makeBolt(
+      x + (dir > 0 ? PADDLE_WIDTH : 0), y,
+      x + (dir > 0 ? PADDLE_WIDTH : 0) + dir * reachPx * (0.5 + Math.random()),
+      y + (Math.random() * 2 - 1) * reachPx,
+      3, reachPx * 0.5
+    ));
+  }
+  return out;
+}
+
+function fireBolt() {
+  const spec = ABILITY.squeeze;
+  if (spec.boltTicks <= 0) return;
+  const pts = makeBolt(
+    WIDTH - PADDLE_WIDTH, ai.y + ai.h / 2,
+    PADDLE_WIDTH, player.y + player.h / 2,
+    Math.max(1, spec.boltSegments), spec.boltSpreadPx
+  );
+  bolt = {
+    t: spec.boltTicks, max: spec.boltTicks, points: pts,
+    forks: makeForks(pts, spec.boltForks, spec.boltSpreadPx),
+  };
 }
 
 function popPip(i, ticks) {
@@ -418,6 +515,7 @@ function popPip(i, ticks) {
 function tickMeterFx() {
   for (const pip of pips) if (pip.t > 0) pip.t -= 1;
   if (paddleFlash.t > 0) paddleFlash.t -= 1;
+  tickLightning();
   if (meterSeq < 0) return;
   const P = ABILITY.pop;
   const n = pips.length;
@@ -429,6 +527,30 @@ function tickMeterFx() {
   if (meterSeq === flareAt) for (let i = 0; i < n; i++) popPip(i, P.flareTicks);
   meterSeq += 1;
   if (meterSeq >= flareAt + P.flareTicks) meterSeq = -1;
+}
+
+// Bolt and crackle are regenerated on a tick count rather than per frame, so
+// they flicker at the same rate on any monitor.
+function tickLightning() {
+  const spec = ABILITY.squeeze;
+  const every = Math.max(1, spec.flickerTicks);
+  if (bolt.t > 0) {
+    bolt.t -= 1;
+    if (spec.flickerTicks > 0 && bolt.t % every === 0 && bolt.points.length) {
+      const p = bolt.points;
+      bolt.points = makeBolt(p[0].x, p[0].y, p[p.length - 1].x, p[p.length - 1].y,
+        Math.max(1, spec.boltSegments), spec.boltSpreadPx);
+      bolt.forks = makeForks(bolt.points, spec.boltForks, spec.boltSpreadPx);
+    }
+  }
+  if (!moveActive("squeeze") || spec.arcPx <= 0) {
+    arcs = [];
+    return;
+  }
+  if (arcs.length === 0 || spec.flickerTicks <= 0
+      || moveState.squeeze.ticks % every === 0) {
+    arcs = makeArcs(player, 0, spec.arcPx);
+  }
 }
 
 function moveActive(name) {
@@ -469,6 +591,8 @@ function startMove(name) {
   if (name === "squeeze" || name === "expand") {
     player.hTarget = baseHeight(player) * spec.scale;
   }
+  // The wind-up happened on the opponent's paddle; this is the attack crossing.
+  if (name === "squeeze") fireBolt();
   // Help arriving needs no announcement; a reward does. Assisted leaves this at
   // 0 and the paddle simply grows, which is the difference between the two.
   if (name === "expand" && spec.entranceTicks > 0) {
@@ -480,6 +604,7 @@ function startMove(name) {
 
 function endMove(name) {
   const st = moveState[name];
+  if (!st || st.phase === "idle") return;   // safe to call unconditionally
   st.phase = "idle";
   st.ticks = 0;
   st.cooldown = ABILITY[name].cooldownTicks;
@@ -842,6 +967,8 @@ function updateAi() {
       if (Math.random() < moveChance(name, ai.score, player.score)) armMove(name);
     }
   }
+  // The ball has been dealt with, so the thing blink existed to answer is over.
+  if (!approaching && aiApproaching) endMove("blink");
   aiApproaching = approaching;
 
   // Blinking overrides everything, reaction delay included - that is the point.
@@ -1012,8 +1139,13 @@ function onScore(scorer) {
 // move it is rather than what it does: red is the villain acting, green is yours.
 // Clutch first: its pulse is the only thing that says a charge is in hand, while
 // expand's tell is the paddle's own size and shows whatever is drawn over it.
-const PLAYER_TELLS = [["squeeze", "villain"], ["clutch", "hero"], ["expand", "hero"]];
-const AI_TELLS = [["overdrive", "villain"], ["blink", "villain"]];
+// Squeeze is listed on the *opponent's* paddle even though it lands on yours:
+// the wind-up is something it does, and the bolt carries it across. Listing it
+// on yours made the victim look like the one with the powerup.
+const PLAYER_TELLS = [["clutch", "hero"], ["expand", "hero"]];
+const AI_TELLS = [
+  ["squeeze", "villain"], ["overdrive", "villain"], ["blink", "villain"],
+];
 
 // A paddle winding up shakes and glows harder the closer it is to firing; one
 // that is charged and waiting glows steadily. Both are how you know it is coming.
@@ -1028,6 +1160,8 @@ function drawPaddle(p, x, tells) {
     // payoff at the end of the sweep rather than halfway through it.
     if (name === "clutch" && meterSeq >= 0) continue;
     const spec = ABILITY[name];
+    // A move whose effect lands somewhere else only tells while it is winding up.
+    if (spec.tellWhile && st.phase !== spec.tellWhile) continue;
     tint = colors[who];
     if (spec.tell === "tint") break;   // the colour is the whole tell
     if (st.phase === "telegraph") {
@@ -1131,6 +1265,43 @@ function drawPaddleFlash() {
   ctx.restore();
 }
 
+// One jagged path, drawn twice: a wide soft stroke for the glow and a thin white
+// core on top. That pairing is what stops it reading as a red scribble.
+function strokePath(pts, width, colour, alpha) {
+  if (pts.length < 2) return;
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = width;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.stroke();
+}
+
+function drawLightning() {
+  const spec = ABILITY.squeeze;
+  ctx.save();
+  if (bolt.t > 0 && bolt.points.length > 1) {
+    const p = bolt.t / bolt.max;
+    ctx.shadowColor = colors.villain;
+    ctx.shadowBlur = 18 * p;
+    for (const fork of bolt.forks) strokePath(fork, 2, colors.villain, 0.7 * p);
+    strokePath(bolt.points, 7, colors.villain, 0.55 * p);
+    strokePath(bolt.points, 2.5, "#ffffff", p);
+  }
+  if (arcs.length > 0) {
+    ctx.shadowColor = colors.villain;
+    ctx.shadowBlur = 10;
+    for (const arc of arcs) {
+      strokePath(arc, 3.5, colors.villain, 0.65);
+      strokePath(arc, 1.5, "#ffffff", 0.9);
+    }
+  }
+  ctx.restore();
+}
+
 function draw() {
   ctx.fillStyle = getComputedStyle(canvas).backgroundColor;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -1156,6 +1327,9 @@ function draw() {
 
   drawPaddle(player, 0, PLAYER_TELLS);
   drawPaddle(ai, WIDTH - PADDLE_WIDTH, AI_TELLS);
+  // Over the paddles: the bolt starts and ends on them, and the crackle has to
+  // sit on top of the paddle it is crackling over.
+  drawLightning();
   drawPaddleFlash();
   drawClutchMeter();
 
