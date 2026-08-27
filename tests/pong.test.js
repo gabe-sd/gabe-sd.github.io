@@ -2106,6 +2106,18 @@ const { check, report } = makeChecks();
     check("and bursts on arrival, which Assisted's version does not",
       flash.flash > 0, flash.flash);
 
+    // Winning a point must NOT take it away. This is the check that catches
+    // syncExpand running in a mode it does not govern: with the guard gone it
+    // ends the move at every point, whoever won it.
+    const kept = await page.evaluate(() => {
+      player.score += 1;
+      onScore("player");
+      return { phase: moveState.expand.phase, big: player.hTarget > baseHeight(player) };
+    });
+    check("winning a point keeps the paddle you earned",
+      kept.phase === "active", kept.phase);
+    check("and it is still the big one", kept.big);
+
     // --- ...and taken away by the two things that should take it away ---
     const conceded = await page.evaluate(() => {
       ai.score += 1;
