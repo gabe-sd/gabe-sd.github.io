@@ -2850,7 +2850,13 @@ const { check, report } = makeChecks();
           // it never makes a close call and never loses - which meant Assisted,
           // whose moves are both earned, fired nothing at all across a match.
           if (ball.vx < 0 && aimFor === null) {
-            aimFor = (Math.random() * 2 - 1) * player.h * 0.55;
+            // Half the approaches aim deliberately near a paddle end, because a
+            // close call is what earns Clutch and both of Assisted's moves are
+            // earned - spreading the aim evenly leaves whole matches with
+            // nothing firing, which is a flake rather than a finding.
+            aimFor = Math.random() < 0.5
+              ? (Math.random() < 0.5 ? -1 : 1) * player.h * 0.42
+              : (Math.random() * 2 - 1) * player.h * 0.55;
           } else if (ball.vx > 0) {
             aimFor = null;
           }
