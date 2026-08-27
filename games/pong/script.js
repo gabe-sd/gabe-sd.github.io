@@ -476,17 +476,30 @@ function makeForks(pts, count, spreadPx) {
 }
 
 // The crackle left on a paddle that has been hit: little arcs off its edges.
+// Always thrown *into* the board. Your paddle sits against the left wall, so an
+// arc aimed the other way is drawn off-screen and simply lost - and when a whole
+// batch happened to pick that direction the effect vanished for a moment, which
+// showed up as a test failing roughly one run in thirty.
 function makeArcs(p, x, reachPx) {
   const out = [];
   const n = 3 + Math.floor(p.h / 22);
   for (let i = 0; i < n; i++) {
     const y = p.y + Math.random() * p.h;
-    const dir = Math.random() < 0.5 ? -1 : 1;
     out.push(makeBolt(
-      x + (dir > 0 ? PADDLE_WIDTH : 0), y,
-      x + (dir > 0 ? PADDLE_WIDTH : 0) + dir * reachPx * (0.5 + Math.random()),
+      x + PADDLE_WIDTH, y,
+      x + PADDLE_WIDTH + reachPx * (0.5 + Math.random()),
       y + (Math.random() * 2 - 1) * reachPx,
       3, reachPx * 0.5
+    ));
+  }
+  // And one off each end, which is where a paddle that just shrank draws the eye.
+  for (const end of [-1, 1]) {
+    const y = end < 0 ? p.y : p.y + p.h;
+    out.push(makeBolt(
+      x + PADDLE_WIDTH / 2, y,
+      x + PADDLE_WIDTH / 2 + (Math.random() * 2 - 1) * reachPx,
+      y + end * reachPx * (0.5 + Math.random()),
+      3, reachPx * 0.4
     ));
   }
   return out;

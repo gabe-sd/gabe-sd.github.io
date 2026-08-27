@@ -228,9 +228,10 @@ half their points; enlarging the paddle alone leaves a quarter of points untouch
 Neither lever works without the other.
 
 **Assisted and Insane change the game itself**, not just the opponent: both move
-ball speed and paddle sizes. The menu colours those two — green and red against
-the accent that means "selected" — and leaves Normal plain, so it is visible
-before you press anything that two of the three are doing something unusual.
+ball speed and paddle sizes; Normal changes neither. The menu gives each mode a
+colour — green, blue, red — so the three read as characters rather than as three
+settings of one slider. Normal's blue is also the colour a selected button fills
+with, which works only because selected is filled and unselected is an outline.
 
 A preset has three optional halves, and each has a pristine copy behind it:
 `ai` (how well the opponent reads the ball), `game` (the ball and paddles both

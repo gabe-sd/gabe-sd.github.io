@@ -153,11 +153,11 @@ than oversights:
   version shipped. It is a heading, three difficulty buttons, a "first to" row and
   Play, stacked centred over the board. It was five buttons when that complaint
   was made, so re-look before assuming it still applies.
-- **The ability colours are placeholders.** Assisted is green and Insane red,
-  taken from `--win` and `--lose`; Normal is left plain on purpose. Blue was asked
-  for and could not be used: `--accent` is blue and already means "this button is
-  selected", so a blue Assisted reads as chosen before you touch it. Changing that
-  means deciding what selected looks like first.
+- **The mode colours are placeholders.** Assisted green, Normal blue, Insane red,
+  from `--win`, `--accent` and `--lose`. Blue doubling as "selected" is survivable
+  only because selected is a filled button and unselected is an outline; if the
+  art pass changes what selected looks like, check that Normal still reads as
+  unchosen.
 - **Real art assets**, which the game has never had — everything is `fillRect`
   against theme tokens.
 
