@@ -2336,9 +2336,66 @@ const { check, report } = makeChecks();
       return out;
     });
     check("boltTicks 0 draws no bolt", off.mid === 0, off.mid);
+
+    const thin = await page.evaluate(() => {
+      stage();
+      const was = ABILITY.squeeze.boltWidthPx;
+      ABILITY.squeeze.boltWidthPx = 0;
+      armMove("squeeze");
+      for (let i = 0; i < ABILITY.squeeze.telegraphTicks + 2; i++) {
+        tickAbilities();
+        tickLightning();
+      }
+      draw();
+      const mid = redIn(150, 300);
+      ABILITY.squeeze.boltWidthPx = was;
+      return mid;
+    });
+    check("boltWidthPx 0 draws no bolt either", thin === 0, thin);
     check("arcPx 0 draws no crackle", off.beside === 0, off.beside);
     check("and it still shrinks the paddle - the effect is not the visuals",
       off.shrank);
+
+    // The board is pure white in the light theme and near-black in the dark one,
+    // and the bolt's core is the brightest thing in it. A fixed white core is
+    // invisible on a white board - the effect loses the part that makes it read
+    // as lightning, in the theme most people are using.
+    for (const scheme of ["light", "dark"]) {
+      const themed = await browser.newPage();
+      await themed.emulateMedia({ colorScheme: scheme });
+      await themed.goto(PAGE);
+      await themed.waitForSelector("#board");
+      const seen = await themed.evaluate(() => {
+        cancelAnimationFrame(rafId);
+        applyDifficulty("insane");
+        restart();
+        document.getElementById("menu").hidden = true;
+        phase = "play";
+        ball = { x: 300, y: 200, vx: 6, vy: 0 };
+        player.y = 100;
+        ai.y = 260;
+        const m = getComputedStyle(canvas).backgroundColor.match(/\d+/g).map(Number);
+        const lit = () => {
+          const d = ctx.getImageData(150, 0, 300, HEIGHT).data;
+          let n = 0;
+          for (let i = 0; i < d.length; i += 4) {
+            if (Math.abs(d[i] - m[0]) + Math.abs(d[i + 1] - m[1])
+                + Math.abs(d[i + 2] - m[2]) > 12) n++;
+          }
+          return n;
+        };
+        draw();
+        const before = lit();
+        armMove("squeeze");
+        for (let i = 0; i < ABILITY.squeeze.telegraphTicks + 1; i++) tickAbilities();
+        tickLightning();
+        draw();
+        return { before, after: lit() };
+      });
+      check(`the bolt is visible against a ${scheme} board`,
+        seen.after > seen.before + 2000, `${seen.before} -> ${seen.after}`);
+      await themed.close();
+    }
 
     // --- blink lasts exactly as long as the ball is coming ---------------
     const flight = await page.evaluate((n) => {
@@ -2397,9 +2454,23 @@ const { check, report } = makeChecks();
         }
         return n;
       };
+      // Anything unlike the board background. Counting red alone breaks as soon
+      // as a bright core is drawn over the red: the core is not red, so making
+      // the effect stronger lowers the count.
+      window.litIn = (x, w) => {
+        const m = getComputedStyle(canvas).backgroundColor.match(/\d+/g).map(Number);
+        const d = ctx.getImageData(x, 0, w, HEIGHT).data;
+        let n = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          const off = Math.abs(d[i] - m[0]) + Math.abs(d[i + 1] - m[1])
+            + Math.abs(d[i + 2] - m[2]);
+          if (off > 12) n++;
+        }
+        return n;
+      };
       // A band over the opponent's paddle and a little of the board beside it,
       // so an aura that spills past the paddle edge is counted.
-      window.aiBand = () => redIn(WIDTH - PADDLE_WIDTH - 20, 20 + PADDLE_WIDTH);
+      window.aiBand = () => litIn(WIDTH - PADDLE_WIDTH - 20, 20 + PADDLE_WIDTH);
       window.stage = (lvl) => {
         applyDifficulty(lvl);
         restart();
@@ -2484,8 +2555,10 @@ const { check, report } = makeChecks();
     });
     check("spending the charge puts the paddle out", spent.phase === "idle",
       spent.phase);
-    check("and the aura goes with it", spent.band <= held.quiet,
-      `${spent.band} vs quiet ${held.quiet}`);
+    // Against the charged reading rather than the quiet one: the band counts the
+    // paddle itself, which is still easing back to size a tick after the shot.
+    check("and the aura goes with it", spent.band < held.charged,
+      `${spent.band} vs charged ${held.charged}`);
 
     // Off switches, same contract as everything else here.
     // The aura is a layer on top of the move's own tell, so switching it off

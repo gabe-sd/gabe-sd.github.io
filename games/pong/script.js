@@ -151,7 +151,9 @@ const ABILITY = {
     chance: 0.25,
     cooldownTicks: 320,
     telegraphTicks: 26,
-    durationTicks: 210,
+    durationTicks: 420,   // how long you are left small; the shrink is the point
+                          // of the move, so this is the knob that decides how
+                          // much the move actually costs you
     scale: 0.7,           // fraction of your paddle's *base* size it shrinks to,
                           // not of PADDLE_HEIGHT: the base varies by mode, and an
                           // absolute target would shrink you by different amounts
@@ -162,11 +164,14 @@ const ABILITY = {
     // villain red, which reads as a reward you were handed - see DESIGN.md.
     tellWhile: "telegraph", // the charge is the wind-up only; after it fires the
                             // effect is on the other paddle. "" = glow throughout
-    boltTicks: 22,        // how long the bolt hangs after it lands; 0 = no bolt
-    boltSegments: 16,     // joints along the bolt; 1 = a straight beam
-    boltSpreadPx: 34,     // how far it strays from the straight line; 0 = a beam
-    boltForks: 3,         // branches thrown off the main bolt; 0 = none
-    arcPx: 9,             // how far the crackle reaches off a squeezed paddle;
+    boltTicks: 45,        // how long the bolt hangs after it lands; 0 = no bolt
+    boltSegments: 18,     // joints along the bolt; 1 = a straight beam
+    boltSpreadPx: 46,     // how far it strays from the straight line; 0 = a beam
+    boltForks: 5,         // branches thrown off the main bolt; 0 = none
+    boltWidthPx: 4,       // width of the bolt's white core; the red glow around
+                          // it is drawn proportionally, so this is the one knob
+                          // for how heavy the whole thing looks. 0 = invisible
+    arcPx: 15,            // how far the crackle reaches off a squeezed paddle;
                           // 0 = it shrinks silently, with no electricity at all
     flickerTicks: 3,      // ticks between redraws of bolt and crackle. In ticks,
                           // like everything that moves here, or it would flicker
@@ -287,7 +292,7 @@ const DIFFICULTY = {
       // did not deliver - 10.5 against a cap of 10, indistinguishable from an
       // ordinary shot late in a rally, which is when it is being watched for.
       overdrive: { chance: 0.16, cooldownTicks: 440 },
-      squeeze: { chance: 0.13, cooldownTicks: 560, durationTicks: 150, scale: 0.82 },
+      squeeze: { chance: 0.13, cooldownTicks: 560, durationTicks: 330, scale: 0.82 },
       // Earned, not given: no situation triggers at all, so this runs on a timer
       // and is lost the moment you concede.
       expand: { behindToTrigger: 0, concededToTrigger: 0, returnsToTrigger: 6,
@@ -1398,24 +1403,44 @@ function drawCharged(p, x, who) {
   ctx.restore();
 }
 
+// The bolt's core is the brightest thing in it, and white only reads as bright
+// against a dark board. In the light theme the board is pure white, so a white
+// core is simply absent and the effect loses the part that makes it lightning.
+// Picked from the board's own luminance, so it follows the theme like the rest.
+function boltCore() {
+  const m = getComputedStyle(canvas).backgroundColor.match(/\d+/g);
+  if (!m) return "#ffffff";
+  const lum = (Number(m[0]) * 299 + Number(m[1]) * 587 + Number(m[2]) * 114) / 1000;
+  return lum > 140 ? "#3d0208" : "#ffffff";
+}
+
 function drawLightning() {
   const spec = ABILITY.squeeze;
+  // Explicit, because canvas *ignores* a lineWidth of 0 rather than drawing
+  // nothing - it keeps whatever width was set last, so the knob would silently
+  // do nothing instead of switching the effect off as its comment promises.
+  if (spec.boltWidthPx <= 0) return;
+  const core = boltCore();
   ctx.save();
   if (bolt.t > 0 && bolt.points.length > 1) {
     const p = bolt.t / bolt.max;
     ctx.shadowColor = colors.villain;
     ctx.shadowBlur = 18 * p;
-    for (const fork of bolt.forks) strokePath(fork, 2, colors.villain, 0.7 * p);
-    strokePath(bolt.points, 7, colors.villain, 0.55 * p);
-    strokePath(bolt.points, 2.5, "#ffffff", p);
+    const w = spec.boltWidthPx;
+    ctx.shadowBlur = 26 * p;
+    for (const fork of bolt.forks) strokePath(fork, w * 0.6, colors.villain, 0.75 * p);
+    for (const fork of bolt.forks) strokePath(fork, w * 0.25, core, 0.9 * p);
+    strokePath(bolt.points, w * 2.6, colors.villain, 0.6 * p);
+    strokePath(bolt.points, w, core, p);
   }
   for (const set of [arcs, chargeArcs]) {
     if (set.length === 0) continue;
     ctx.shadowColor = colors.villain;
     ctx.shadowBlur = 10;
+    const w = spec.boltWidthPx;
     for (const arc of set) {
-      strokePath(arc, 3.5, colors.villain, 0.65);
-      strokePath(arc, 1.5, "#ffffff", 0.9);
+      strokePath(arc, w * 1.1, colors.villain, 0.7);
+      strokePath(arc, w * 0.45, core, 0.95);
     }
   }
   ctx.restore();
