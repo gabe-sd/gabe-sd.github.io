@@ -208,6 +208,11 @@ const { check, report } = makeChecks();
       // ai.y a few pixels a tick and the ball starts clipping the paddle ends.
       const realUpdateAi = typeof updateAi === "function" ? updateAi : null;
       if (realUpdateAi) updateAi = () => {};
+      // A charged shot leaves *above* the cap on purpose, and since powerups
+      // reached every mode one can fire in the middle of this rally. This case
+      // is about vy not compounding, so take the moves out of it.
+      const savedModes = MOVES.map((m) => ABILITY[m].modes);
+      for (const m of MOVES) ABILITY[m].modes = [];
       for (let i = 0; i < n; i++) {
         const was = Math.sign(ball.vx);
         update();
@@ -220,6 +225,7 @@ const { check, report } = makeChecks();
         minAbsVx = Math.min(minAbsVx, Math.abs(ball.vx));
       }
       if (realUpdateAi) updateAi = realUpdateAi;
+      MOVES.forEach((m, i) => { ABILITY[m].modes = savedModes[i]; });
       return { maxSpeed, maxSteep, minAbsVx, hits, points: player.score + ai.score };
     }, 5000);
 
@@ -635,6 +641,16 @@ const { check, report } = makeChecks();
     check("restart clears the pause", !(await page.evaluate(() => paused)));
   }
 
+  // Sections 16-18 describe how the ai *moves*. Blink teleports it, and since
+  // powerups reached every mode it can fire in the middle of any of these on a
+  // random roll - which would show up as a flaky suite rather than an honest
+  // failure. Silence the moves while the mover is under test.
+  const savedModes = await page.evaluate(() => {
+    const was = Object.fromEntries(MOVES.map((m) => [m, ABILITY[m].modes]));
+    for (const m of MOVES) ABILITY[m].modes = [];
+    return was;
+  });
+
   console.log("16. how the ai behaves");
   {
     // These two describe the old chasing ai's behaviour by contradiction, so they
@@ -942,6 +958,11 @@ const { check, report } = makeChecks();
       rate !== null && `saves ${rate.toFixed(1)}%`);
   }
 
+  // The mover has been characterised; hand the moves back.
+  await page.evaluate((was) => {
+    for (const m of MOVES) ABILITY[m].modes = was[m];
+  }, savedModes);
+
   console.log("19. paddle collision is a crossing, not a position");
   {
     // Already past the plane when the paddle arrives. The old half-plane test
@@ -1112,15 +1133,15 @@ const { check, report } = makeChecks();
     check("exactly one difficulty is selected", (await checked()).length === 1,
       (await checked()).join(","));
 
-    await page.click('#difficulty [data-level="easy"]');
-    check("clicking one selects it", (await checked())[0] === "easy",
+    await page.click('#difficulty [data-level="assisted"]');
+    check("clicking one selects it", (await checked())[0] === "assisted",
       (await checked()).join(","));
     check("and deselects the others", (await checked()).length === 1);
     check("selecting does not start the game",
       (await page.evaluate(() => phase)) === "menu" && await page.isVisible("#menu"));
     check("it actually reaches the ai",
       (await page.evaluate(() => AI.reactionTicks))
-        === (await page.evaluate(() => DIFFICULTY.easy.ai.reactionTicks)));
+        === (await page.evaluate(() => DIFFICULTY.assisted.ai.reactionTicks)));
 
     await page.click("#play");
     await page.waitForTimeout(80);
@@ -1140,9 +1161,9 @@ const { check, report } = makeChecks();
     await page.reload();
     await page.waitForSelector("#board");
     check("the choice is remembered across a reload",
-      (await page.evaluate(() => difficulty)) === "easy",
+      (await page.evaluate(() => difficulty)) === "assisted",
       await page.evaluate(() => difficulty));
-    check("and the button shows it", (await checked())[0] === "easy");
+    check("and the button shows it", (await checked())[0] === "assisted");
 
     // ...and an unavailable localStorage falls back rather than throwing.
     const blocked = await browser.newPage();
@@ -1158,7 +1179,7 @@ const { check, report } = makeChecks();
     check("a blocked localStorage does not break the page",
       blockedErrors.length === 0, blockedErrors.join("; "));
     check("and falls back to the default difficulty",
-      (await blocked.evaluate(() => difficulty)) === "medium",
+      (await blocked.evaluate(() => difficulty)) === "normal",
       await blocked.evaluate(() => difficulty));
     await blocked.close();
 
@@ -1190,11 +1211,15 @@ const { check, report } = makeChecks();
     }, 300);
     const shown = Object.entries(rates)
       .map(([k, v]) => `${k} ${v.toFixed(0)}%`).join(", ");
-    check("harder difficulties save more", rates.easy < rates.medium
-      && rates.medium < rates.hard, shown);
-    check("easy is genuinely beatable", rates.easy < 85, shown);
-    check("hard is not a formality", rates.hard > 88, shown);
-    await page.evaluate(() => { restart(); applyDifficulty("medium"); });
+    // Each mode plays its own ball now, so these are not on one scale and the
+    // old "harder saves more" ordering across all three would be comparing
+    // different games. What still has to be true is that the mode you are meant
+    // to play is winnable, and that the joke mode is harder than it.
+    check("Normal is genuinely beatable", rates.normal < 93, shown);
+    check("Normal is not a walkover either", rates.normal > 70, shown);
+    check("Insane is harder than Normal", rates.insane > rates.normal, shown);
+    check("and is still not a formality", rates.insane < 100, shown);
+    await page.evaluate(() => { restart(); applyDifficulty("normal"); });
   }
 
   console.log("24. Play starts a match, including after one has ended");
@@ -1262,20 +1287,23 @@ const { check, report } = makeChecks();
     await page.waitForSelector("#board");
     const levels = () => page.evaluate(() =>
       [...document.querySelectorAll("#difficulty [data-level]")].map((b) => b.dataset.level));
-    check("five difficulties are offered",
-      (await levels()).join(",") === "assisted,easy,medium,hard,insane",
+    check("three difficulties are offered",
+      (await levels()).join(",") === "assisted,normal,insane",
       (await levels()).join(","));
 
-    // Easy/Medium/Hard must keep playing the identical game, or the save rates
-    // recorded in DESIGN.md stop meaning anything.
+    // Normal is the only mode with no `game` half, which is what makes it the
+    // one with no handicap on either side: stock ball, stock paddles.
     const ballOf = (level) => page.evaluate((l) => {
       applyDifficulty(l);
-      return { speed: BALL_SPEED, max: BALL_SPEED_MAX };
+      return { speed: BALL_SPEED, max: BALL_SPEED_MAX,
+               player: PLAYER_PADDLE_SCALE, ai: AI_PADDLE_SCALE };
     }, level);
-    const mid = await Promise.all(["easy", "medium", "hard"].map(ballOf));
-    check("the three fair presets play the same ball",
-      mid.every((b) => b.speed === mid[0].speed && b.max === mid[0].max),
-      JSON.stringify(mid));
+    const mid = [await ballOf("normal")];
+    check("Normal plays the stock ball and stock paddles",
+      await page.evaluate((b) => b.speed === GAME_DEFAULTS.BALL_SPEED
+        && b.max === GAME_DEFAULTS.BALL_SPEED_MAX
+        && b.player === 1 && b.ai === 1, mid[0]),
+      JSON.stringify(mid[0]));
 
     const assisted = await ballOf("assisted");
     const insane = await ballOf("insane");
@@ -1288,7 +1316,7 @@ const { check, report } = makeChecks();
 
     // The failure this guards: applyGame writing only the overridden fields would
     // leave Insane's ball behind when you switched back down.
-    const back = await ballOf("medium");
+    const back = await ballOf("normal");
     check("switching back off Insane restores the default ball",
       back.speed === mid[0].speed && back.max === mid[0].max,
       JSON.stringify(back));
@@ -1402,14 +1430,18 @@ const { check, report } = makeChecks();
       phase = "play";
     }, level);
 
-    // The fair presets must stay fair: no move may exist outside its own mode.
-    await setup("medium");
-    const fairArmed = await page.evaluate(() => {
-      let armed = 0;
-      for (const name of MOVES) if (armMove(name)) armed++;
-      return armed;
-    });
-    check("no move can be armed in the fair presets", fairArmed === 0, fairArmed);
+    // Every mode has moves now, so the gate that matters is which ones. Assisted
+    // is the player's mode: it must never get the opponent's three.
+    await setup("assisted");
+    const inAssisted = await page.evaluate(() =>
+      MOVES.filter((name) => armMove(name)));
+    check("Assisted gets your moves and not the opponent's",
+      inAssisted.join(",") === "expand,clutch", inAssisted.join(","));
+
+    await setup("normal");
+    const inNormal = await page.evaluate(() =>
+      MOVES.filter((name) => armMove(name)));
+    check("Normal gets all five", inNormal.length === 5, inNormal.join(","));
 
     // --- blink -------------------------------------------------------------
     await setup("insane");
@@ -1983,7 +2015,7 @@ const { check, report } = makeChecks();
       applyDifficulty("insane");
       armMove("squeeze");
       const shrunk = player.hTarget;
-      applyDifficulty("easy");
+      applyDifficulty("normal");
       return { shrunk, afterSwitch: player.h, armed: moveState.squeeze.phase };
     });
     check("switching mode restores the paddle", sizes.afterSwitch === 80,
@@ -1994,9 +2026,11 @@ const { check, report } = makeChecks();
     // The same contract the AI object carries: turning it all off has to give
     // back the plain game, so any of this can be isolated by setting numbers.
     const off = await page.evaluate(() => {
+      applyDifficulty("insane");
+      // After applyDifficulty, not before: it restores ABILITY from its pristine
+      // copy, which would put the modes straight back.
       const saved = {};
       for (const name of MOVES) { saved[name] = ABILITY[name].modes; ABILITY[name].modes = []; }
-      applyDifficulty("insane");
       restart();
       document.getElementById("menu").hidden = true;
       phase = "play";
@@ -2016,7 +2050,147 @@ const { check, report } = makeChecks();
       off.heights.join(","));
 
     await page.evaluate(() => {
-      applyDifficulty("medium");
+      applyDifficulty("normal");
+      localStorage.removeItem("pong.difficulty");
+      restart();
+    });
+  }
+
+  console.log("27. Expand answers two different questions");
+  {
+    await page.reload();
+    await page.waitForSelector("#board");
+    const setup = (level) => page.evaluate((l) => {
+      cancelAnimationFrame(rafId);
+      applyDifficulty(l);
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = "play";
+    }, level);
+    const phaseOf = () => page.evaluate(() => moveState.expand.phase);
+
+    // --- Normal: earned, and only earned --------------------------------
+    await setup("normal");
+    const losing = await page.evaluate(() => {
+      // Four points down and four conceded in a row: everything that hands the
+      // paddle over in Assisted, and none of it may do anything here.
+      for (let i = 0; i < 4; i++) { ai.score += 1; onScore("ai"); }
+      return { phase: moveState.expand.phase, gap: ai.score - player.score };
+    });
+    check("losing badly does not hand you a bigger paddle in Normal",
+      losing.phase === "idle", `${losing.phase}, ${losing.gap} down`);
+
+    await setup("normal");
+    const earned = await page.evaluate(() => {
+      const need = ABILITY.expand.returnsToTrigger;
+      const before = [];
+      for (let i = 0; i < need - 1; i++) {
+        onPlayerReturn(player.y + player.h / 2);
+        before.push(moveState.expand.phase);
+      }
+      onPlayerReturn(player.y + player.h / 2);
+      return { before, at: moveState.expand.phase, need };
+    });
+    check("a rally short of the target earns nothing",
+      earned.before.every((p) => p === "idle"), earned.before.join(","));
+    check("and the return that reaches it arms Expand",
+      earned.at !== "idle", `${earned.at} after ${earned.need}`);
+
+    // The whole point of the entrance: a reward has to look like one.
+    const flash = await page.evaluate(() => {
+      for (let i = 0; i < ABILITY.expand.telegraphTicks + 2; i++) tickAbilities();
+      return { phase: moveState.expand.phase, flash: paddleFlash.t,
+               grew: player.hTarget > baseHeight(player) };
+    });
+    check("it grows the paddle", flash.grew, flash.phase);
+    check("and bursts on arrival, which Assisted's version does not",
+      flash.flash > 0, flash.flash);
+
+    // --- ...and taken away by the two things that should take it away ---
+    const conceded = await page.evaluate(() => {
+      ai.score += 1;
+      onScore("ai");
+      return { phase: moveState.expand.phase, size: player.hTarget };
+    });
+    check("conceding a point takes the earned paddle back",
+      conceded.phase === "idle", conceded.phase);
+    check("and the paddle goes back to normal", 
+      await page.evaluate((s) => s === baseHeight(player), conceded.size),
+      conceded.size);
+
+    await setup("normal");
+    const expiry = await page.evaluate(() => {
+      const spec = ABILITY.expand;
+      for (let i = 0; i < spec.returnsToTrigger; i++) {
+        onPlayerReturn(player.y + player.h / 2);
+      }
+      for (let i = 0; i < spec.telegraphTicks + 2; i++) tickAbilities();
+      const armed = moveState.expand.phase;
+      // Well past the duration, and nothing else touched.
+      for (let i = 0; i < spec.durationTicks + 5; i++) tickAbilities();
+      return { armed, after: moveState.expand.phase, dur: spec.durationTicks };
+    });
+    check("the earned paddle was actually active", expiry.armed === "active",
+      expiry.armed);
+    check("and it does run out on its own", expiry.after === "idle",
+      `${expiry.after} after ${expiry.dur} ticks`);
+
+    // --- Assisted: the state model, unchanged ----------------------------
+    await setup("assisted");
+    const held = await page.evaluate(() => {
+      const need = ABILITY.expand.behindToTrigger;
+      for (let i = 0; i < need; i++) { ai.score += 1; onScore("ai"); }
+      const on = moveState.expand.phase;
+      // Far longer than Normal's timer: a state does not expire.
+      for (let i = 0; i < 2000; i++) tickAbilities();
+      return { on, later: moveState.expand.phase };
+    });
+    check("Assisted still hands it over for falling behind", held.on !== "idle",
+      held.on);
+    check("and holds it there rather than timing out", held.later !== "idle",
+      held.later);
+
+    await setup("assisted");
+    const rally = await page.evaluate(() => {
+      for (let i = 0; i < 12; i++) onPlayerReturn(player.y + player.h / 2);
+      return moveState.expand.phase;
+    });
+    check("a long rally earns nothing in Assisted - it is not a reward there",
+      rally === "idle", rally);
+
+    // --- presets must not leak into one another --------------------------
+    const leak = await page.evaluate(() => {
+      applyDifficulty("insane");
+      const insane = ABILITY.blink.chance;
+      applyDifficulty("normal");
+      const normal = ABILITY.blink.chance;
+      applyDifficulty("insane");
+      return { insane, normal, back: ABILITY.blink.chance,
+               spec: DIFFICULTY.normal.ability.blink.chance };
+    });
+    check("a preset's ability tuning actually lands",
+      leak.normal === leak.spec, `${leak.normal} vs ${leak.spec}`);
+    check("Normal's moves are tuned below Insane's", leak.normal < leak.insane,
+      `${leak.normal} vs ${leak.insane}`);
+    check("and switching back restores Insane's, not Normal's",
+      leak.back === leak.insane, `${leak.back} vs ${leak.insane}`);
+
+    // Assisted names no ability overrides at all, so it must land on the
+    // pristine values rather than on whatever the last mode left behind.
+    const pristine = await page.evaluate(() => {
+      applyDifficulty("normal");
+      applyDifficulty("assisted");
+      return { got: ABILITY.expand.durationTicks,
+               want: ABILITY_DEFAULTS.expand.durationTicks,
+               returns: ABILITY.expand.returnsToTrigger };
+    });
+    check("a mode with no ability half gets the pristine copy",
+      pristine.got === pristine.want, `${pristine.got} vs ${pristine.want}`);
+    check("so Normal's earned trigger does not follow it there",
+      pristine.returns === 0, pristine.returns);
+
+    await page.evaluate(() => {
+      applyDifficulty("normal");
       localStorage.removeItem("pong.difficulty");
       restart();
     });

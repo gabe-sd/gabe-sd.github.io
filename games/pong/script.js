@@ -95,9 +95,11 @@ const ABILITY = {
     paddleSpreadPx: 28, // how far that flash spreads from the contact point
   },
 
-  // --- Insane's moves ------------------------------------------------------
+  // --- The opponent's moves ------------------------------------------------
+  // Every mode that lists them fires these; a preset's `ability` half tunes how
+  // often and how hard. Insane is the tuning they were designed at.
   blink: {
-    modes: ["insane"],
+    modes: ["normal", "insane"],
     tell: "charge",       // glows, pulses and shakes; "tint" only recolours
     chance: 0.4,          // per approach of the ball; 0 = never
     cooldownTicks: 150,
@@ -109,7 +111,7 @@ const ABILITY = {
     accuracyPx: 4,        // how close those on-target hops land
   },
   overdrive: {
-    modes: ["insane"],
+    modes: ["normal", "insane"],
     tell: "charge",       // glows, pulses and shakes; "tint" only recolours
     chance: 0.3,
     cooldownTicks: 260,
@@ -120,7 +122,7 @@ const ABILITY = {
                              // ordinary shot at full pace
   },
   squeeze: {
-    modes: ["insane"],
+    modes: ["normal", "insane"],
     tell: "charge",       // glows, pulses and shakes; "tint" only recolours
     chance: 0.25,
     cooldownTicks: 320,
@@ -132,9 +134,11 @@ const ABILITY = {
                           // in different modes for no stated reason. 1 = no shrink
   },
 
-  // --- Assisted's moves, which are yours -----------------------------------
+  // --- Your moves ----------------------------------------------------------
+  // Assisted is the tuning these were designed at. Expand answers two different
+  // questions depending on the mode - see returnsToTrigger below.
   expand: {
-    modes: ["assisted"],
+    modes: ["assisted", "normal", "insane"],
     // Growing to nearly twice its size is announcement enough, and unlike squeeze
     // this is not a warning about anything - there is nothing to brace for. The
     // charge treatment on top read as a second, different thing happening.
@@ -148,13 +152,24 @@ const ABILITY = {
     durationTicks: Infinity,
     cooldownTicks: 0,
     scale: 1.35,          // multiple of your paddle's *base* size; 1 = no growth
+    // Two of these are *situation* triggers and one is a *reward* trigger, and
+    // the difference decides how the move ends. With either situation trigger set
+    // the move is a state: held exactly while the trouble lasts (see syncExpand).
+    // With neither set it is earned instead, runs on durationTicks, and is taken
+    // away the moment you concede.
     behindToTrigger: 3,   // held while this many points behind, and dropped once
                           // the gap is smaller; 0 = never from the score
     concededToTrigger: 3, // held after this many points lost in a row, and
                           // dropped the moment you win one; 0 = never from a run
+    returnsToTrigger: 0,  // earned by this many returns without conceding a
+                          // point; 0 = never earned, which is what makes the two
+                          // triggers above the only way in
+    // Arriving as a reward has to look different from arriving as help, so the
+    // earned version bursts on the paddle the way a filled meter does.
+    entranceTicks: 0,     // 0 = it simply appears, which is the Assisted look
   },
   clutch: {
-    modes: ["assisted"],
+    modes: ["assisted", "normal", "insane"],
     tell: "charge",
     chance: 0,
     cooldownTicks: 120,
@@ -179,11 +194,33 @@ const ABILITY = {
 
 const MOVES = ["blink", "overdrive", "squeeze", "expand", "clutch"];
 
-// Difficulty is overrides on AI, and for the two joke modes on GAME as well.
-// Easy/Medium/Hard touch `ai` only, which is what keeps their save rates
-// comparable: all three play the same ball with the same paddles, so the only
-// thing that differs is the opponent. Assisted and Insane deliberately break
-// that, and their percentages mean nothing next to the middle three.
+// Same discipline as AI_DEFAULTS: a pristine copy, restored in full on every
+// change of mode, so a preset that tunes a move down cannot leave it tuned down
+// in the next mode. structuredClone rather than a spread because the values are
+// nested one deep, and rather than JSON because durationTicks is Infinity, which
+// JSON turns into null.
+const ABILITY_DEFAULTS = structuredClone(ABILITY);
+
+// Writes *every* field on every call, not just the overridden ones - the same
+// reason applyGame() does. Nested move specs are replaced wholesale rather than
+// merged into, so nothing survives that the preset did not ask for.
+function applyAbility(overrides = {}) {
+  const fresh = structuredClone(ABILITY_DEFAULTS);
+  for (const key of Object.keys(fresh)) {
+    const base = fresh[key];
+    ABILITY[key] = base && typeof base === "object" && !Array.isArray(base)
+      ? Object.assign(base, overrides[key])
+      : overrides[key] ?? base;
+  }
+}
+
+// Three modes, each a character rather than a notch on a scale. A preset may
+// override three things, and each has a pristine copy behind it so nothing leaks
+// between modes: `ai` (how well the opponent reads the ball), `game` (the ball
+// and the paddles both sides get) and `ability` (how the moves are tuned here).
+// Every mode has moves. That is what removed Easy, Medium and Hard: they differed
+// in `ai` alone and were the only modes without powerups, so once powerups were
+// everywhere there were five names for three real differences.
 // The figures are what each preset measured at; they are starting points to tune
 // by feel, not settings to preserve.
 const DIFFICULTY = {
@@ -196,9 +233,28 @@ const DIFFICULTY = {
           readErrorNearPx: 45, aimSpread: 0.15, panicSpeed: 4.5 },
     game: { BALL_SPEED: 3.5, BALL_SPEED_MAX: 6.5, PLAYER_PADDLE_SCALE: 1.5 },
   },
-  easy: { ai: { readErrorNearPx: 60, reactionTicks: 24, lookaheadBounces: 0 } }, // ~73%
-  medium: { ai: { readErrorNearPx: 45, reactionTicks: 18 } },                    // ~87%
-  hard: { ai: { readErrorNearPx: 22, reactionTicks: 8 } },                       // ~95%
+  // Normal is the one you are meant to play: beatable without being handed to
+  // you, and no handicap on either side - it is the only mode with no `game`
+  // half, so both paddles are the stock size and the ball is the stock ball.
+  // Every move is available here, tuned well below Insane's settings: the moves
+  // are the show, not the difficulty.
+  normal: {                                                        // ~86% saves
+    ai: { readErrorNearPx: 45, reactionTicks: 18 },
+    ability: {
+      blink: { chance: 0.16, cooldownTicks: 460, durationTicks: 28,
+               accuracyPx: 16, lockPx: 110 },
+      overdrive: { chance: 0.16, cooldownTicks: 440, chargedMultiplier: 1.05 },
+      squeeze: { chance: 0.13, cooldownTicks: 560, durationTicks: 150, scale: 0.82 },
+      // Earned, not given: no situation triggers at all, so this runs on a timer
+      // and is lost the moment you concede.
+      expand: { behindToTrigger: 0, concededToTrigger: 0, returnsToTrigger: 6,
+                durationTicks: 480, cooldownTicks: 240, scale: 1.3,
+                entranceTicks: 30 },
+      // Assisted's multiplier is deliberately far above its own low cap. Normal's
+      // cap is much higher, so the same number would be absurd here.
+      clutch: { chargedMultiplier: 1.9, cooldownTicks: 200 },
+    },
+  },
   insane: {
     ai: { speed: 6, reactionTicks: 2, lookaheadBounces: Infinity, resampleTicks: 2,
           resampleJitter: 1, readErrorFarPx: 24, readErrorNearPx: 28,
@@ -210,7 +266,7 @@ const DIFFICULTY = {
 // leave whatever the previous one had overridden.
 const AI_DEFAULTS = { ...AI };
 const DIFFICULTY_KEY = "pong.difficulty";
-let difficulty = "medium";
+let difficulty = "normal";
 const BALL_SIZE = 10;
 // Points needed to take the match. `let` because the menu sets it; the ? panel
 // reads it from here rather than hardcoding it, so it has to be refreshed
@@ -325,7 +381,13 @@ let clutchCharge = 0;
 // the instant the meter fills, and only the *telling* of it is delayed.
 let pips = [];                 // { t, max } per segment, counting down
 let meterSeq = -1;             // ticks into the completion sequence; -1 = idle
-let paddleFlash = { t: 0, y: 0 };
+// A white burst on your paddle. Shared: the meter fills one of these and so does
+// an earned Expand, at different lengths, so it carries its own `max` rather than
+// reading one from whichever knob happened to fire it.
+let paddleFlash = { t: 0, max: 1, y: 0 };
+// Player returns since the last point conceded, which is what earns an Expand in
+// a mode that hands it out for playing well rather than for losing.
+let returnStreak = 0;
 // Points conceded back to back. Separate from the score gap: losing three on the
 // trot while still level is its own kind of trouble.
 let concededStreak = 0;
@@ -343,7 +405,8 @@ function resetAbilities() {
     ? Array.from({ length: ABILITY.clutch.segments }, () => ({ t: 0, max: 1 }))
     : [];
   meterSeq = -1;
-  paddleFlash = { t: 0, y: 0 };
+  paddleFlash = { t: 0, max: 1, y: 0 };
+  returnStreak = 0;
 }
 
 function popPip(i, ticks) {
@@ -405,6 +468,13 @@ function startMove(name) {
   }
   if (name === "squeeze" || name === "expand") {
     player.hTarget = baseHeight(player) * spec.scale;
+  }
+  // Help arriving needs no announcement; a reward does. Assisted leaves this at
+  // 0 and the paddle simply grows, which is the difference between the two.
+  if (name === "expand" && spec.entranceTicks > 0) {
+    paddleFlash = {
+      t: spec.entranceTicks, max: spec.entranceTicks, y: player.y + player.h / 2,
+    };
   }
 }
 
@@ -481,6 +551,14 @@ function blinkTeleport() {
 // Are you in trouble right now? Two separate kinds of it: a losing run, and a
 // gap on the scoreboard. Only checked when a point is scored, because neither can
 // change at any other time.
+// Which kind of Expand is this mode running? With a situation trigger set it is
+// a state, held while the trouble lasts. With none set it is a reward, and the
+// generic duration and the concede below are what take it away.
+function expandIsState() {
+  const ex = ABILITY.expand;
+  return ex.behindToTrigger > 0 || ex.concededToTrigger > 0;
+}
+
 function expandWanted() {
   const ex = ABILITY.expand;
   if (!ex.modes.includes(difficulty)) return false;
@@ -494,6 +572,7 @@ function expandWanted() {
 // calls are no-ops when the state already matches, so this is safe to run at
 // every point.
 function syncExpand() {
+  if (!expandIsState()) return;      // earned, not held: nothing to sync it to
   if (expandWanted()) armMove("expand");
   else if (moveState.expand && moveState.expand.phase !== "idle") endMove("expand");
 }
@@ -501,6 +580,16 @@ function syncExpand() {
 // Catching the ball on the very end of the paddle is the close call that fills
 // the meter. Returning it well is *not* rewarded here - see the design doc.
 function onPlayerReturn(hitY) {
+  // Counted before anything else can return early: the streak is a record of
+  // play, not of close calls.
+  returnStreak += 1;
+  const ex = ABILITY.expand;
+  if (!expandIsState() && ex.returnsToTrigger > 0
+      && returnStreak >= ex.returnsToTrigger && armMove("expand")) {
+    // Earned from scratch each time, rather than staying earned once the streak
+    // is long: otherwise one good rally hands it back the instant it expires.
+    returnStreak = 0;
+  }
   const cl = ABILITY.clutch;
   if (cl.edgeFraction <= 0 || moveActive("clutch")) return; // one in hand is enough
   const edge = baseHeight(player) * cl.edgeFraction;
@@ -514,7 +603,10 @@ function onPlayerReturn(hitY) {
   popPip(clutchCharge - 1, ABILITY.pop.pipTicks);
   // The meter is in the corner and your eye is on the ball, so the paddle says it
   // too, at the exact spot the ball landed.
-  paddleFlash = { t: ABILITY.pop.paddleTicks, y: hitY + BALL_SIZE / 2 };
+  paddleFlash = {
+    t: ABILITY.pop.paddleTicks, max: ABILITY.pop.paddleTicks,
+    y: hitY + BALL_SIZE / 2,
+  };
   if (clutchCharge >= cl.segments && armMove("clutch")) {
     clutchCharge = 0;
     meterSeq = 0;
@@ -587,10 +679,12 @@ function baseHeight(p) {
 }
 
 function applyDifficulty(level) {
-  difficulty = DIFFICULTY[level] ? level : "medium";
+  difficulty = DIFFICULTY[level] ? level : "normal";
   const preset = DIFFICULTY[difficulty];
   Object.assign(AI, AI_DEFAULTS, preset.ai);
   applyGame(preset.game);
+  // Before resetAbilities(), which sizes the meter from ABILITY.clutch.segments.
+  applyAbility(preset.ability);
   // Switching mode in the menu has to take the previous mode's paddles and any
   // armed move with it, or Insane's short paddle survives into Easy.
   resetAbilities();
@@ -899,6 +993,14 @@ function onScore(scorer) {
     return;
   }
   concededStreak = scorer === "ai" ? concededStreak + 1 : 0;
+  if (scorer === "ai") {
+    returnStreak = 0;
+    // An earned Expand is lost by conceding. A situational one is not - being
+    // scored on is the very thing it is there for - so syncExpand owns that case.
+    if (!expandIsState() && moveState.expand && moveState.expand.phase !== "idle") {
+      endMove("expand");
+    }
+  }
   syncExpand();
   ball = centredBall();
   phase = "countdown";
@@ -1016,8 +1118,8 @@ function drawClutchMeter() {
 // too - a white burst at the exact point of contact, spreading as it fades.
 function drawPaddleFlash() {
   const P = ABILITY.pop;
-  if (paddleFlash.t <= 0 || P.paddleTicks <= 0) return;
-  const p = paddleFlash.t / P.paddleTicks;
+  if (paddleFlash.t <= 0) return;
+  const p = paddleFlash.t / paddleFlash.max;
   const spread = (1 - p) * P.paddleSpreadPx;
   ctx.save();
   ctx.globalAlpha = p;
@@ -1260,7 +1362,7 @@ playBtn.addEventListener("click", () => {
 });
 helpToggle.addEventListener("click", toggleHelp);
 
-applyDifficulty(loadDifficulty() ?? "medium");
+applyDifficulty(loadDifficulty() ?? "normal");
 applyWinScore(loadWinScore() ?? WIN_SCORES[0]);
 showMenu();
 start();
