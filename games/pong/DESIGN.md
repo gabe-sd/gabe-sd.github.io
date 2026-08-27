@@ -352,9 +352,9 @@ paddle, and `tell` in its config says which.
 The distinction is not decoration. A charge tell is a *warning*: something is
 about to happen that you should brace for, or a thing you are holding that you
 have to remember to spend. A tint is a *statement*: this is what you have now.
-Expand grows the paddle to nearly twice its size, which announces itself without
-help, and — unlike Squeeze, which shrinks you and genuinely is a threat — there is
-nothing to brace for. Given the charge treatment as well, it read as a second,
+Expand makes the paddle visibly bigger, which announces itself without help, and
+— unlike Squeeze, which shrinks you and genuinely is a threat — there is nothing
+to brace for. Given the charge treatment as well, it read as a second,
 different thing happening on top of the growth.
 
 `PLAYER_TELLS` checks Clutch **before** Expand, because Expand's real tell is the

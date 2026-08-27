@@ -2815,6 +2815,127 @@ const { check, report } = makeChecks();
     });
   }
 
+  console.log("31. soak: whole matches in every mode, with everything on");
+  {
+    await page.reload();
+    await page.waitForSelector("#board");
+    // Everything above sets up a position and steps a few ticks. This plays the
+    // actual game - every move firing on its own rolls, points scored, matches
+    // finished - and checks the invariants on every tick rather than at the end.
+    // It is the only case here that would catch something that only goes wrong
+    // after the machinery has been running for a while.
+    for (const level of ["assisted", "normal", "insane"]) {
+      const soak = await page.evaluate(([lvl, lag]) => {
+        cancelAnimationFrame(rafId);
+        applyDifficulty(lvl);
+        restart();
+        document.getElementById("menu").hidden = true;
+        phase = "serve";
+        const bad = [];
+        const note = (why, detail) => {
+          if (bad.length < 5) bad.push(`${why}: ${detail}`);
+        };
+        // The largest speed anything is allowed to leave at, charged shots
+        // included. Above this the ball can skip a paddle between two ticks.
+        const ceiling = BALL_SPEED_MAX * Math.max(
+          ABILITY.overdrive.chargedMultiplier, ABILITY.clutch.chargedMultiplier) + 0.001;
+        let ticks = 0, matches = 0, points = 0, telegraphs = 0, actives = 0;
+        let aimFor = null;
+        const seen = new Set();
+        const wasIdle = Object.fromEntries(MOVES.map((m) => [m, true]));
+        while (matches < 2 && ticks < 120000) {
+          if (phase === "serve") serve();
+          // Aim off-centre, re-rolled each time the ball turns towards us. A
+          // dead-centre tracker never catches the ball on the paddle's edge, so
+          // it never makes a close call and never loses - which meant Assisted,
+          // whose moves are both earned, fired nothing at all across a match.
+          if (ball.vx < 0 && aimFor === null) {
+            aimFor = (Math.random() * 2 - 1) * player.h * 0.55;
+          } else if (ball.vx > 0) {
+            aimFor = null;
+          }
+          const want = ball.y + BALL_SIZE / 2 - player.h / 2 + (aimFor || 0);
+          player.y += Math.max(-lag, Math.min(lag, want - player.y));
+          player.y = Math.max(0, Math.min(HEIGHT - player.h, player.y));
+          const before = player.score + ai.score;
+          update();
+          ticks += 1;
+          if (player.score + ai.score !== before) points += 1;
+
+          const speed = Math.hypot(ball.vx, ball.vy);
+          if (!Number.isFinite(ball.x) || !Number.isFinite(ball.y)
+              || !Number.isFinite(speed)) note("ball not finite", `${ball.x},${ball.y}`);
+          if (speed > ceiling) note("ball above the ceiling", speed.toFixed(1));
+          for (const pad of [player, ai]) {
+            if (!(pad.h > 4 && pad.h < PADDLE_HEIGHT * 4)) {
+              note("paddle size out of range", pad.h);
+            }
+            if (pad.y < -0.5 || pad.y > HEIGHT - pad.h + 0.5) {
+              note("paddle off the board", `${pad.y.toFixed(1)} h=${pad.h.toFixed(1)}`);
+            }
+          }
+          // hTarget has exactly one owner; anything else writing it shows up here.
+          let want2 = 1;
+          if (moveActive("expand")) want2 = ABILITY.expand.scale;
+          if (moveActive("squeeze")) want2 = ABILITY.squeeze.scale;
+          if (Math.abs(player.hTarget - baseHeight(player) * want2) > 0.001) {
+            note("hTarget disagrees with syncPaddleSize", player.hTarget);
+          }
+          for (const name of MOVES) {
+            const st = moveState[name];
+            if (!["idle", "telegraph", "active"].includes(st.phase)) {
+              note("bad move phase", `${name} ${st.phase}`);
+            }
+            if (st.phase === "telegraph") { telegraphs += 1; seen.add(name); }
+            if (st.phase === "active") { actives += 1; seen.add(name); }
+            // The standing contract: a move with a wind-up never skips it. Not
+            // "some move telegraphed" - Clutch has telegraphTicks 0 on purpose,
+            // because it is earned by a save that has already happened, so a
+            // mode where only Clutch fires legitimately shows no wind-up at all.
+            if (wasIdle[name] && st.phase === "active"
+                && ABILITY[name].telegraphTicks > 0) {
+              note("move skipped its wind-up", name);
+            }
+            // A blocked move must never *start* while its blocker is running.
+            // One already running is suppressed rather than cancelled - see
+            // "Paddle sizes" in DESIGN.md - so coexisting is fine and starting
+            // is not.
+            if (ABILITY[name].blockedBy && wasIdle[name] && st.phase !== "idle"
+                && moveActive(ABILITY[name].blockedBy)) {
+              note("blocked move started anyway", name);
+            }
+            wasIdle[name] = st.phase === "idle";
+          }
+          if (gameOver) {
+            matches += 1;
+            resetMatch();
+            phase = "serve";
+          }
+        }
+        applyDifficulty(lvl);
+        return { lvl, ticks, matches, points, telegraphs, actives,
+                 moves: [...seen].sort(), bad };
+      }, [level, 6]);
+
+      check(`${level}: matches play through to a result`, soak.matches === 2,
+        `${soak.matches} matches, ${soak.points} points, ${soak.ticks} ticks`);
+      check(`${level}: points are actually scored`, soak.points >= 8, soak.points);
+      check(`${level}: moves fire during real play`, soak.actives > 0,
+        `${soak.moves.join(",")} over ${soak.actives} active ticks`);
+      check(`${level}: a move with a wind-up never skips it`,
+        !soak.bad.some((b) => b.startsWith("move skipped")),
+        `${soak.telegraphs} wind-up ticks`);
+      check(`${level}: no invariant broken across the whole soak`,
+        soak.bad.length === 0, soak.bad.join(" | "));
+    }
+
+    await page.evaluate(() => {
+      applyDifficulty("normal");
+      localStorage.removeItem("pong.difficulty");
+      restart();
+    });
+  }
+
   check("no page errors", errors.length === 0, errors.join("; "));
 
   await browser.close();

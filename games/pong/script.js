@@ -189,7 +189,7 @@ const ABILITY = {
     modes: ["assisted", "normal", "insane"],
     // You cannot be handed a bigger paddle while the lightning has you small.
     blockedBy: "squeeze", // "" = never blocked
-    // Growing to nearly twice its size is announcement enough, and unlike squeeze
+    // The change in size is announcement enough, and unlike squeeze
     // this is not a warning about anything - there is nothing to brace for. The
     // charge treatment on top read as a second, different thing happening.
     tell: "tint",

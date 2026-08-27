@@ -32,9 +32,11 @@ still describes what it names in both places.
 step with the code, in the same commit as the change.
 
 `tests/pong.test.js` covers the physics, the round lifecycle, the ai, the
-controls, the panels, the difficulty presets, the win score and every ability —
-add to it rather than around it. Nothing is currently pinned there, but if you
-knowingly leave something broken, pin it as described in `CLAUDE.md`.
+controls, the panels, the difficulty presets, the win score, every ability, how
+the effects are drawn (by reading canvas pixels, in both colour schemes) and a
+soak that plays whole matches in each mode — add to it rather than around it.
+Nothing is currently pinned there, but if you knowingly leave something broken,
+pin it as described in `CLAUDE.md`.
 
 Anything that changes how the game feels gets played before it merges. Not
 designing for mobile at this point.
