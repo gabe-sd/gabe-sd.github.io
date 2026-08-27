@@ -2450,8 +2450,8 @@ const { check, report } = makeChecks();
       check(`the shrink is still on when the ball comes back in ${level}`,
         volleys.smallAtContact >= 1,
         `small at ${volleys.smallAtContact} of ${volleys.contacts} contacts`);
-      check(`and lasts more than a single volley in ${level}`,
-        volleys.smallAtContact >= 2,
+      check(`and covers about two volleys in ${level}`,
+        volleys.smallAtContact >= 2 && volleys.smallAtContact <= 3,
         `small at ${volleys.smallAtContact} of ${volleys.contacts} contacts`);
     }
 
@@ -2689,6 +2689,124 @@ const { check, report } = makeChecks();
       gathering.arcs > 0, gathering.arcs);
     check("without anything crossing the board yet", gathering.mid === 0,
       gathering.mid);
+
+    await page.evaluate(() => {
+      applyDifficulty("normal");
+      localStorage.removeItem("pong.difficulty");
+      restart();
+    });
+  }
+
+  console.log("30. two moves, one paddle");
+  {
+    await page.reload();
+    await page.waitForSelector("#board");
+    await page.evaluate(() => {
+      cancelAnimationFrame(rafId);
+      window.stage = () => {
+        applyDifficulty("normal");
+        restart();
+        document.getElementById("menu").hidden = true;
+        phase = "play";
+        player.y = HEIGHT / 2 - player.h / 2;
+      };
+      window.greenOnPlayer = () => {
+        const d = ctx.getImageData(0, 0, PADDLE_WIDTH, HEIGHT).data;
+        let n = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i + 1] > d[i] + 30 && d[i + 1] > d[i + 2] + 30 && d[i + 3] > 0) n++;
+        }
+        return n;
+      };
+    });
+
+    // The reported bug, exactly: shrunk by the lightning, then given the bigger
+    // paddle, and when *that* wore off the paddle went back to normal size with
+    // the lightning still crackling on it. Two moves wrote the same field and
+    // whichever ended last reset it to the base size.
+    const both = await page.evaluate(() => {
+      stage();
+      const base = baseHeight(player);
+      armMove("squeeze"); startMove("squeeze");
+      const squeezed = player.hTarget;
+      // Expand cannot start here any more, so drive it directly to reproduce the
+      // old collision: this is the state the bug needed.
+      startMove("expand");
+      const withBoth = player.hTarget;
+      endMove("expand");
+      const afterExpand = player.hTarget;
+      return { base, squeezed, withBoth, afterExpand,
+               stillSqueezed: moveActive("squeeze") };
+    });
+    check("the lightning shrinks you", both.squeezed < both.base,
+      `${both.squeezed} vs base ${both.base}`);
+    check("an attack outranks a gift while both are on",
+      both.withBoth === both.squeezed, `${both.withBoth} vs ${both.squeezed}`);
+    check("and when the gift ends you are still shrunk, not back to normal",
+      both.afterExpand === both.squeezed && both.stillSqueezed,
+      `${both.afterExpand} vs squeezed ${both.squeezed}, base ${both.base}`);
+
+    // ...and the other way round: the attack ending must hand the paddle back to
+    // whatever else still wants it, not to the base size.
+    const other = await page.evaluate(() => {
+      stage();
+      const base = baseHeight(player);
+      startMove("expand");
+      const grown = player.hTarget;
+      armMove("squeeze"); startMove("squeeze");
+      endMove("squeeze");
+      return { base, grown, afterSqueeze: player.hTarget,
+               stillExpanded: moveActive("expand") };
+    });
+    check("the gift grows you", other.grown > other.base,
+      `${other.grown} vs base ${other.base}`);
+    check("and when the attack ends the gift is still yours",
+      other.afterSqueeze === other.grown && other.stillExpanded,
+      `${other.afterSqueeze} vs grown ${other.grown}, base ${other.base}`);
+
+    // You cannot be handed a bigger paddle while the lightning has you.
+    const locked = await page.evaluate(() => {
+      stage();
+      armMove("squeeze"); startMove("squeeze");
+      const blocked = armMove("expand");
+      endMove("squeeze");
+      const allowed = armMove("expand");
+      return { blocked, allowed, off: ABILITY.expand.blockedBy };
+    });
+    check("Expand cannot arm while the lightning has you",
+      locked.blocked === false, locked.blocked);
+    check("and can again once it lets go", locked.allowed === true,
+      locked.allowed);
+
+    // A green paddle that is also small claims a gift you are not getting.
+    const tint = await page.evaluate(() => {
+      stage();
+      startMove("expand");
+      draw();
+      const gift = greenOnPlayer();
+      armMove("squeeze"); startMove("squeeze");
+      draw();
+      const attacked = greenOnPlayer();
+      endMove("squeeze");
+      draw();
+      return { gift, attacked, restored: greenOnPlayer() };
+    });
+    check("the bigger paddle shows green", tint.gift > 0, tint.gift);
+    check("but says nothing while the lightning outranks it",
+      tint.attacked === 0, tint.attacked);
+    check("and speaks again once the lightning ends", tint.restored > 0,
+      tint.restored);
+
+    // The off value has to work, like every other knob here.
+    const unblocked = await page.evaluate(() => {
+      stage();
+      ABILITY.expand.blockedBy = "";
+      armMove("squeeze"); startMove("squeeze");
+      const armed = armMove("expand");
+      applyDifficulty("normal");   // restores blockedBy from the pristine copy
+      return armed;
+    });
+    check("blockedBy \"\" lets it arm anyway", unblocked === true, unblocked);
 
     await page.evaluate(() => {
       applyDifficulty("normal");

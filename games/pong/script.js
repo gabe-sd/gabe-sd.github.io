@@ -157,7 +157,7 @@ const ABILITY = {
     // in Insane. Note the lead-in: the bolt lands while the ball is still headed
     // away from you, so roughly half a volley of this is spent before you next
     // face the ball. Budget for it, or the shrink is over before you can feel it.
-    durationTicks: 420,
+    durationTicks: 315,
     scale: 0.55,          // fraction of your paddle's *base* size it shrinks to,
                           // not of PADDLE_HEIGHT: the base varies by mode, and an
                           // absolute target would shrink you by different amounts
@@ -187,6 +187,8 @@ const ABILITY = {
   // questions depending on the mode - see returnsToTrigger below.
   expand: {
     modes: ["assisted", "normal", "insane"],
+    // You cannot be handed a bigger paddle while the lightning has you small.
+    blockedBy: "squeeze", // "" = never blocked
     // Growing to nearly twice its size is announcement enough, and unlike squeeze
     // this is not a warning about anything - there is nothing to brace for. The
     // charge treatment on top read as a second, different thing happening.
@@ -218,6 +220,7 @@ const ABILITY = {
   },
   clutch: {
     modes: ["assisted", "normal", "insane"],
+    blockedBy: "",        // no move locks this one out; "" = never blocked
     tell: "charge",
     chance: 0,
     cooldownTicks: 120,
@@ -300,7 +303,7 @@ const DIFFICULTY = {
       // with the ball actually coming at you. The cooldown is longer than the
       // effect for the same reason a charged shot is rare: a shrink you are
       // under half the time stops registering as an attack.
-      squeeze: { chance: 0.13, cooldownTicks: 800, durationTicks: 550, scale: 0.62 },
+      squeeze: { chance: 0.13, cooldownTicks: 800, durationTicks: 460, scale: 0.62 },
       // Earned, not given: no situation triggers at all, so this runs on a timer
       // and is lost the moment you concede.
       expand: { behindToTrigger: 0, concededToTrigger: 0, returnsToTrigger: 6,
@@ -621,8 +624,27 @@ function moveActive(name) {
 
 function moveAvailable(name) {
   const st = moveState[name];
-  return !!st && ABILITY[name].modes.includes(difficulty)
-    && st.phase === "idle" && st.cooldown <= 0;
+  const spec = ABILITY[name];
+  if (!st || !spec.modes.includes(difficulty)) return false;
+  // A move can be locked out by another being active. Expand uses it: being
+  // handed a bigger paddle while the lightning has you pinned small reads as the
+  // attack having failed, and the two then fight over the same paddle.
+  if (spec.blockedBy && moveActive(spec.blockedBy)) return false;
+  return st.phase === "idle" && st.cooldown <= 0;
+}
+
+// **One place decides how big a paddle is**, the way bounce() owns velocity.
+// Moves used to write hTarget themselves, so whichever ran last won - and worse,
+// endMove reset to the base size even when another move still wanted it changed.
+// Getting squeezed and then expanded left the paddle back at normal size with the
+// lightning still crackling over it, because Expand ending overwrote Squeeze.
+// Precedence, not last-writer: an attack outranks a gift.
+function syncPaddleSize() {
+  let scale = 1;
+  if (moveActive("expand")) scale = ABILITY.expand.scale;
+  if (moveActive("squeeze")) scale = ABILITY.squeeze.scale;
+  player.hTarget = baseHeight(player) * scale;
+  ai.hTarget = baseHeight(ai);
 }
 
 // A move gets likelier the further its owner is behind, which is what turns it
@@ -650,9 +672,7 @@ function startMove(name) {
     blinkHop = 0;
     aiGhosts = [];
   }
-  if (name === "squeeze" || name === "expand") {
-    player.hTarget = baseHeight(player) * spec.scale;
-  }
+  if (name === "squeeze" || name === "expand") syncPaddleSize();
   // The wind-up happened on the opponent's paddle; this is the attack crossing.
   if (name === "squeeze") fireBolt();
   // Help arriving needs no announcement; a reward does. Assisted leaves this at
@@ -671,7 +691,7 @@ function endMove(name) {
   st.ticks = 0;
   st.cooldown = ABILITY[name].cooldownTicks;
   if (name === "blink") aiGhosts = [];
-  if (name === "squeeze" || name === "expand") player.hTarget = baseHeight(player);
+  if (name === "squeeze" || name === "expand") syncPaddleSize();
 }
 
 // Charged shots are spent on contact rather than running out, so a paddle stops
@@ -1230,6 +1250,10 @@ function drawPaddle(p, x, tells) {
     const spec = ABILITY[name];
     // A move whose effect lands somewhere else only tells while it is winding up.
     if (spec.tellWhile && st.phase !== spec.tellWhile) continue;
+    // ...and one that is outranked says nothing at all. Expand can already be
+    // running when the lightning lands; a green paddle that is also small claims
+    // a gift you are not getting.
+    if (spec.blockedBy && moveActive(spec.blockedBy)) continue;
     tint = colors[who];
     if (spec.tell === "tint") break;   // the colour is the whole tell
     if (st.phase === "telegraph") {
