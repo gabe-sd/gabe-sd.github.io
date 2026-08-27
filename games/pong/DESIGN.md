@@ -325,12 +325,17 @@ purpose, because these are meant to be tuned by feel and the test exists to catc
 
 ## Abilities
 
-Assisted and Insane are **characters, not points on a scale**. Tuning numbers
-harder and softer produced two more difficulties; what makes these two worth
-having is that the opponent has *moves* — Insane blinks up and down the board
-like a cartoon villain, charges a shot that comes back faster than the game
-normally permits, and squeezes your paddle. Assisted hands the same kind of thing
-to you.
+The modes are **characters, not points on a scale**, and the moves are what makes
+that true. Tuning numbers harder and softer only ever produced more difficulties;
+what distinguishes a character is that it *does things* — the opponent blinks up
+and down the board like a cartoon villain, charges a shot that comes back faster
+than the game normally permits, and throws lightning that leaves your paddle
+shrunken and crackling. You get moves of your own back.
+
+Every mode has them. That was not always so: they were built for Assisted and
+Insane while the middle three had none, which is exactly what left five names
+describing three differences. What varies between modes now is the *tuning* — a
+preset's `ability` half — not whether the moves exist.
 
 ### Two kinds of tell
 
@@ -352,6 +357,22 @@ invisible.
 
 A test separates the two by sampling a pixel just outside the paddle: a glow
 bleeds past the rect and a tint does not.
+
+#### An attack is drawn on the attacker, and travels
+
+Squeeze shrinks your paddle, and shipped drawn entirely on *your* paddle: red
+glow, shaking, the same treatment Clutch uses for a reward. The reported symptom
+was "what is that powerup?" — the victim looked like the owner.
+
+The move is now staged the way the fiction says it happens. The opponent charges
+on its own paddle, a bolt of lightning crosses the board, and your paddle arrives
+shrunken and crackling. `tellWhile` keeps the wind-up on the attacker only, so
+once the bolt is away the opponent stops glowing rather than appearing to channel
+forever.
+
+The general rule: **a move whose effect lands somewhere else is drawn in three
+parts — the wind-up where it comes from, something crossing, and the effect where
+it lands.** Drawing only the effect makes the target look like the beneficiary.
 
 #### Three wind-ups, one colour
 
@@ -390,8 +411,8 @@ layer deleted.
 ### Lean into it
 
 A standing instruction for anything in this section: **these are supposed to be
-chaotic, exciting and loud.** The moves are the reason the two joke modes exist,
-and a restrained powerup is a wasted one. When a choice is between tasteful and
+chaotic, exciting and loud.** The moves are most of the reason to play any of the
+modes, and a restrained powerup is a wasted one. When a choice is between tasteful and
 obvious, take obvious — flash white, throw a ring, shake the paddle, stack the
 effects up. The rest of the game is two rectangles and a square, so there is
 plenty of quiet to spend.
@@ -501,21 +522,24 @@ paddle; a moving one reads as something waiting to go off. The pulse counts
 
 ### Who fires, and why
 
-**The villain rolls; you earn.** Insane's moves are a random chance per approach,
-raised by however many points it is behind — it stops playing around exactly when
-you start winning, which is both the drama and a self-balancing property: it
-cannot bully you while you are already losing.
+**The villain rolls; you earn.** The opponent's moves are a random chance per
+approach, raised by however many points it is behind — it stops playing around
+exactly when you start winning, which is both the drama and a self-balancing
+property: it cannot bully you while you are already losing.
 
 Yours are never random, and the two of them mean **different things**:
 
 - **Clutch is a reward.** Three close calls fill the meter; it exists to pay out
   for playing well.
-- **Expand is mercy.** Falling behind on the scoreboard, or losing three points on
-  the trot. It exists to help when the game is going badly, and for no other
-  reason.
+- **Expand depends on the mode.** In Assisted it is *mercy*: falling behind on the
+  scoreboard, or losing three points on the trot. In Normal there is no mercy to
+  give — the mode has no handicap on either side — so it is a *reward* there
+  instead, earned by a run of returns. One move, two meanings, and the section
+  below is about how it tells them apart.
 
-Keeping those apart is the whole design. A handout that arrives while you are
-winning is not a handicap, it is noise.
+Keeping reward and mercy apart is the whole design. A handout that arrives while
+you are winning is not a handicap, it is noise — which is why Assisted has no
+earned trigger and Normal has no situation one.
 
 The losing run and the score gap are **separate triggers on purpose**. Dropping
 three in a row while still level is a different kind of trouble from being two

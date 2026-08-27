@@ -2403,6 +2403,50 @@ const { check, report } = makeChecks();
       await themed.close();
     }
 
+    // --- the shrink has to outlive its own lead-in -----------------------
+    // The bolt lands while the ball is still heading *away* from you, so a
+    // duration that looks generous on paper can be over before you next face the
+    // ball. The reported symptom was exactly that: "it often ends before the
+    // player can hit the ball". Counted in volleys rather than ticks, so tuning
+    // the speeds does not silently invalidate it.
+    for (const level of ["normal", "insane"]) {
+      const volleys = await page.evaluate((lvl) => {
+        cancelAnimationFrame(rafId);
+        applyDifficulty(lvl);
+        restart();
+        document.getElementById("menu").hidden = true;
+        phase = "play";
+        player.y = HEIGHT / 2 - player.h / 2;
+        ai.y = HEIGHT / 2 - ai.h / 2;
+        // Fire it at the moment a real approach would: ball heading away.
+        ball = { x: PLAYER_PLANE + 20, y: HEIGHT / 2, vx: BALL_SPEED, vy: 0 };
+        armMove("squeeze");
+        for (const m of ["blink", "overdrive"]) ABILITY[m].chance = 0;
+        let contacts = 0, smallAtContact = 0, guard = 0;
+        const s0 = player.score + ai.score;
+        while (player.score + ai.score === s0 && guard++ < 6000) {
+          const before = Math.sign(ball.vx);
+          // Track the ball so the rally keeps going rather than ending early.
+          const want = ball.y + BALL_SIZE / 2 - player.h / 2;
+          player.y += Math.max(-6, Math.min(6, want - player.y));
+          player.y = Math.max(0, Math.min(HEIGHT - player.h, player.y));
+          update();
+          if (before < 0 && Math.sign(ball.vx) > 0) {
+            contacts++;
+            if (player.h < baseHeight(player) * 0.95) smallAtContact++;
+            if (contacts >= 3) break;
+          }
+        }
+        return { contacts, smallAtContact };
+      }, level);
+      check(`the shrink is still on when the ball comes back in ${level}`,
+        volleys.smallAtContact >= 1,
+        `small at ${volleys.smallAtContact} of ${volleys.contacts} contacts`);
+      check(`and lasts more than a single volley in ${level}`,
+        volleys.smallAtContact >= 2,
+        `small at ${volleys.smallAtContact} of ${volleys.contacts} contacts`);
+    }
+
     // --- blink lasts exactly as long as the ball is coming ---------------
     const flight = await page.evaluate((n) => {
       cancelAnimationFrame(rafId);

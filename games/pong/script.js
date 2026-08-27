@@ -151,10 +151,14 @@ const ABILITY = {
     chance: 0.25,
     cooldownTicks: 320,
     telegraphTicks: 26,
-    durationTicks: 420,   // how long you are left small; the shrink is the point
-                          // of the move, so this is the knob that decides how
-                          // much the move actually costs you
-    scale: 0.7,           // fraction of your paddle's *base* size it shrinks to,
+    // How long you are left small, and the knob that decides what the move
+    // actually costs you. Set in *volleys*, measured: a volley - your contact to
+    // your next contact - is about 280 ticks in Assisted, 185 in Normal and 125
+    // in Insane. Note the lead-in: the bolt lands while the ball is still headed
+    // away from you, so roughly half a volley of this is spent before you next
+    // face the ball. Budget for it, or the shrink is over before you can feel it.
+    durationTicks: 420,
+    scale: 0.55,          // fraction of your paddle's *base* size it shrinks to,
                           // not of PADDLE_HEIGHT: the base varies by mode, and an
                           // absolute target would shrink you by different amounts
                           // in different modes for no stated reason. 1 = no shrink
@@ -292,7 +296,11 @@ const DIFFICULTY = {
       // did not deliver - 10.5 against a cap of 10, indistinguishable from an
       // ordinary shot late in a rally, which is when it is being watched for.
       overdrive: { chance: 0.16, cooldownTicks: 440 },
-      squeeze: { chance: 0.13, cooldownTicks: 560, durationTicks: 330, scale: 0.82 },
+      // ~3 volleys of Normal, less the lead-in, so about 2.5 of them are spent
+      // with the ball actually coming at you. The cooldown is longer than the
+      // effect for the same reason a charged shot is rare: a shrink you are
+      // under half the time stops registering as an attack.
+      squeeze: { chance: 0.13, cooldownTicks: 800, durationTicks: 550, scale: 0.62 },
       // Earned, not given: no situation triggers at all, so this runs on a timer
       // and is lost the moment you concede.
       expand: { behindToTrigger: 0, concededToTrigger: 0, returnsToTrigger: 6,
