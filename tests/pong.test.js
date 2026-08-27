@@ -2383,6 +2383,172 @@ const { check, report } = makeChecks();
     });
   }
 
+  console.log("29. the opponent's charge: visible, readable, and worth bracing for");
+  {
+    await page.reload();
+    await page.waitForSelector("#board");
+    await page.evaluate(() => {
+      cancelAnimationFrame(rafId);
+      window.redIn = (x, w) => {
+        const d = ctx.getImageData(x, 0, w, HEIGHT).data;
+        let n = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i] > d[i + 1] + 40 && d[i] > d[i + 2] + 40 && d[i + 3] > 0) n++;
+        }
+        return n;
+      };
+      // A band over the opponent's paddle and a little of the board beside it,
+      // so an aura that spills past the paddle edge is counted.
+      window.aiBand = () => redIn(WIDTH - PADDLE_WIDTH - 20, 20 + PADDLE_WIDTH);
+      window.stage = (lvl) => {
+        applyDifficulty(lvl);
+        restart();
+        document.getElementById("menu").hidden = true;
+        phase = "play";
+        ball = { x: 300, y: 200, vx: 6, vy: 0 };
+        player.y = 100;
+        ai.y = 160;
+      };
+    });
+
+    // --- the shot has to be worth the wind-up ----------------------------
+    for (const level of ["normal", "insane"]) {
+      const shot = await page.evaluate((lvl) => {
+        const fire = (charged) => {
+          stage(lvl);
+          ai.y = 150;
+          ball = { x: AI_PLANE - 6, y: ai.y + ai.h / 2, vx: 6, vy: 0 };
+          if (charged) { armMove("overdrive"); startMove("overdrive"); }
+          let g = 0;
+          while (ball.vx > 0 && g++ < 60) update();
+          return Math.hypot(ball.vx, ball.vy);
+        };
+        return { plain: fire(false), charged: fire(true), cap: BALL_SPEED_MAX };
+      }, level);
+      check(`the charged shot clears the speed cap in ${level}`,
+        shot.charged > shot.cap * 1.3,
+        `${shot.charged.toFixed(1)} vs cap ${shot.cap}`);
+      // The failure this guards: a multiplier close to 1 looks dramatic on the
+      // first exchange and vanishes once the rally is already at the cap.
+      check(`and is clearly faster than an ordinary one in ${level}`,
+        shot.charged > shot.plain * 1.8,
+        `${shot.charged.toFixed(1)} vs ${shot.plain.toFixed(1)}`);
+    }
+
+    // --- and it must stay visible until it is spent ----------------------
+    const held = await page.evaluate(() => {
+      stage("insane");
+      draw();
+      const quiet = aiBand();
+      armMove("overdrive");
+      startMove("overdrive");
+      draw();
+      const charged = aiBand();
+      // Now wind up something else on the same paddle. A paddle draws one tell,
+      // so this is where a charge drawn *as* a tell would disappear.
+      armMove("squeeze");
+      for (let i = 0; i < 6; i++) { tickAbilities(); tickLightning(); }
+      draw();
+      const alsoWinding = aiBand();
+      return { quiet, charged, alsoWinding,
+               stillCharged: moveActive("overdrive") };
+    });
+    check("a charged opponent paddle looks different from a quiet one",
+      held.charged > held.quiet, `${held.charged} vs ${held.quiet}`);
+    check("and stays lit while it winds up something else on top",
+      held.alsoWinding > held.quiet && held.stillCharged,
+      `${held.alsoWinding} vs quiet ${held.quiet}`);
+
+    const spent = await page.evaluate(() => {
+      // Land the charged shot; the paddle should go quiet the moment it is used.
+      // Chances to zero first: the opponent rolls for a new move every time the
+      // ball turns towards it, and a fresh wind-up would light the paddle again.
+      for (const m of ["blink", "overdrive", "squeeze"]) ABILITY[m].chance = 0;
+      ball = { x: AI_PLANE - 6, y: ai.y + ai.h / 2, vx: 6, vy: 0 };
+      endMove("squeeze");
+      let g = 0;
+      while (ball.vx > 0 && g++ < 60) update();
+      draw();
+      return { band: aiBand(), phase: moveState.overdrive.phase };
+    });
+    check("spending the charge puts the paddle out", spent.phase === "idle",
+      spent.phase);
+    check("and the aura goes with it", spent.band <= held.quiet,
+      `${spent.band} vs quiet ${held.quiet}`);
+
+    // Off switches, same contract as everything else here.
+    // The aura is a layer on top of the move's own tell, so switching it off
+    // does not make the paddle dark - it makes it less bright. Measure the layer.
+    const dark = await page.evaluate(() => {
+      const lit = (halo, core) => {
+        stage("insane");
+        ABILITY.chargedHaloPx = halo;
+        ABILITY.chargedCorePx = core;
+        armMove("overdrive");
+        startMove("overdrive");
+        draw();
+        return aiBand();
+      };
+      const on = lit(ABILITY_DEFAULTS.chargedHaloPx, ABILITY_DEFAULTS.chargedCorePx);
+      const off = lit(0, 0);
+      applyDifficulty("insane");   // restores both from the pristine copy
+      return { on, off };
+    });
+    check("the aura adds to what the tell already draws", dark.on > dark.off,
+      `${dark.on} with vs ${dark.off} without`);
+
+    // --- the three wind-ups have to be tellable apart --------------------
+    // Blink stutters, so its brightness swings inside a few ticks. Overdrive
+    // swells, so over the same window it barely moves. That difference is the
+    // whole point: three moves, one colour, three readings.
+    const jump = await page.evaluate(() => {
+      const watch = (name) => {
+        stage("insane");
+        armMove(name);
+        const seen = [];
+        for (let i = 0; i < ABILITY[name].telegraphTicks; i++) {
+          draw();
+          // The computed glow, not the lit pixels: the paddle shakes by design,
+          // so a pixel count of it measures the jitter and not the wind-up.
+          seen.push(lastTell.ai ? lastTell.ai.glow : 0);
+          tickAbilities();
+          tickCount += 1;
+        }
+        // Biggest change from one tick to the next. A stutter swings hard every
+        // few ticks; a swell creeps, however far it travels in total.
+        let biggest = 0;
+        for (let i = 1; i < seen.length; i++) {
+          biggest = Math.max(biggest, Math.abs(seen[i] - seen[i - 1]));
+        }
+        return biggest;
+      };
+      return { blink: watch("blink"), overdrive: watch("overdrive") };
+    });
+    check("a stuttering wind-up jumps from tick to tick", jump.blink > 0.5,
+      jump.blink.toFixed(3));
+    check("a swelling one creeps instead", jump.overdrive < jump.blink / 5,
+      `overdrive ${jump.overdrive.toFixed(3)} vs blink ${jump.blink.toFixed(3)}`);
+
+    // Squeeze announces itself with the lightning already gathering.
+    const gathering = await page.evaluate(() => {
+      stage("insane");
+      armMove("squeeze");
+      for (let i = 0; i < 6; i++) { tickAbilities(); tickLightning(); }
+      draw();
+      return { arcs: chargeArcs.length, mid: redIn(150, 300) };
+    });
+    check("a squeeze gathers lightning on the opponent while it winds up",
+      gathering.arcs > 0, gathering.arcs);
+    check("without anything crossing the board yet", gathering.mid === 0,
+      gathering.mid);
+
+    await page.evaluate(() => {
+      applyDifficulty("normal");
+      localStorage.removeItem("pong.difficulty");
+      restart();
+    });
+  }
+
   check("no page errors", errors.length === 0, errors.join("; "));
 
   await browser.close();

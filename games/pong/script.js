@@ -80,6 +80,13 @@ const ABILITY = {
                      // not milliseconds, or it would breathe at a different rate
                      // on a 144Hz monitor than on a 60Hz one; 0 = a steady glow
   afterimages: 4,    // ghosts left behind by a blink; 0 = none
+  stutterTicks: 6,   // period of a stuttering wind-up, in ticks; 0 = steady
+  // A held charge is drawn as its own layer, on top of whatever tell the paddle
+  // is showing. A paddle draws one tell at a time, so without this an opponent
+  // holding a charged shot stops looking charged the moment it winds up
+  // something else - and a charge you cannot see is a shot you cannot brace for.
+  chargedHaloPx: 14, // reach of the aura around a charged paddle; 0 = no aura
+  chargedCorePx: 4,  // width of the white-hot core down its face; 0 = none
 
   // The meter's celebration, all counted in ticks so it plays at the same rate on
   // any monitor. Filling the third pip runs: that pip's own pop, then a sweep
@@ -101,6 +108,11 @@ const ABILITY = {
   blink: {
     modes: ["normal", "insane"],
     tell: "charge",       // glows, pulses and shakes; "tint" only recolours
+    // All three of the opponent's moves are red, because red means it is doing
+    // something to you. What separates them is how they wind up, so you can read
+    // which is coming rather than only what it was afterwards. "swell" is the
+    // plain ramp and the default for anything that does not say otherwise.
+    windUp: "stutter",    // flickers on and off, like something misfiring
     chance: 0.4,          // per approach of the ball; 0 = never
     cooldownTicks: 150,
     telegraphTicks: 12,   // 0 = no warning at all
@@ -119,17 +131,23 @@ const ABILITY = {
   overdrive: {
     modes: ["normal", "insane"],
     tell: "charge",       // glows, pulses and shakes; "tint" only recolours
+    windUp: "swell",      // one long steady build; the slowest and biggest tell
     chance: 0.3,
     cooldownTicks: 260,
     telegraphTicks: 45,   // long on purpose: the charge is the whole show
     durationTicks: Infinity, // held until it is spent on a shot; a number expires it
-    chargedMultiplier: 1.1,  // the charged shot leaves at this multiple of the
+    chargedMultiplier: 1.5,  // the charged shot leaves at this multiple of the
                              // mode's own speed cap, whatever arrived; 1 = an
-                             // ordinary shot at full pace
+                             // ordinary shot at full pace. Being a multiple of
+                             // the *cap* is the point: an ordinary shot's speed
+                             // depends on what arrived, so anything close to 1
+                             // is dramatic early in a rally and invisible late,
+                             // which is exactly when it is being watched for.
   },
   squeeze: {
     modes: ["normal", "insane"],
     tell: "charge",       // glows, pulses and shakes; "tint" only recolours
+    windUp: "crackle",    // barely shakes; the gathering lightning is the tell
     chance: 0.25,
     cooldownTicks: 320,
     telegraphTicks: 26,
@@ -265,7 +283,10 @@ const DIFFICULTY = {
       // No durationTicks override: blink ends when the ball is dealt with, and a
       // number here would put the old early-expiry bug back in this mode alone.
       blink: { chance: 0.16, cooldownTicks: 460, accuracyPx: 16, lockPx: 110 },
-      overdrive: { chance: 0.16, cooldownTicks: 440, chargedMultiplier: 1.05 },
+      // No chargedMultiplier override: 1.05 made the wind-up promise a shot it
+      // did not deliver - 10.5 against a cap of 10, indistinguishable from an
+      // ordinary shot late in a rally, which is when it is being watched for.
+      overdrive: { chance: 0.16, cooldownTicks: 440 },
       squeeze: { chance: 0.13, cooldownTicks: 560, durationTicks: 150, scale: 0.82 },
       // Earned, not given: no situation triggers at all, so this runs on a timer
       // and is lost the moment you concede.
@@ -413,6 +434,9 @@ let paddleFlash = { t: 0, max: 1, y: 0 };
 // the game's.
 let bolt = { t: 0, max: 1, points: [], forks: [] };
 let arcs = [];
+// The lightning gathering on the opponent while a squeeze winds up, which is
+// what makes that wind-up readable as *this* move rather than one of the others.
+let chargeArcs = [];
 // Player returns since the last point conceded, which is what earns an Expand in
 // a mode that hands it out for playing well rather than for losing.
 let returnStreak = 0;
@@ -436,6 +460,7 @@ function resetAbilities() {
   paddleFlash = { t: 0, max: 1, y: 0 };
   bolt = { t: 0, max: 1, points: [], forks: [] };
   arcs = [];
+  chargeArcs = [];
   returnStreak = 0;
 }
 
@@ -480,14 +505,15 @@ function makeForks(pts, count, spreadPx) {
 // arc aimed the other way is drawn off-screen and simply lost - and when a whole
 // batch happened to pick that direction the effect vanished for a moment, which
 // showed up as a test failing roughly one run in thirty.
-function makeArcs(p, x, reachPx) {
+function makeArcs(p, x, reachPx, dir = 1) {
   const out = [];
+  const edge = dir > 0 ? x + PADDLE_WIDTH : x;
   const n = 3 + Math.floor(p.h / 22);
   for (let i = 0; i < n; i++) {
     const y = p.y + Math.random() * p.h;
     out.push(makeBolt(
-      x + PADDLE_WIDTH, y,
-      x + PADDLE_WIDTH + reachPx * (0.5 + Math.random()),
+      edge, y,
+      edge + dir * reachPx * (0.5 + Math.random()),
       y + (Math.random() * 2 - 1) * reachPx,
       3, reachPx * 0.5
     ));
@@ -555,6 +581,16 @@ function tickLightning() {
         Math.max(1, spec.boltSegments), spec.boltSpreadPx);
       bolt.forks = makeForks(bolt.points, spec.boltForks, spec.boltSpreadPx);
     }
+  }
+  const winding = moveState.squeeze && moveState.squeeze.phase === "telegraph";
+  if (winding && spec.arcPx > 0) {
+    if (chargeArcs.length === 0 || spec.flickerTicks <= 0
+        || moveState.squeeze.ticks % every === 0) {
+      // Into the board from the right-hand paddle, hence the -1.
+      chargeArcs = makeArcs(ai, WIDTH - PADDLE_WIDTH, spec.arcPx * 0.8, -1);
+    }
+  } else {
+    chargeArcs = [];
   }
   if (!moveActive("squeeze") || spec.arcPx <= 0) {
     arcs = [];
@@ -1162,10 +1198,16 @@ const AI_TELLS = [
 
 // A paddle winding up shakes and glows harder the closer it is to firing; one
 // that is charged and waiting glows steadily. Both are how you know it is coming.
+// What drawPaddle last worked out for each side. Exposed for the harness: the
+// wind-up styles differ in how the glow *moves* over time, and counting lit
+// pixels on a paddle that is deliberately shaking measures the shake instead.
+let lastTell = { player: null, ai: null };
+
 function drawPaddle(p, x, tells) {
   let shake = 0;
   let glow = 0;
   let tint = null;
+  let showing = null;
   for (const [name, who] of tells) {
     const st = moveState[name];
     if (!st || st.phase === "idle") continue;
@@ -1178,8 +1220,24 @@ function drawPaddle(p, x, tells) {
     tint = colors[who];
     if (spec.tell === "tint") break;   // the colour is the whole tell
     if (st.phase === "telegraph") {
-      glow = spec.telegraphTicks > 0 ? 1 - st.ticks / spec.telegraphTicks : 1;
-      shake = ABILITY.vibratePx * glow;
+      const t = spec.telegraphTicks > 0 ? 1 - st.ticks / spec.telegraphTicks : 1;
+      if (spec.windUp === "stutter") {
+        // Flickering rather than building: it reads as something misfiring, and
+        // it is the shortest of the three so it has to register immediately.
+        const on = ABILITY.stutterTicks > 0
+          ? tickCount % ABILITY.stutterTicks < ABILITY.stutterTicks / 2
+          : true;
+        glow = on ? 1 : 0.12;
+        shake = ABILITY.vibratePx * (on ? 1.8 : 0.2);
+      } else if (spec.windUp === "crackle") {
+        // Nearly still. The arcs gathering on the paddle are the tell here, and
+        // a shaking paddle underneath them just muddies it.
+        glow = 0.35 + 0.65 * t;
+        shake = ABILITY.vibratePx * 0.25;
+      } else {
+        glow = t;
+        shake = ABILITY.vibratePx * t;
+      }
     } else {
       // A held charge pulses rather than glowing flat: a steady light reads as
       // part of the paddle, and a moving one reads as something waiting to go off.
@@ -1188,8 +1246,12 @@ function drawPaddle(p, x, tells) {
         : 1;
       shake = ABILITY.activeVibratePx;
     }
+    showing = name;
     break;
   }
+  lastTell[p === ai ? "ai" : "player"] = showing
+    ? { name: showing, glow, shake }
+    : null;
   ctx.save();
   if (tint) {
     ctx.fillStyle = tint;
@@ -1293,6 +1355,49 @@ function strokePath(pts, width, colour, alpha) {
   ctx.stroke();
 }
 
+// Which unspent charged shot, if any, this paddle is holding. Both sides have
+// one: the opponent's Overdrive and your Clutch are the same idea pointed in
+// opposite directions, so they are drawn the same way.
+function chargeHeldBy(p) {
+  const name = p === ai ? "overdrive" : "clutch";
+  if (!moveActive(name)) return null;
+  // Clutch arms the instant the meter fills, but the meter is still celebrating;
+  // the paddle lights up at the end of that sweep, not halfway through it.
+  if (name === "clutch" && meterSeq >= 0) return null;
+  return name;
+}
+
+// Drawn separately from the tell rather than as one of them, because a paddle
+// shows a single tell and a held charge has to survive the paddle winding up
+// something else on top of it.
+function drawCharged(p, x, who) {
+  if (!chargeHeldBy(p)) return;
+  const halo = ABILITY.chargedHaloPx;
+  const core = ABILITY.chargedCorePx;
+  if (halo <= 0 && core <= 0) return;
+  // Ticks, not milliseconds, so it breathes at the same rate on any monitor.
+  const pulse = ABILITY.pulseTicks > 0
+    ? 0.6 + 0.4 * Math.sin((tickCount / ABILITY.pulseTicks) * Math.PI * 2)
+    : 1;
+  ctx.save();
+  if (halo > 0) {
+    ctx.globalAlpha = 0.35 * pulse;
+    ctx.fillStyle = colors[who];
+    ctx.shadowColor = colors[who];
+    ctx.shadowBlur = halo * pulse;
+    ctx.fillRect(x - halo / 2, p.y - halo / 2, PADDLE_WIDTH + halo, p.h + halo);
+  }
+  if (core > 0) {
+    ctx.globalAlpha = 0.85 * pulse;
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = colors[who];
+    ctx.shadowBlur = 12;
+    const cx = x + (PADDLE_WIDTH - core) / 2;
+    ctx.fillRect(cx, p.y + 2, core, Math.max(0, p.h - 4));
+  }
+  ctx.restore();
+}
+
 function drawLightning() {
   const spec = ABILITY.squeeze;
   ctx.save();
@@ -1304,10 +1409,11 @@ function drawLightning() {
     strokePath(bolt.points, 7, colors.villain, 0.55 * p);
     strokePath(bolt.points, 2.5, "#ffffff", p);
   }
-  if (arcs.length > 0) {
+  for (const set of [arcs, chargeArcs]) {
+    if (set.length === 0) continue;
     ctx.shadowColor = colors.villain;
     ctx.shadowBlur = 10;
-    for (const arc of arcs) {
+    for (const arc of set) {
       strokePath(arc, 3.5, colors.villain, 0.65);
       strokePath(arc, 1.5, "#ffffff", 0.9);
     }
@@ -1342,6 +1448,8 @@ function draw() {
   drawPaddle(ai, WIDTH - PADDLE_WIDTH, AI_TELLS);
   // Over the paddles: the bolt starts and ends on them, and the crackle has to
   // sit on top of the paddle it is crackling over.
+  drawCharged(player, 0, "hero");
+  drawCharged(ai, WIDTH - PADDLE_WIDTH, "villain");
   drawLightning();
   drawPaddleFlash();
   drawClutchMeter();
