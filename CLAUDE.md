@@ -71,13 +71,15 @@ npm test                        # every browser suite, then the docs check
 node tests/chording.test.js     # one suite on its own
 node tests/docs-check.js        # do the docs still describe this repo? no browser
 node tests/ai-sweep.js          # how often Pong's ai saves; a ruler, not a test
+node tests/volley-sweep.js      # how long a Pong volley is, and what each effect covers
 node --check games/<name>/script.js   # syntax only - proves nothing about behaviour
 ```
 
-`tests/ai-sweep.js` is deliberately outside `npm test`: it measures rather than
-asserts, and every difficulty claim in `games/pong/DESIGN.md` came out of it.
-Extend it rather than writing a second one — a figure from a differently shaped
-harness cannot be set against the ones already recorded.
+`tests/ai-sweep.js` and `tests/volley-sweep.js` are deliberately outside
+`npm test`: they measure rather than assert, and every difficulty and duration
+claim in `games/pong/DESIGN.md` came out of one of them. Extend them rather than
+writing a third — a figure from a differently shaped harness cannot be set
+against the ones already recorded.
 
 `npm install` first (once) for the tests; see `tests/README.md`. Serve rather than
 opening `file://`; relative paths work either way, but a server matches how it is
