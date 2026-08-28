@@ -165,9 +165,10 @@ at a time — a playtest cannot tell two feel changes apart.
 
 ### pong-vine-attack — Vines that wrap the opponent's paddle and slow it
 
-**Gate: playtest, its own.** How hard the slow bites, how long it lasts and how
-you earn it are all feel, and it is the first thing you own that reaches the other
-side of the board.
+**Gate: a decision from Gabriel first — vines or a laser, see below — then a
+playtest of its own.** How hard the slow bites, how long it lasts and how you earn
+it are all feel, and it is the first thing you own that reaches the other side of
+the board.
 
 Vines shoot out of the player's paddle, cross the board, wrap around the
 opponent's paddle and slow it for a few seconds. It is deliberately the mirror of
@@ -197,7 +198,26 @@ things that entry knew are still true.
   make the opponent misread shots for a reason the player cannot see — a bug from
   where you are sitting, not a mechanic.
 
-Four things are undecided, and the first is the real design question:
+**Vines, or a green laser?** Gabriel raised the laser after this entry was
+written and is unsure which fits the game better. It decides what the move looks
+like rather than what it does, and it is not settled — **get the answer from him
+before building either.**
+
+It is not a return to the gun. Whichever way it lands, this stays one earned move
+that crosses the board and slows the opponent, staged the way Squeeze is; the
+shooter's collectable, its stream of bullets and its second and third moving
+objects are gone either way. Two things bear on the choice, neither decisive:
+
+- **A slow has to be legible**, which is the argument the move is built on: the
+  paddle visibly cannot get there. Vines wrapping a paddle say "bound" with no
+  caption. A beam hitting one says "hit", which reads closer to damage than to
+  slow, so a laser has to carry the slow some other way.
+- **Something has to cross the board.** A move whose effect lands elsewhere is
+  drawn in three parts and the middle one is the travel. A vine has that
+  naturally; a laser arrives instantly unless the beam is drawn lingering, which
+  is a choice rather than something the fiction hands you.
+
+Four more things are undecided once that is, and the first is the real one:
 
 - **How you earn it.** The player's moves are never a random roll — the villain
   rolls, you earn. Clutch pays out for close calls; Expand is mercy in Assisted
