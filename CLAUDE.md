@@ -249,6 +249,11 @@ Four principles underneath that, each of which has already paid for itself here:
   every fix by reverting to the broken code, watching the new test fail, then
   restoring and watching it pass. What that catches is not a bad fix — it is a
   test that passes for the wrong reason.
+  **Commit before you do it.** "Restoring" means `git checkout -- <file>`, which
+  restores the file to `HEAD` — so on a branch with nothing committed yet, the
+  proof destroys the very work it was meant to verify. That has happened twice
+  here, both times costing a full replay of the change from scratch. Commit, then
+  break, then `git checkout` back.
 - **Characterise before you change.** Against code with no coverage, first write
   tests for what it does *now*. Every test failure while building Pong out was a
   wrong assumption of the author's rather than a regression, which is what these
