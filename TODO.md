@@ -49,6 +49,35 @@ here rather than batched.
 
 Entries with no gate need nothing from him and can run back to back.
 
+### pong-feel-pass — Tune what just shipped, now that it can be played
+
+**Gate: playtest, and it is the whole entry.** Nothing here is a bug; every item
+is a number that can only be judged by playing.
+
+The three-mode rework went live without a final playtest. Bugs found during the
+last round were fixed and merged straight away, so the state that shipped is not
+the state that was last played. Start by playing all three modes.
+
+Three specific things were flagged during that work and never decided:
+
+- **Insane sits at ~99% saves**, up from ~98% before Blink was bound to the ball.
+  Still beatable and still under the softlock line, but you take roughly half as
+  many points off it as you used to. If it now reads as unwinnable rather than
+  brutal, `chance` on Insane's `blink` is the knob — not the ai's reading error,
+  which is what actually makes it hard.
+- **Blink hops for the entire flight now.** That is what was asked for, and at
+  `hopTicks` 3 it is around thirty teleports in a Normal-speed crossing. It may
+  read as noise rather than menace. `hopTicks` makes it calmer; `lockPx` makes it
+  settle onto the intercept sooner.
+- **Assisted has not been played since Normal existed.** Its numbers were tuned
+  when it sat beside Easy, and it is the one mode with a spec that is not about
+  difficulty at all: it exists so a child who has not played Pong before has fun,
+  which means rallies rather than a scoreline. Worth confirming it still does.
+
+`node tests/ai-sweep.js` and `node tests/volley-sweep.js` are the two rulers, and
+`games/pong/DESIGN.md` records what every figure in them means. Change one thing
+at a time — a playtest cannot tell two feel changes apart.
+
 ### pong-shooter-powerup — A collectable that turns your paddle into a gun
 
 **Gate: playtest, its own.** Fire rate, bullet speed and how hard the debuff bites

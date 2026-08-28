@@ -401,6 +401,13 @@ worth measuring rather than assuming: it varies by more than a factor of two
 across the modes, because they play different balls. The test counts contacts for
 the same reason, so retuning a speed cannot quietly invalidate it.
 
+`node tests/volley-sweep.js` is the ruler: it reports a volley per mode and how
+many of your next contacts each effect covers. Measure the move's **phase** and
+not the paddle's size — size says only "this paddle is not its normal height",
+so the *other* size move firing later in the same rally counts as this one, and
+the first version of that tool reported a squeeze lasting twice as long as it
+does.
+
 #### Three wind-ups, one colour
 
 Red means *the opponent is doing something to you*, and all three of its moves
