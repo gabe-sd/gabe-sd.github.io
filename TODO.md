@@ -49,6 +49,89 @@ here rather than batched.
 
 Entries with no gate need nothing from him and can run back to back.
 
+### pong-keyboard-paddle-speed — The keyboard paddle is too slow
+
+**Gate: playtest, its own.** A speed is pure feel, and this one changes how the
+whole game plays rather than how one mode does.
+
+`PADDLE_SPEED` caps keyboard movement at a fixed number of pixels per tick and has
+never been tuned. It is slow enough that crossing the board is a commitment rather
+than a decision.
+
+- **Do not "fix" the pointer while you are in here.** Pointer control sets
+  `player.y` straight from the event handler, outside the tick, so it is not
+  rate-limited at all and a mouse crosses the board in one frame. That asymmetry
+  is deliberate: it was fixed once and reverted on play, and `games/pong/DESIGN.md`
+  has the argument under Controls. Raising the key speed narrows the gap, which is
+  the point. Closing it is the thing that was already tried.
+- Per **tick**, not per frame, like every other speed here.
+- It is not part of a preset's `game` half — `applyGame()` writes `BALL_SPEED`,
+  `BALL_SPEED_MAX` and the two paddle scales and nothing else — so one number
+  changes all three modes at once. A per-mode speed means a fifth field there and
+  a fifth line in that function.
+- **This is why it comes before `pong-normal-rebalance`.** A faster paddle makes
+  every mode easier, and `node tests/ai-sweep.js` cannot see it: the sweep asks
+  only whether the ai reached the ball, never whether you could have. Tuning
+  Normal against a paddle that is about to change would have to be done twice.
+
+### pong-pointer-beyond-board — The paddle stops when the mouse leaves the board
+
+**Gate: try it with a real mouse.** Less a feel change than a hole — the check is
+whether the paddle keeps up when the cursor goes past the edge of the canvas.
+
+`pointermove` is bound to the canvas, so the paddle only tracks a pointer that is
+over the board. Chasing a ball to the top and overshooting the canvas edge strands
+the paddle wherever it had got to.
+
+- Listening on `window` rather than the canvas covers everything inside the
+  browser window. `handlePointerMove` already converts client coordinates against
+  the canvas's own rect and clamps to the board, so it needs no new arithmetic.
+- **Outside the browser window is a different problem, and possibly not solvable
+  as asked.** The page receives no pointer events at all once the cursor leaves
+  it, so no listener reaches that case. Pointer lock does, and it takes the cursor
+  away and gives relative movement instead — which discards the 1:1 spatial
+  mapping that `games/pong/DESIGN.md` says is the entire reason a mouse is worth
+  using. Decide which "outside" this entry means before starting.
+- The takeover guard stays. Control only moves to the pointer after
+  `POINTER_TAKEOVER_PX` of movement, because the case it guards against is the
+  mouse being *brushed* mid-rally. A window-level listener sees far more movement
+  than a canvas-level one, so re-read that logic instead of assuming it survives
+  the move.
+- Pointer behaviour is the one thing here that must be verified with real XTEST
+  input rather than `page.mouse` — see the section in `CLAUDE.md` and what
+  believing synthetic input cost Minesweeper.
+
+### pong-normal-rebalance — Normal is a bit too hard
+
+**Gate: playtest, its own.** Gabriel called it, so he is the one who calls it
+fixed.
+
+Normal is the mode meant to be played and it currently asks too much. Judge it
+*after* `pong-keyboard-paddle-speed`: a faster paddle may be most of the answer,
+and if it is, there is nothing left to do here.
+
+The mode overrides very little, which is what makes it tunable.
+
+- Its `ai` half sets only `readErrorNearPx` and `reactionTicks`; everything else
+  comes from `AI_DEFAULTS`.
+- It has **no `game` half at all** — stock ball, stock paddles, no handicap on
+  either side. That is the mode's identity in `games/pong/DESIGN.md`, so slowing
+  its ball or growing its paddle is not a tuning move, it is a different mode.
+  Exhaust the other two halves first.
+- Its `ability` half tunes all five moves, three of which are the opponent's.
+
+DESIGN.md ranks the ai levers: how wrong the read still is when the ball arrives is
+by far the strongest and must never reach zero, then reaction delay, then bounce
+lookahead, then top speed, which is the weakest. Two recent things made this mode
+harder and are the cheapest to look at first — binding Blink to the ball moved it
+from 86.4% to 88.4% saves, and every move in the game now fires here.
+
+- `node tests/ai-sweep.js` is the ruler, and it only asks whether the ai reached
+  the ball. Overdrive and Squeeze make the ball harder for *you* and do not move
+  that number at all, so softening them will read as having done nothing. Say
+  which half you changed.
+- One change per playtest.
+
 ### pong-feel-pass — Tune what just shipped, now that it can be played
 
 **Gate: playtest, and it is the whole entry.** Nothing here is a bug; every item
@@ -56,7 +139,9 @@ is a number that can only be judged by playing.
 
 The three-mode rework went live without a final playtest. Bugs found during the
 last round were fixed and merged straight away, so the state that shipped is not
-the state that was last played. Start by playing all three modes.
+the state that was last played. Start by playing all three modes. Normal has since
+been played and called too hard; that verdict is `pong-normal-rebalance` and not
+this entry's business.
 
 Three specific things were flagged during that work and never decided:
 
@@ -78,45 +163,59 @@ Three specific things were flagged during that work and never decided:
 `games/pong/DESIGN.md` records what every figure in them means. Change one thing
 at a time — a playtest cannot tell two feel changes apart.
 
-### pong-shooter-powerup — A collectable that turns your paddle into a gun
+### pong-vine-attack — Vines that wrap the opponent's paddle and slow it
 
-**Gate: playtest, its own.** Fire rate, bullet speed and how hard the debuff bites
-are all pure feel, and this is the first mechanic in the game that is not the ball.
+**Gate: playtest, its own.** How hard the slow bites, how long it lasts and how
+you earn it are all feel, and it is the first thing you own that reaches the other
+side of the board.
 
-Design decided; this entry is the record of it:
+Vines shoot out of the player's paddle, cross the board, wrap around the
+opponent's paddle and slow it for a few seconds. It is deliberately the mirror of
+Squeeze — the opponent's lightning — and it is the move that evens the two sides
+up. You get Expand and Clutch, both of which act on your own paddle; the opponent
+gets Blink, Overdrive and Squeeze, and Squeeze is aimed at you.
 
-- **You collect it.** A second object is served into play mid-match, visibly not
-  the ball. Miss it and nothing happens. Hit it and a spectacle fires, and your
-  paddle starts shooting.
-- **The paddle auto-fires straight ahead** while it lasts. No aiming, no button:
-  you position, it shoots.
-- **A bullet that reaches the opponent's paddle slows it down** for a while. Not
-  shrinking — Squeeze already shrinks a paddle, and two moves doing the same thing
-  read as one move. Slow is a new axis and it is legible: the paddle visibly
-  cannot get there.
-- **Bullets pass straight through the ball.** They do not deflect it. The ai reads
-  the ball by simulating clean physics (`predictInterceptY`), so a bullet that
-  moved the ball would make the opponent misread shots for a reason the player
-  cannot see — a bug from where you are sitting, not a mechanic.
+**This replaces `pong-shooter-powerup`**, which answered the same asymmetry with a
+collectable that turned your paddle into a gun and bullets that slowed the
+opponent on contact. Same effect, more machinery: it needed a second moving object
+and then a third, where the vine reuses the staging Squeeze already has. Four
+things that entry knew are still true.
 
-Why it exists: the moves are asymmetric today. You get Expand and Clutch; the
-opponent gets Blink, Overdrive and Squeeze — and Squeeze is aimed at *your*
-paddle. This is the move that evens it up, which is why it is worth building
-before adding anything else to the opponent's side.
+- **Slow, not shrink.** Squeeze already shrinks a paddle, and two moves doing the
+  same thing read as one move. Slow is a new axis and it is legible: the paddle
+  visibly cannot get there.
+- **Slowing the ai means a live multiplier, never a write to `AI`.** `AI.speed`
+  and `panicSpeed` are rebuilt from `AI_DEFAULTS` on every mode change, so a
+  debuff written into them is either wiped or leaks into the next mode. Derive the
+  value from what is active — the same shape `syncPaddleSize()` uses for paddle
+  height, and for the same reason: two effects writing one field means whichever
+  ends last wins.
+- **It is a move like any other.** It belongs in `ABILITY` with a `modes` list and
+  an off value for every knob, and both "everything off" tests have to still pass.
+- **Nothing it fires may touch the ball.** The ai reads the ball by simulating
+  clean physics (`predictInterceptY()`), so anything that deflected the ball would
+  make the opponent misread shots for a reason the player cannot see — a bug from
+  where you are sitting, not a mechanic.
 
-- The collectable is a second moving object, which the game has never had. `draw()`
-  and `update()` both assume one ball. Decide early whether it goes in `update()`
-  beside the ball or in its own step.
-- Bullets are a third. They need a spawn cadence in **ticks**, like everything else
-  here, or they will fire at different rates on different monitors.
-- Slowing the ai means a live multiplier on `AI.speed`/`panicSpeed` rather than a
-  write to them — those are restored from `AI_DEFAULTS` on every mode change, so a
-  debuff written into them would either be wiped or would leak. It is the same
-  trap `syncPaddleSize()` exists to close on the player's side: two effects
-  writing one field means whichever ends last wins. Derive the value from what is
-  active rather than assigning it.
-- It is a move like any other: it belongs in `ABILITY` with a `modes` list and an
-  off value for every knob, and both "everything off" tests have to still pass.
+Four things are undecided, and the first is the real design question:
+
+- **How you earn it.** The player's moves are never a random roll — the villain
+  rolls, you earn. Clutch pays out for close calls; Expand is mercy in Assisted
+  and a return streak in Normal. A third player move needs a third condition that
+  is neither. A collectable served into play that you have to hit is one answer,
+  and is the part of the shooter entry worth keeping.
+- **What colour it is.** Red means the opponent is doing something to you and all
+  three of its moves are red, so a player attack cannot be red. Green is Expand's.
+- **How it is staged.** A move whose effect lands somewhere else is drawn in three
+  parts: the wind-up where it comes from, something crossing, and the effect where
+  it lands. That rule exists because Squeeze got it wrong and the victim looked
+  like the owner. `makeBolt()` and `strokePath()` already draw a jagged glowing
+  path between two points — vines want a different line, not different machinery.
+- **How long it lasts.** Durations aimed at the *player* are set in volleys
+  because the lead-in eats half of one before the ball is coming back. This lands
+  as the ball heads towards the opponent, so it bites on the very next contact:
+  the lead-in argument runs the other way and Squeeze's number must not be copied
+  across. `node tests/volley-sweep.js` is the ruler either way.
 
 ### pong-explain-the-modes — Say what the modes and the powerups actually do
 
