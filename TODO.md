@@ -101,14 +101,80 @@ the paddle wherever it had got to.
   input rather than `page.mouse` — see the section in `CLAUDE.md` and what
   believing synthetic input cost Minesweeper.
 
+### pong-rename-anime-pong — Rename the game to Anime Pong
+
+**Gate: none** — a copy change, not a feel change.
+
+Display name only, decided this way to keep the blast radius small: the folder
+`games/pong/`, the `pong.difficulty`/`pong.winScore` localStorage keys, and every
+`pong-` slug in this file and in branch history stay exactly as they are. Renaming
+any of those would break the naming convention above (the slug has to keep
+matching the folder and the history), invalidate saved preferences on upgrade for
+no benefit, and force a rename of every open and historical `pong-*` entry here —
+none of which the new name is actually about.
+
+What does change is what a player sees:
+
+- `games/pong/index.html` — the `<title>` and the `<h1>`.
+- root `index.html` — the hub card's `.game-name` text for this entry.
+- Anywhere else the word "Pong" appears as copy rather than as an id, path or
+  storage key — check the `?` panel and `#status` strings too.
+
+Leave `games/pong/DESIGN.md`'s own title and prose alone unless doing this makes
+it read strangely next to the new in-game name; it is an internal document about
+the code, not player-facing copy, so it is not part of the contract either way.
+
+`tests/docs-check.js` checks names, ids, paths and storage keys, not prose, so it
+will not catch a half-renamed page — reread the touched files the way
+`CLAUDE.md`'s "Reread the docs before merging" section describes.
+
+### pong-serve-from-paddle — Serve from your own paddle, aimed where you choose
+
+**Gate: playtest, its own.** It changes the opening of every single point and
+what the ai's first read of the ball looks like, so it cannot share a session
+with any other feel change.
+
+Today `serve()` hands the ball to `newBall(serveTo)`
+(`games/pong/script.js`), which spawns it at board centre on a random angle the
+player has no say in — Space or a click on the board only triggers that roll.
+Instead: while `phase === "serve"` and the server is the player, the ball sits on
+(or at) the serving paddle, and a click chooses where it leaves from — the
+vertical position, or some aim gesture — rather than the random ± `newBall`
+currently rolls.
+
+- **Decide what happens when the ai serves.** "The serve goes to whoever
+  conceded the point," so the ai serves half the time. It has no click to aim
+  with, so the simplest answer is: the player-side behaviour above is new, the
+  ai-side serve keeps calling `newBall(serveTo)` exactly as it does today. Say so
+  explicitly if a different answer is chosen, since DESIGN.md's "The round"
+  section will need updating either way.
+- **The click is already doing two other jobs.** "Space or a click on the board
+  serves," and separately "a click on the board resumes" a pause. Aiming now
+  wants the click's *position*, not just its occurrence, on top of both of those
+  — work out how a click mid-pause, a click that serves, and a click that aims
+  stay distinguishable, rather than assuming they compose for free.
+- **The "place the ball by hand" invariant gets a new wrinkle.** DESIGN.md
+  already warns that a test placing the ball has to set `phase` too, because
+  `update()` returns before touching the ball outside `play`. This adds a new
+  thing to be true during `serve` — the ball pinned to the paddle — that such a
+  test now also has to account for.
+- **This belongs before `pong-normal-rebalance`, for the same reason
+  `pong-keyboard-paddle-speed` already does.** Handing the player the opening
+  angle is a real advantage; tuning Normal's difficulty against an opening shot
+  that is about to change would have to be redone once this lands.
+- Update `games/pong/DESIGN.md`'s "The round" section in the same commit, per
+  `CLAUDE.md`'s rule that a doc describing how a game plays has to change with it
+  — including whatever about this was tried and rejected along the way.
+
 ### pong-normal-rebalance — Normal is a bit too hard
 
 **Gate: playtest, its own.** Gabriel called it, so he is the one who calls it
 fixed.
 
 Normal is the mode meant to be played and it currently asks too much. Judge it
-*after* `pong-keyboard-paddle-speed`: a faster paddle may be most of the answer,
-and if it is, there is nothing left to do here.
+*after* `pong-keyboard-paddle-speed` **and** `pong-serve-from-paddle`: a faster
+paddle and a self-aimed serve may between them be most of the answer, and if they
+are, there is nothing left to do here.
 
 The mode overrides very little, which is what makes it tunable.
 
@@ -131,6 +197,88 @@ from 86.4% to 88.4% saves, and every move in the game now fires here.
   that number at all, so softening them will read as having done nothing. Say
   which half you changed.
 - One change per playtest.
+- `pong-longer-volleys` below tunes these same ai levers for a different reason
+  — rally length rather than difficulty. Land this entry first: loosening the
+  ai's read to extend rallies on top of a "too hard" complaint that is still open
+  conflates the two questions, and a playtest afterwards could not say which one
+  it was reacting to.
+
+### pong-longer-volleys — Rounds should last longer, more volleying
+
+**Gate: a decision from Gabriel on the mechanism before writing any code, then
+playtest, its own.** Longer rallies is a feel change like any other here, and
+which knob produces it is not yet settled.
+
+Volleying is the fun part, and rounds should have more of it. The default path is
+the ai's existing difficulty levers — `AI_DEFAULTS` — rather than anything about
+the ball:
+
+- DESIGN.md already ranks them by how much they move the ai's behaviour: read
+  error when the ball arrives first (never push it to zero — that is the softlock
+  line), then reaction delay, then bounce lookahead, then top speed, the weakest
+  of the four. Extending a rally without making the ai simply *worse* at closing
+  points out favours nudging read-error/reaction rather than raw speed, the same
+  ranking `pong-normal-rebalance` already uses.
+- `node tests/volley-sweep.js` is the existing ruler for exactly this — it
+  reports a volley (contacts per point) per mode already, for budgeting ability
+  durations. Re-run it before and after as the measurement; no new tool is
+  needed.
+
+**Do not build against that default without checking first.** Ball-speed
+mechanics — a slower `BALL_SPEEDUP` per hit, or a lower `BALL_SPEED_MAX` — could
+produce the same effect through a completely different mechanism (a rally that
+takes longer to speed out of reach, rather than an opponent that takes longer to
+beat), and that fork was raised and left open rather than decided. **Ask Gabriel
+which mechanism he wants before implementing either one** — the same shape as
+the vines-or-laser decision gating `pong-vine-attack` below.
+
+- Whichever is chosen, it must not be done by tuning the same levers
+  `pong-normal-rebalance` just set for a different reason. Land that entry first,
+  and say explicitly which half (difficulty vs. rally length) a given change is
+  answering, same as that entry already asks.
+- One change per playtest, per the house rule — this cannot share a session with
+  `pong-normal-rebalance` or `pong-insane-ball-speed` below; all three touch
+  ai/ball tuning and a single playtest cannot tell them apart.
+
+### pong-insane-ball-speed — Insane's ball may be too fast to hit at all
+
+**Gate: characterise first, then a decision from Gabriel if it turns out to be a
+feel question rather than a bug, then playtest.**
+
+The worry is that on Insane the ball moves fast enough that the player's own
+paddle cannot realistically get to it — a question about whether *you* can hit
+it, not whether the ai can, which `node tests/ai-sweep.js` was never built to
+answer (it only asks whether the ai reached the ball; DESIGN.md's "What actually
+changes difficulty" section already flags this blind spot for the opponent's
+moves, and it applies just as much here).
+
+**Characterise before changing anything** — there are two different causes here
+and they take different fixes:
+
+- **The ball is simply fast, on purpose.** DESIGN.md is explicit that "Insane is
+  a great deal harder to play than the figure suggests, and always has been," and
+  that brutality is the mode's character, not a bug. If this is the whole story,
+  lowering `BALL_SPEED_MAX` for Insane is a difficulty decision indistinguishable
+  from softening the mode, and needs the same sign-off `pong-normal-rebalance`
+  needs for Normal — it is not something to decide unilaterally.
+- **The ball is tunnelling** — travelling far enough per tick at the raised cap
+  that it can cross a paddle's whole collision plane between one tick and the
+  next. DESIGN.md's "The ball" section already designed around exactly this
+  shape of bug: `crossingY()` interpolates the crossing rather than trusting the
+  end-of-tick position, specifically because at the *current* speed cap the two
+  are "at most a few pixels" apart. A cap raised enough could widen that gap past
+  the paddle's own width, which would make `crossingY()`'s existing interpolation
+  insufficient rather than wrong.
+- Work out which one this is — e.g. measure ball travel-per-tick against
+  `PADDLE_WIDTH` and the paddle's height band at Insane's cap — before picking a
+  fix. If it is tunnelling, continuous collision detection (sweeping the ball's
+  path against the paddle's swept rect between ticks, rather than point-sampling
+  at tick boundaries) extends `crossingY()`'s own approach rather than replacing
+  it. If it is not, this is a feel entry and belongs in the same conversation as
+  `pong-normal-rebalance`, not a correctness fix.
+- Do not batch this playtest with `pong-normal-rebalance` or
+  `pong-longer-volleys` — different mode, different question, but still a feel
+  change if the cause turns out to be the speed cap rather than tunnelling.
 
 ### pong-feel-pass — Tune what just shipped, now that it can be played
 
@@ -162,6 +310,83 @@ Three specific things were flagged during that work and never decided:
 `node tests/ai-sweep.js` and `node tests/volley-sweep.js` are the two rulers, and
 `games/pong/DESIGN.md` records what every figure in them means. Change one thing
 at a time — a playtest cannot tell two feel changes apart.
+
+### pong-charge-hitbox-tell — Color the paddle tips to show the Clutch hitbox
+
+**Gate: Gabriel looks at the colours before they ship.** Not a full playtest —
+this does not change how the game plays, only what it shows — but it is a new
+colour on the player's own paddle, which is worth a look before it lands.
+
+`ABILITY.clutch` already defines a band at each end of the player's paddle that
+counts as a close call toward filling the meter (`games/pong/script.js`, near the
+`clutch` config), and today it is completely invisible — the player has no way to
+know it exists, let alone aim for it. Tint the top and bottom band of the
+player's paddle to mark it.
+
+- **It must track the band's actual definition, not the paddle's drawn size.**
+  The comment on that constant is explicit about why: the band is a fraction of
+  the paddle's *base* size, not its current height, specifically so an active
+  Expand or Squeeze does not silently change where a close call registers. A tip
+  drawn as a fraction of the live `h` would disagree with where `onPlayerReturn()`
+  actually counts a close call whenever Expand or Squeeze is active — which is
+  the exact failure this entry exists to avoid. A hitbox indicator that lies is
+  worse than no indicator.
+- Read the same base-size fraction the close-call check itself uses; do not
+  recompute an independent one. `syncPaddleSize()` is still the only thing that
+  writes a paddle's live height, and this entry should not need to touch it.
+- Pick a colour that is not already claimed: green is Expand's and red is
+  reserved for "the opponent is doing something to you" per DESIGN.md's "Three
+  wind-ups, one colour." The tip tint needs its own colour, or it will misread as
+  one of those two.
+- A test should read canvas pixels at the band's edge, the way the existing
+  Clutch-meter tests already do, rather than asserting on state — per
+  `CLAUDE.md`, a meter nobody can see is precisely the failure this is fixing,
+  and the same goes for a hitbox.
+- Closely related to `pong-explain-the-modes` below, which is the *text* answer
+  to the same hidden mechanic. Doing this one first may settle that entry's open
+  question of whether the strategy needs spelling out in words at all.
+
+### pong-explain-the-modes — Say what the modes and the powerups actually do
+
+**Gate: read the wording.** Text in a panel rather than a feel change, so it does
+not need its own playtest — but nobody except Gabriel can say whether it reads to
+a beginner, which is the only audience that matters here.
+
+The `?` panel lists the controls and the win score and nothing else. It has never
+mentioned the difficulty modes, and it is silently missing the half of the game
+that is hardest to work out by looking at it: a three-pip meter fills, a paddle
+turns green and grows, the opponent teleports, throws lightning that leaves your
+paddle shrunken and crackling, and fires a shot well above the speed the ball
+otherwise reaches. None of it is named anywhere in the game.
+
+Every mode has powerups now, so this is no longer a note about two odd modes — it
+is missing from all three. It matters most on Assisted, which exists so a child
+who has not played Pong before has fun, and a child is exactly who will not work
+out unaided that hitting the ball with the very end of their own paddle, three
+times, is what fills the meter.
+
+The same paddle growth also means two different things depending on the mode:
+help in Assisted, a reward for a long rally in Normal. If the panel says only "your
+paddle gets bigger" it will be wrong in one of them.
+
+- The panel is per-mode content in a game that can change mode from the menu at
+  any time. Decide whether it lists all three at once or only the current one —
+  the second reads better and means the text has to be rebuilt in
+  `applyDifficulty()`, alongside the paddle and ability reset it already does.
+- Naming what fills the clutch meter tells the player to aim with the edge of
+  their own paddle, which is a real strategy the game currently hides. Worth
+  deciding whether revealing it is the intent — `pong-charge-hitbox-tell` above
+  reveals the same thing visually and landing it first may answer this question
+  on its own.
+- `#win-score` in that panel is already rewritten when the win score changes;
+  whatever keeps mode text in step should follow the same path.
+- Do not quote the numbers. A panel that says "three close calls" goes stale the
+  first time `segments` is tuned, in exactly the way `games/pong/DESIGN.md` warns
+  a doc does — and here the player sees the wrong version, not just the next
+  developer.
+- The same panel already lies to a touch device, listing keys a phone does not
+  have — see "On a phone" in `games/pong/DESIGN.md`. Mobile is deferred, but it is
+  the same panel and worth reading before rewriting it.
 
 ### pong-vine-attack — Vines that wrap the opponent's paddle and slow it
 
@@ -236,46 +461,6 @@ Four more things are undecided once that is, and the first is the real one:
   as the ball heads towards the opponent, so it bites on the very next contact:
   the lead-in argument runs the other way and Squeeze's number must not be copied
   across. `node tests/volley-sweep.js` is the ruler either way.
-
-### pong-explain-the-modes — Say what the modes and the powerups actually do
-
-**Gate: read the wording.** Text in a panel rather than a feel change, so it does
-not need its own playtest — but nobody except Gabriel can say whether it reads to
-a beginner, which is the only audience that matters here.
-
-The `?` panel lists the controls and the win score and nothing else. It has never
-mentioned the difficulty modes, and it is silently missing the half of the game
-that is hardest to work out by looking at it: a three-pip meter fills, a paddle
-turns green and grows, the opponent teleports, throws lightning that leaves your
-paddle shrunken and crackling, and fires a shot well above the speed the ball
-otherwise reaches. None of it is named anywhere in the game.
-
-Every mode has powerups now, so this is no longer a note about two odd modes — it
-is missing from all three. It matters most on Assisted, which exists so a child
-who has not played Pong before has fun, and a child is exactly who will not work
-out unaided that hitting the ball with the very end of their own paddle, three
-times, is what fills the meter.
-
-The same paddle growth also means two different things depending on the mode:
-help in Assisted, a reward for a long rally in Normal. If the panel says only "your
-paddle gets bigger" it will be wrong in one of them.
-
-- The panel is per-mode content in a game that can change mode from the menu at
-  any time. Decide whether it lists all three at once or only the current one —
-  the second reads better and means the text has to be rebuilt in
-  `applyDifficulty()`, alongside the paddle and ability reset it already does.
-- Naming what fills the clutch meter tells the player to aim with the edge of
-  their own paddle, which is a real strategy the game currently hides. Worth
-  deciding whether revealing it is the intent.
-- `#win-score` in that panel is already rewritten when the win score changes;
-  whatever keeps mode text in step should follow the same path.
-- Do not quote the numbers. A panel that says "three close calls" goes stale the
-  first time `segments` is tuned, in exactly the way `games/pong/DESIGN.md` warns
-  a doc does — and here the player sees the wrong version, not just the next
-  developer.
-- The same panel already lies to a touch device, listing keys a phone does not
-  have — see "On a phone" in `games/pong/DESIGN.md`. Mobile is deferred, but it is
-  the same panel and worth reading before rewriting it.
 
 ### pong-high-dpi-canvas — Blurry on high-DPI displays
 
