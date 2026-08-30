@@ -109,6 +109,14 @@ from anywhere and where you were standing stops mattering, which is the whole of
 the positional game. Narrowing the gap to the mouse is the point of the cap being
 where it is; closing it is the thing that was already tried, below.
 
+**One number covers all three modes.** `PADDLE_SPEED` is not part of a preset's
+`game` half — that writes the ball speeds and the two paddle scales and nothing
+else — so tuning it moves Easy, Normal and Insane together, and making it
+per-mode means a new field there and a new line in `applyGame()`. Note also that
+`node tests/ai-sweep.js` cannot see a change to it at all: the sweep asks whether
+the ai reached the ball, never whether you could have. A mode retuned against a
+sweep taken before the key speed moved is being tuned against the wrong game.
+
 **This asymmetry is deliberate and was fixed once before being reverted.** Having
 the paddle travel towards the pointer at a capped speed killed the exploit
 outright, and was worse to play at every speed tried: the paddle chases the cursor
