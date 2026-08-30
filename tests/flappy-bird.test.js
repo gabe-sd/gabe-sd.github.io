@@ -357,15 +357,29 @@ const { check, report } = makeChecks();
   });
   await page2.goto(PAGE);
   await page2.waitForSelector("#board");
-  check("page still loads", (await page2.evaluate(() => phase)) === "ready");
-  check("best degrades to a dash",
+  // First, because an unguarded read throws while the script is still loading and
+  // every check after it would then be reading a half-run page.
+  check("nothing thrown on load", errors2.length === 0, errors2.join("; "));
+  check("page still loads",
+    (await page2.evaluate(() => (typeof phase === "string" ? phase : null))) === "ready");
+  // The dash in the HUD is in the HTML to begin with, so seeing one proves
+  // nothing on its own - this is the part only a guarded read can produce.
+  check("the guarded read reports no record rather than throwing",
+    await page2.evaluate(() => {
+      try { return loadBestScore() === null; } catch { return false; }
+    }));
+  check("best shows a dash",
     (await page2.textContent("#best-score")).includes("—"),
     await page2.textContent("#best-score"));
   const over = await page2.evaluate(() => {
-    phase = "play";
-    score = 5;
-    endRun("pipe");
-    return { phase, status: document.getElementById("status").textContent };
+    try {
+      phase = "play";
+      score = 5;
+      endRun("pipe");
+      return { phase, status: document.getElementById("status").textContent };
+    } catch (e) {
+      return { phase: `threw: ${e.message}`, status: "" };
+    }
   });
   check("still playable to the end", over.phase === "over", over.phase);
   check("does not falsely claim a record", !/best/i.test(over.status), over.status);
