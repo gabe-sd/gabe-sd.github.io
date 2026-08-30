@@ -75,7 +75,9 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
   bird where the ground kills it, scoring a pipe exactly once, the pipe stream
   staying evenly spaced and reachable, the lockout that stops the flap already
   in flight from restarting a dead run, and the stored best score including the
-  path where `localStorage` throws. It also asserts that the same span of real
+  path where `localStorage` throws. Case 17 is the one to keep: a clicked button
+  holds the focus and a focused button eats the Space bar, which shipped as a
+  game that stopped responding to Space the moment you opened How to play. It also asserts that the same span of real
   time produces the same flight whether it arrives as one long frame or ten
   short ones, which is the whole reason the loop is a fixed timestep. Like
   `pong.test.js` it cancels the animation frame and steps `update()` by hand.
