@@ -113,6 +113,17 @@ const { check, report } = makeChecks();
     const s = await read();
     check("three flaps lift no harder than one", s.bird.vy === C.FLAP_VELOCITY, s.bird.vy);
   }
+  // A held key repeats at the OS rate, which is a flap per repeat unless the
+  // handler ignores them - see the messy-input rules in CLAUDE.md.
+  await set({ bird: { y: C.BIRD_START_Y, vy: 3 } });
+  const press = (repeat) => page.evaluate((r) => document.dispatchEvent(
+    new KeyboardEvent("keydown", { key: " ", repeat: r, bubbles: true })), repeat);
+  await press(true);
+  check("a held key does not autofire", (await read()).bird.vy === 3,
+    (await read()).bird.vy);
+  await press(false);
+  check("the press itself still flaps", (await read()).bird.vy === C.FLAP_VELOCITY,
+    (await read()).bird.vy);
 
   console.log("5. gravity pulls it back down, up to a terminal speed");
   await freezePlaying();

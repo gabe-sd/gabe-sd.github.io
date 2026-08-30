@@ -297,6 +297,9 @@ function toggleInstructions() {
 const FLAP_KEYS = [" ", "ArrowUp", "w", "W"];
 
 function handleKeyDown(e) {
+  // A held key repeats at the OS rate, and a flap per repeat is an autofire that
+  // pins the bird to the ceiling. One press is one hop.
+  if (e.repeat) return;
   if (!FLAP_KEYS.includes(e.key)) return;
   // A focused button takes Space and Enter as its own activation; flapping as
   // well would mean opening the help panel also launched the bird.
