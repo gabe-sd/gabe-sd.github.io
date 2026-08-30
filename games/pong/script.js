@@ -18,7 +18,10 @@ const PADDLE_WIDTH = 10;
 // because the abilities below stretch and shrink them independently - this is the
 // base, not the current size, and anything reading a live paddle wants `.h`.
 const PADDLE_HEIGHT = 80;
-const PADDLE_SPEED = 6;
+// Keyboard movement, px per tick. Deliberately below the steepest descent a
+// ball can have in Normal (`BALL_SPEED_MAX` at `MAX_BOUNCE_ANGLE`), so a fast
+// steep shot still beats the keys across the board - see DESIGN.md.
+const PADDLE_SPEED = 8;
 // Everything the ai does, in one place. The point of the numbers is that its
 // mistakes emerge from reading the ball badly rather than from deciding up front
 // how much to miss by — it must not solve the whole trajectory the moment the

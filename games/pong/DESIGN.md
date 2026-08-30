@@ -98,8 +98,16 @@ real focus change. That is a harness limit rather than a choice, and
 Keyboard movement is capped at `PADDLE_SPEED` per tick. Pointer control sets
 `player.y` directly from the event handler, which runs outside the tick, so **it is
 not rate-limited at all** — a mouse crosses the board in one frame where the
-keyboard needs fifty-odd ticks, and repositioning the pointer while the game is
-paused is a free move.
+keyboard needs the better part of a second, and repositioning the pointer while the
+game is paused is a free move.
+
+**What bounds the key speed is the ball, not the mouse.** The cap sits just under
+the steepest vertical descent a ball can have in Normal — `BALL_SPEED_MAX` struck
+at `MAX_BOUNCE_ANGLE` — so a fast shot into a corner still outruns the keys and has
+to be read early rather than chased down. Past that line every ball is reachable
+from anywhere and where you were standing stops mattering, which is the whole of
+the positional game. Narrowing the gap to the mouse is the point of the cap being
+where it is; closing it is the thing that was already tried, below.
 
 **This asymmetry is deliberate and was fixed once before being reverted.** Having
 the paddle travel towards the pointer at a capped speed killed the exploit

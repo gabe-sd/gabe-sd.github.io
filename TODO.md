@@ -49,31 +49,6 @@ here rather than batched.
 
 Entries with no gate need nothing from him and can run back to back.
 
-### pong-keyboard-paddle-speed — The keyboard paddle is too slow
-
-**Gate: playtest, its own.** A speed is pure feel, and this one changes how the
-whole game plays rather than how one mode does.
-
-`PADDLE_SPEED` caps keyboard movement at a fixed number of pixels per tick and has
-never been tuned. It is slow enough that crossing the board is a commitment rather
-than a decision.
-
-- **Do not "fix" the pointer while you are in here.** Pointer control sets
-  `player.y` straight from the event handler, outside the tick, so it is not
-  rate-limited at all and a mouse crosses the board in one frame. That asymmetry
-  is deliberate: it was fixed once and reverted on play, and `games/pong/DESIGN.md`
-  has the argument under Controls. Raising the key speed narrows the gap, which is
-  the point. Closing it is the thing that was already tried.
-- Per **tick**, not per frame, like every other speed here.
-- It is not part of a preset's `game` half — `applyGame()` writes `BALL_SPEED`,
-  `BALL_SPEED_MAX` and the two paddle scales and nothing else — so one number
-  changes all three modes at once. A per-mode speed means a fifth field there and
-  a fifth line in that function.
-- **This is why it comes before `pong-normal-rebalance`.** A faster paddle makes
-  every mode easier, and `node tests/ai-sweep.js` cannot see it: the sweep asks
-  only whether the ai reached the ball, never whether you could have. Tuning
-  Normal against a paddle that is about to change would have to be done twice.
-
 ### pong-pointer-beyond-board — The paddle stops when the mouse leaves the board
 
 **Gate: try it with a real mouse.** Less a feel change than a hole — the check is
