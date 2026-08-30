@@ -97,7 +97,10 @@ with state worth protecting.
 Every game lives in `games/<name>/` as three files (`index.html`, `style.css`,
 `script.js`), plus a `DESIGN.md` once it has earned one, and is otherwise
 self-contained. Adding a game means creating that
-folder and a card in the root `index.html` — nothing else changes.
+folder and a card in the root `index.html`: the site has no registry, no
+manifest and no build to update. What does need updating is all outside the
+site — the page contract below, the game's ids and any storage key it invents,
+a suite in `tests/`, and that suite's place in `npm test`.
 
 Each game page follows a contract that `shared.css` depends on:
 
