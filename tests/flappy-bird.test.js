@@ -323,7 +323,7 @@ const { check, report } = makeChecks();
     check("record kept", s.best === 7, s.best);
   }
 
-  console.log("17. the help panel, and Space on a button does not fly the bird");
+  console.log("17. the help panel, and who owns the Space bar afterwards");
   await page.click("#help-toggle");
   await page.waitForTimeout(120);
   check("panel visible", await page.isVisible("#instructions"));
@@ -341,10 +341,42 @@ const { check, report } = makeChecks();
     check("panel toggled instead", !(await page.isVisible("#instructions")));
   }
 
-  console.log("18. clicking the board flaps");
-  // Stubbed so the click cannot start a live loop and race the read: what is
-  // under test is that the pointer reaches flap(), not how fast a frame lands.
+  // The reported bug, replayed: a round flown with Space, then How to play
+  // clicked with the mouse, and from then on Space belonged to the button - the
+  // panel opening and closing instead of the bird flapping, even after clicking
+  // the board. Stubbed loop so no live frame races the reads; what is under test
+  // is which element the key reaches, not how fast a frame lands.
   await page.evaluate(() => { start = () => {}; });
+  await page.click("#restart");
+  await page.keyboard.press("Space");
+  check("Space flies the bird to begin with", (await read()).phase === "play",
+    (await read()).phase);
+  await page.click("#help-toggle");
+  await page.click("#restart");
+  await page.keyboard.press("Space");
+  {
+    const s = await read();
+    check("Space still flaps after clicking How to play", s.phase === "play", s.phase);
+    check("and the panel it opened stayed open",
+      await page.isVisible("#instructions"));
+  }
+
+  // The other half of the report: whatever had the focus, clicking the board
+  // hands the keyboard back to the game.
+  await page.click("#help-toggle");
+  await page.click("#restart");
+  await page.focus("#help-toggle");
+  await page.click("#board", { position: { x: 200, y: 300 } });
+  await page.keyboard.press("Space");
+  {
+    const s = await read();
+    check("clicking the board takes the keyboard back", s.phase === "play", s.phase);
+    check("so Space did not reach the button",
+      (await page.getAttribute("#help-toggle", "aria-expanded")) === "false",
+      await page.getAttribute("#help-toggle", "aria-expanded"));
+  }
+
+  console.log("18. clicking the board flaps");
   await page.click("#restart");
   await page.click("#board", { position: { x: 200, y: 300 } });
   {

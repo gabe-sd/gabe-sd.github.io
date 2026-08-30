@@ -314,13 +314,28 @@ function handleKeyDown(e) {
 // time at all.
 document.addEventListener("visibilitychange", () => { lastFrame = null; });
 
+// A clicked button keeps the focus, and a focused button takes the Space bar as
+// its own activation - so after clicking How to play, every Space toggled the
+// panel instead of flapping. Hand the focus back on a *pointer* click only: a
+// keyboard activation (detail 0) has to keep it, or tabbing through the controls
+// would drop the focus on the first press.
+function releaseFocus(e) {
+  if (e.detail > 0) e.currentTarget.blur();
+}
+
 // pointerdown rather than click: it covers mouse and touch in one handler and
 // fires at the press, so a flap lands when the finger goes down.
 canvas.addEventListener("pointerdown", (e) => {
+  // preventDefault suppresses the mousedown that would normally move the focus,
+  // so do that part by hand. Clicking the board is a player saying the game has
+  // the keyboard now, and it has to work whatever they clicked last.
   e.preventDefault();
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
   flap();
 });
 document.addEventListener("keydown", handleKeyDown);
 restartBtn.addEventListener("click", restart);
+restartBtn.addEventListener("click", releaseFocus);
 helpToggle.addEventListener("click", toggleInstructions);
+helpToggle.addEventListener("click", releaseFocus);
 restart();
