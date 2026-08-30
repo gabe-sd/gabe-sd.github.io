@@ -120,10 +120,20 @@ Each game page follows a contract that `shared.css` depends on:
   `.hint`, `.btn` (with `.secondary` and `.icon`), `.controls`, `.back-link`
   for them.
 - Treats `#status` as game state only — what just happened, or what to do next.
-  Standing instructions belong in a collapsible panel (both Minesweeper and Pong
-  use `#instructions`), not the status line. `shared.css` gives `.status` a reserved
-  min-height so its text can change without shifting the board.
+  Standing instructions belong in a collapsible panel (Minesweeper, Pong and
+  Flappy Bird all use `#instructions`), not the status line. `shared.css` gives
+  `.status` a reserved min-height so its text can change without shifting the
+  board.
 - Links back to `../../index.html`.
+- **Hands the focus back after a pointer click on its own buttons**, in any game
+  whose keys drive play. A clicked button keeps the focus, and a focused button
+  takes Space and Enter as its own activation — so the key that plays the game
+  quietly becomes the key that works the button. In Flappy Bird, Space stopped
+  flapping the moment How to play was clicked. Clicking the board did not recover
+  it either: `preventDefault()` on `pointerdown` suppresses the mousedown the
+  browser uses to move the focus, so the game has to blur by hand. `releaseFocus`
+  does it on a pointer click only; a keyboard activation (`detail === 0`) has to
+  keep the focus, or tabbing through the controls loses it on the first press.
 
 `shared.css` owns the theme as CSS custom properties (`--bg`, `--fg`, `--cell-bg`,
 `--cell-border`, `--accent`, `--win`, `--lose`, `--muted`) which flip under
