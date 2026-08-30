@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flappy Bird · Game Arcade</title>
+<link rel="stylesheet" href="../../shared.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+    <a class="back-link" href="../../index.html">← All games</a>
+    <h1>Flappy Bird</h1>
+    <!-- Both scores live in the DOM rather than being painted on the canvas, so
+         a screen reader can read them without a hidden live region shadowing
+         them. aria-live because the score changes while nothing is focused. -->
+    <div class="hud">
+      <span id="score" aria-live="polite" title="Pipes cleared">🐦 0</span>
+      <span id="best-score" title="Your best on this device">🏆 —</span>
+    </div>
+    <p id="status" class="status">Click, tap or press Space to flap</p>
+    <canvas id="board" width="400" height="560" aria-label="Flappy Bird game board"></canvas>
+    <div class="controls">
+      <button id="restart" class="btn">Restart</button>
+      <button id="help-toggle" class="btn secondary"
+              aria-expanded="false" aria-controls="instructions">How to play</button>
+    </div>
+    <div id="instructions" class="instructions" hidden>
+      <ul>
+        <li><b>Space</b>, <b>↑</b> or <b>W</b> — flap</li>
+        <li><b>Click</b> or <b>tap the board</b> — flap</li>
+      </ul>
+      <p>
+        Every flap is a fixed hop upwards; gravity does the rest. One point per
+        pipe cleared. Touching a pipe or the ground ends the run — the ceiling
+        only stops you.
+      </p>
+    </div>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>

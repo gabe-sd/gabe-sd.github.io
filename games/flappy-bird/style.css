@@ -1,0 +1,43 @@
+.hud {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+#board {
+  background: var(--cell-bg);
+  border: 2px solid var(--cell-border);
+  border-radius: 8px;
+  /* The canvas is a fixed pixel size; this keeps it inside a narrow window
+     without the script needing to know anything about layout. */
+  max-width: 100%;
+  height: auto;
+  /* A tap on the board flaps, so the browser must not also treat it as a
+     double-tap zoom or a scroll gesture. */
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.instructions {
+  max-width: 340px;
+  padding: 0.85rem 1rem;
+  background: var(--card-bg);
+  border: 2px solid var(--cell-border);
+  border-radius: 10px;
+  font-size: 0.85rem;
+}
+
+.instructions ul {
+  margin: 0 0 0.6rem;
+  padding-left: 1.1rem;
+}
+
+.instructions li {
+  margin-bottom: 0.2rem;
+}
+
+.instructions p {
+  margin: 0;
+  color: var(--muted);
+}

@@ -69,6 +69,17 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
   the wrong behaviour, so that fixing it turns a check red and the before/after
   evidence arrives without anyone having to remember to look for it. Rewrite such
   an assertion as part of the fix rather than deleting it.
+- **flappy-bird.test.js** — the flight model and everything hanging off it:
+  that nothing moves before the first flap, that a flap sets the climb rather
+  than adding to it, gravity and its terminal speed, the ceiling holding the
+  bird where the ground kills it, scoring a pipe exactly once, the pipe stream
+  staying evenly spaced and reachable, the lockout that stops the flap already
+  in flight from restarting a dead run, and the stored best score including the
+  path where `localStorage` throws. It also asserts that the same span of real
+  time produces the same flight whether it arrives as one long frame or ten
+  short ones, which is the whole reason the loop is a fixed timestep. Like
+  `pong.test.js` it cancels the animation frame and steps `update()` by hand.
+
 - **docs-check.js** — the odd one out. No browser, no `npm install`, and it
   asserts about prose rather than about a game: that every file path and
   function name the docs mention still resolves, and that every element id and
