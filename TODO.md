@@ -44,6 +44,12 @@ See the Human Benchmark version for the shape of it.
 
 ## Site-wide
 
+### site-readme-for-humans — The README is written for agents, not visitors
+
+It is the front page of a public repo, but it reads like the internal docs beside
+it. Review with Gabriel before rewriting — what a visitor should get from it is
+his call.
+
 ### site-favicon — The site has no favicon
 
 Every page 404s `/favicon.ico`, because browsers ask for it whether or not you
