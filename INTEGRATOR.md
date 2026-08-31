@@ -192,3 +192,24 @@ was fixed the day it was reported. "The pong test looks weak" would not have bee
 
 Then hand it over rather than acting on it, and say plainly which area it belongs
 to.
+
+## This file is one day old
+
+The worker/integrator split, and everything above, came out of a single day of
+running it — most of that with one worker and one integrator, and no two agents
+ever colliding on the same file. It is a first draft that has been used once, not
+a settled process. Expect it to be modified and optimised as real use finds the
+parts that are wrong.
+
+`CLAUDE.md` says the same of its own section, and asks for something specific in
+return: where a rule here costs more than it saves, misses a case, or turns out to
+be unnecessary, **propose a better version of it rather than working around it**,
+and say what happened that prompted the change. A workaround that stays in one
+agent's head is the thing this cannot survive — and that is not hypothetical, it
+is how the rule about who merges to `main` came to be missing from these files for
+as long as it was.
+
+Two known gaps to start from: nothing here has been tested against two agents
+genuinely wanting the same file at the same time, and every integrator so far has
+also been an author of these rules, which is the least demanding reader they will
+ever have.
