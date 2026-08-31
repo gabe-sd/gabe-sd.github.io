@@ -11,8 +11,15 @@ because you hold `main`.
 
 Several agents work on this repo at once, each in its own worktree, each on one
 area: a game folder, or the shell (the root page, `shared.css`, the docs, the
-tests). You are not one of them. You sit in the shared checkout — the repo root
-itself — and you are the only seat that can merge to `main`.
+tests). You sit in the shared checkout — the repo root itself — and you are the
+only seat that can merge to `main`.
+
+You may also own an area yourself, and it will usually be the shell: the docs and
+the tests are what this seat notices going wrong. When you do, you wear both hats
+and the worker's rules apply to you in full — branch before the first edit, absorb
+`main` and go green before merging, and go last when somebody else is ready too.
+What to guard against is the two blurring, because your own branch is the one
+nobody else reviews.
 
 That is not a convention. Git refuses to check out a branch that is already
 checked out in another worktree, and an agent session pinned to a worktree is
@@ -39,10 +46,12 @@ code is alive in another agent's session and not in yours, and a fix you make on
 `main` will collide with the branch that agent is already holding.
 
 You do not write into another worktree — not a file, not a `git -C`, not a
-`worktree remove`, not a force-push or a branch deletion. Uncommitted work has no
-git record; clobber it and there is nothing to recover and nothing to say what
+`worktree remove` while somebody is live in it, and not a force-push or a deletion
+of a branch that is somebody's work in progress. Uncommitted work has no git
+record; clobber it and there is nothing to recover and nothing to say what
 happened. Reading another worktree is fine and often the only way to work
-something out.
+something out. Tidying away *merged* branches and dead worktrees is a different
+act and it is yours — see "Cleaning up".
 
 You do not kill a process you did not start until you know whose it is.
 `ls -l /proc/<pid>/cwd` names the directory it was launched from. A server already
@@ -59,6 +68,13 @@ time the two halves have met.
 If a branch is not in that state, it is not ready. Send it back rather than
 integrating it yourself — resolving someone else's conflict is guessing at intent
 you do not have.
+
+You do not fetch to see it. Worktrees share one object store, so a worker's branch
+is a ref in your checkout the moment they commit; `git branch` lists it with no
+push involved. How you *hear* it is ready is out of band — agents cannot see each
+other, so the person running the session tells you, and that is the same route
+back for anything you find. Nothing you write in a file will reach a worker on its
+own.
 
 ## Merging, step by step
 
@@ -77,10 +93,11 @@ branch is stale: hand it back.
 A `package.json` that gained a dependency means `npm install` before testing.
 Nothing else in there normally changes.
 
-Before running anything, check the desktop is free: `pgrep -af chromium`, then
-`ls -l /proc/<pid>/cwd` for anything you find. `npm test` is headless and does not
-care, but the pointer suites drive the real display and two at once corrupt both
-runs.
+`npm test` is entirely headless — `launch()` in `tests/helpers.js` takes
+playwright's default and no suite drives the real display — so it is safe to run
+whatever else is on the desktop. The XTEST verification `CLAUDE.md` describes is a
+manual procedure with no harness in this repo, and *that* is the thing only one
+agent may be doing at a time.
 
 ```bash
 git merge --no-ff <branch> -m "Merge branch '<branch>'"
@@ -124,6 +141,34 @@ checkout; that has happened here. Check what the server was serving.
 So confirm it rather than assuming, and make the answer easy: say whether the diff
 touches anything a visitor sees. A change to docs, tests and `package.json` alters
 nothing on the site; a change to `index.html`, `shared.css` or any game page does.
+
+## Cleaning up
+
+A merged branch holds nothing that `main` does not: the merge commit is the
+record, and `tests/docs-check.js` reads merge commit messages rather than branch
+refs. Delete them once their work has landed, locally and on the remote.
+
+```bash
+git branch --no-merged main         # anything listed here is somebody's - leave it
+git branch -d <branch>              # refuses anything unmerged, which is the safety
+git push origin --delete <branch>
+git worktree prune                  # a directory already deleted still leaves a registration
+```
+
+`git branch -d` is what makes this safe to do quickly: it will not delete a branch
+whose commits are not on `main`, so the destructive version of the mistake is not
+available to you.
+
+Worktrees are disposable and worth treating that way. The checkout is well under a
+megabyte here, `.git` is shared rather than copied, and the only real cost of a new
+one is a single `npm install`. Delete one once its branch has landed rather than
+leaving it for the next agent: a worktree sitting on an old commit fails its own
+suite for reasons that have nothing to do with the code, and whoever inherits it
+spends their first twenty minutes on a problem that does not exist.
+
+What is not disposable is uncommitted work, which no branch and no reflog knows
+about. Before a worktree goes idle its agent should commit — a WIP commit costs
+nothing and turns the one unrecoverable thing in this setup into a recoverable one.
 
 ## Reading the docs before you merge
 
