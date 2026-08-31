@@ -36,6 +36,8 @@ so it serves from the domain root rather than a subpath.
 
 ## Working on it
 
-`CLAUDE.md` has the conventions and the per-game invariants worth knowing before
-editing anything. `TODO.md` is what is not done yet, in priority order. Games
-with a design worth explaining keep a `DESIGN.md` next to their code.
+`CLAUDE.md` has the conventions every game shares, and how several people work on
+this at once without colliding. Everything specific to one game lives with that
+game: `games/<name>/DESIGN.md` for how it works and what must not be broken,
+`games/<name>/TODO.md` for what is not done yet, in priority order. The root
+`TODO.md` keeps what belongs to no single game.

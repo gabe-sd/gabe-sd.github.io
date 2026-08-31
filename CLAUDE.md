@@ -13,9 +13,11 @@ it deploys from `main` to the domain root, `https://gabe-sd.github.io/`, not to 
 `../../index.html`), so nothing depends on that prefix either way — keep it
 relative, and a future rename stays a non-event.
 
-Known gaps and unscheduled work live in `TODO.md`. Check it before starting
-something new, and delete entries there as they land rather than marking them
-done — git history is the record of what happened.
+Known gaps and unscheduled work live in `games/<name>/TODO.md` for a game, and in
+the root `TODO.md` for everything else — site-wide work, games not built yet, and
+the slug naming rules. Check the relevant one before starting something new, and
+delete entries as they land rather than marking them done — git history is the
+record of what happened.
 
 ## As simple as possible, but as complex as it needs to be
 

@@ -63,8 +63,9 @@ the paddle wherever it had got to.
 Display name only, decided this way to keep the blast radius small: the folder
 `games/pong/`, the `pong.difficulty`/`pong.winScore` localStorage keys, and every
 `pong-` slug in this file and in branch history stay exactly as they are. Renaming
-any of those would break the naming convention above (the slug has to keep
-matching the folder and the history), invalidate saved preferences on upgrade for
+any of those would break the naming convention in the root `TODO.md` (the slug
+has to keep matching the folder and the history), invalidate saved preferences on
+upgrade for
 no benefit, and force a rename of every open and historical `pong-*` entry here —
 none of which the new name is actually about.
 

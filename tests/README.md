@@ -93,10 +93,19 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
   `pong.test.js` it cancels the animation frame and steps `update()` by hand.
 
 - **docs-check.js** — the odd one out. No browser, no `npm install`, and it
-  asserts about prose rather than about a game: that every file path and
-  function name the docs mention still resolves, and that every element id and
-  `localStorage` key in the code is written down in `CLAUDE.md`. It runs last in
-  `npm test`.
+  asserts about prose rather than about a game: that every file path and function
+  name the docs mention still resolves; that every element id and `localStorage`
+  key in a game's code is written down in that game's own `DESIGN.md` (the shared
+  ids live in `CLAUDE.md`); that a game which stores anything has documented a key
+  at all; and that no `TODO.md` entry has a merge commit behind it already. It
+  finds the games by reading `games/`, so a new one is covered the day its folder
+  exists rather than the day someone extends a list. It runs last in `npm test`,
+  because a doc claim is only worth checking once the code it describes has been.
+
+  It skips hidden directories, which matters more than it sounds: worktrees live
+  at `.claude/worktrees/<name>` inside the checkout they were made from, and each
+  is a full copy of the repo. Walking into them reads another branch's docs as if
+  they were this one's.
 
   It only catches what is mechanically decidable, which is about half of what
   goes stale. It cannot tell that "the menu is three buttons and Play" stopped
