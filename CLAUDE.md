@@ -67,6 +67,28 @@ owns your area, do something else rather than starting beside it. Two branches
 touching one file diverge silently, and the conflict surfaces later as a puzzle
 instead of at the moment it was created.
 
+**Your worktree is yours; nobody else's is. Read freely, never write.** Reading
+another worktree is fine and sometimes the only way to work something out —
+diffing what two of them were serving is how a port collision got diagnosed here.
+**Writing into one you do not own is a hard rule, not a preference: never.**
+
+That covers more than editing a file. A git command aimed at another tree does the
+same damage in one line (`git -C`, or a `cd` followed by a `checkout` or `reset`),
+and so does `git worktree remove` or `prune` while somebody is live in it, or
+merging, force-pushing or deleting a branch that is someone's work in progress.
+The rule is absolute because uncommitted work has no git record: clobber it and
+there is nothing to recover it from and nothing to say what happened.
+
+Processes count as well. Before killing anything you did not start, find out whose
+it is — `ls -l /proc/<pid>/cwd` names the directory it was launched from. A server
+already holding the port you wanted is far more likely to be another agent's than
+a leftover of yours.
+
+Two things stop some of this by accident, and neither is a substitute for the
+rule: git refuses to check out a branch that is already checked out in another
+worktree, and an agent session pinned to a worktree is blocked from running git
+against the shared checkout. Somebody at a terminal has neither guard.
+
 **Shared files are append-only, and get their own commit.** The root
 `index.html` card list is the one every new game touches, and `CLAUDE.md`, the
 root `TODO.md` and `shared.css` are the others. Appending rather than
@@ -93,6 +115,15 @@ suites in different worktrees cannot end up driving each other's files — that
 happened, and the run went green against the wrong checkout. The git stash stack
 *is* shared across every worktree in the repo, so do not use it; a WIP commit sets
 work aside without reaching into somebody else's.
+
+The desktop is shared in the same way, and it is the one shared thing with no
+technical guard at all. XTEST input goes to the real display and lands on whatever
+window is on top, so two agents driving the pointer at once corrupt both runs —
+and produce exactly the kind of false pass the pointer section below exists to
+prevent. Only one runs at a time. There is no lock and none is worth building for
+this: check for a headed browser you did not start (`pgrep -af chromium`, then
+`ls -l /proc/<pid>/cwd` for whose it is), and if one is up, wait rather than run
+concurrently and believe the number.
 
 A doc-only edit belonging to work already in flight rides on that branch rather
 than taking its own. The rule exists so half-finished work can be abandoned and so
@@ -346,6 +377,9 @@ pointer while the button is held. Do not delete it.
   not because a newer one would refuse to start — see `tests/README.md`.
 
 **Caution:** XTEST clicks go to the real shared desktop and land on whatever window
-is on top — possibly the user's own applications rather than the test window. Check
-window geometry before clicking, and check process start times before any `pkill`
-so a long-running personal browser session is not killed.
+is on top — possibly the user's own applications, or another agent's browser,
+rather than the test window. Check window geometry before clicking, and check
+process start times before any `pkill` so a long-running personal browser session
+is not killed. With more than one agent running this is not only a risk to what
+you hit but to what you measure: two of these at once corrupt both runs, so they
+are serialised across agents — see "Several agents at once".
