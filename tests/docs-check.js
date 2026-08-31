@@ -29,7 +29,12 @@ function check(name, bad, hint) {
 const walk = (dir, out = []) => {
   for (const e of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
     const rel = path.join(dir, e.name);
-    if (e.name === "node_modules" || e.name === ".git") continue;
+    // Nothing hidden, which is .git and also .claude/worktrees - every worktree
+    // is a full checkout living inside this one, so walking into them would read
+    // another branch's docs as if they were this branch's. That is not
+    // hypothetical: a stale worktree holding an entry this branch just landed
+    // fails the merged-entry check below, on main, immediately after merging.
+    if (e.name === "node_modules" || e.name.startsWith(".")) continue;
     if (e.isDirectory()) walk(rel, out);
     else out.push(rel);
   }
