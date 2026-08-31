@@ -97,6 +97,12 @@ Merge one branch at a time and run the suite after each. Git catches conflicting
 break only together, and after two merges there is nothing left to tell you which
 one it was.
 
+When two branches are ready at once, **yours goes last**. Whichever merges second
+stops being up to date the moment the first lands, and has to absorb `main` and go
+green again. Put your own branch there and that cost falls on the seat that owns
+it; put a worker's there and you hand back a branch that was ready when they said
+it was.
+
 ## When the suite is red
 
 Stop. Do not fix it, and do not push.
@@ -134,9 +140,10 @@ files and passed every mechanical check.
 
 A finding is worth more when it is reproducible. Name the file and line, what the
 code actually does, what the doc or the test claims instead, and the numbers if
-there are numbers. "The bound is `PADDLE_SPEED` (8) but the ai's top speed is 4.5
-and its panic speed is 7, so a full panic snap passes a check named for catching
-exactly that" is actionable. "The pong test looks weak" is not.
+there are numbers. The one that became `pong-windup-test-bound` read: the bound
+was `PADDLE_SPEED` (8), but the ai's top speed is 4.5 and its panic speed 7, so a
+full panic snap passed a check whose only purpose was to catch exactly that. It
+was fixed the day it was reported. "The pong test looks weak" would not have been.
 
 Then hand it over rather than acting on it, and say plainly which area it belongs
 to.
