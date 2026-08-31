@@ -29,7 +29,12 @@ function check(name, bad, hint) {
 const walk = (dir, out = []) => {
   for (const e of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
     const rel = path.join(dir, e.name);
-    if (e.name === "node_modules" || e.name === ".git") continue;
+    // Nothing hidden, which is .git and also .claude/worktrees - every worktree
+    // is a full checkout living inside this one, so walking into them would read
+    // another branch's docs as if they were this branch's. That is not
+    // hypothetical: a stale worktree holding an entry this branch just landed
+    // fails the merged-entry check below, on main, immediately after merging.
+    if (e.name === "node_modules" || e.name.startsWith(".")) continue;
     if (e.isDirectory()) walk(rel, out);
     else out.push(rel);
   }
@@ -61,39 +66,101 @@ const badFns = [...allDocs.matchAll(/`([A-Za-z_][\w.]*)\(\)`/g)]
   .filter((n) => !new RegExp(`\\b${n}\\b`).test(code));
 check("every function a doc names still exists", badFns, "gone");
 
-// 3. The page contract in CLAUDE.md is a list of ids other files depend on, so
-//    the direction that matters is code -> doc: an id added to a page and never
-//    written down is exactly how the contract drifts.
+// The games are whatever is in games/, never a list anyone has to extend. Every
+// check below that is per-game reads this, so a new game is covered the day its
+// folder exists rather than the day someone remembers to add it.
+const games = fs
+  .readdirSync(path.join(ROOT, "games"), { withFileTypes: true })
+  .filter((e) => e.isDirectory())
+  .map((e) => e.name);
+
+// A game's own docs, plus CLAUDE.md for the things every game shares. Each game
+// is held against this rather than against one shared list, which is what keeps
+// two games' agents out of the same file.
 const claude = read("CLAUDE.md");
-const badIds = files
-  .filter((f) => f.startsWith("games/") && f.endsWith("index.html"))
-  .flatMap((f) => [...read(f).matchAll(/id="([\w-]+)"/g)].map((m) => m[1]))
-  .filter((id, i, a) => a.indexOf(id) === i)
-  .filter((id) => !claude.includes(`#${id}`));
+const docsFor = (game) => claude + "\n" + files
+  .filter((f) => f.startsWith(`games/${game}/`) && f.endsWith(".md"))
+  .map((f) => read(f))
+  .join("\n");
+
+// 3. The page contract is a list of ids other files depend on, so the direction
+//    that matters is code -> doc: an id added to a page and never written down is
+//    exactly how the contract drifts. The shared ids live in CLAUDE.md and a
+//    game's own in its DESIGN.md; both are in docsFor().
+const badIds = games.flatMap((game) => {
+  const page = path.join("games", game, "index.html");
+  if (!fs.existsSync(path.join(ROOT, page))) return [];
+  const doc = docsFor(game);
+  return [...read(page).matchAll(/id="([\w-]+)"/g)]
+    .map((m) => m[1])
+    .filter((id, i, a) => a.indexOf(id) === i)
+    .filter((id) => !doc.includes(`#${id}`))
+    .map((id) => `${game}:#${id}`);
+});
 check("every id in a game page is in the page contract", badIds, "undocumented");
 
-// 4. Same direction for stored data. A new localStorage key is a promise about
-//    the user's browser, and CLAUDE.md is where that promise is recorded.
-const badKeys = [...code.matchAll(/["'`]([a-z]+\.[A-Za-z]+)[.`"']/g)]
-  .map((m) => m[1])
-  .filter((k) => /^(minesweeper|pong|chess|tic|flappy)\./.test(k))
-  .filter((k, i, a) => a.indexOf(k) === i)
-  .filter((k) => !claude.includes(k));
+// 4. Same direction for stored data. A localStorage key is a promise about the
+//    user's browser, and the game's own doc is where that promise is recorded.
+//    A key is recognised by the game name in front of the dot, and the names come
+//    from the folders: `flappy-bird` owns `flappy.`, `tic-tac-toe` owns `tic.`.
+const prefixes = games.map((g) => g.split("-")[0]);
+const badKeys = games.flatMap((game) => {
+  const prefix = game.split("-")[0];
+  const doc = docsFor(game);
+  return [...code.matchAll(/["'`]([a-z]+\.[A-Za-z]+)[.`"']/g)]
+    .map((m) => m[1])
+    .filter((k) => k.startsWith(prefix + "."))
+    .filter((k, i, a) => a.indexOf(k) === i)
+    .filter((k) => !doc.includes(k));
+});
 check("every storage key is documented", badKeys, "undocumented");
 
-// 5. TODO.md says to delete entries as they land, and a slug is a branch name, so
-//    a slug with a merge commit behind it is work already done.
-const slugs = [...read("TODO.md").matchAll(/^### ([a-z0-9-]+)/gm)].map((m) => m[1]);
+// 4b. The check above can only see a key whose prefix matches the game's folder,
+//     so a game storing under some other name would be checked against nothing at
+//     all and pass in silence. What is decidable is the other direction: a game
+//     that reaches for localStorage has to have written down a key of its own.
+const undocumentedStores = games.filter((game) => {
+  const script = path.join("games", game, "script.js");
+  if (!fs.existsSync(path.join(ROOT, script))) return false;
+  if (!read(script).includes("localStorage")) return false;
+  const prefix = game.split("-")[0];
+  return !new RegExp(`\\b${prefix}\\.[A-Za-z]`).test(docsFor(game));
+});
+check("every game that stores data documents a key", undocumentedStores, "silent");
+
+// 5. Entries are deleted as they land, and a slug is a branch name, so a slug with
+//    a merge commit behind it is work already done. Every TODO.md counts: the root
+//    one and each game's own. Reading only the root would make this pass on
+//    nothing the moment the per-game files appeared.
+const todos = files.filter((f) => f === "TODO.md" || f.endsWith("/TODO.md"));
+const slugs = todos.flatMap((f) =>
+  [...read(f).matchAll(/^### ([a-z0-9-]+)/gm)].map((m) => `${f}:${m[1]}`)
+);
 //    The quotes in the pattern matter: without them `pong-mobile-support` matches
 //    the merge of `pong-mobile-support-entry`, which landed the note, not the work.
-const landed = slugs.filter((s) => {
+//    The optional prefix is there because a worktree branch is created as
+//    `worktree-<slug>`, and a merge of one is still that entry landing.
+const landed = slugs.filter((entry) => {
+  const slug = entry.split(":")[1];
   const log = execFileSync(
-    "git", ["log", "--all", "--oneline", "--merges", `--grep=Merge branch '${s}'`],
+    "git",
+    //  -E so the optional prefix needs no backslashes: a template literal eats
+    //  them, which silently turned the group into three literal characters and
+    //  made this check pass on everything.
+    ["log", "--all", "--oneline", "--merges", "-E",
+     `--grep=Merge branch '(worktree-)?${slug}'`],
     { cwd: ROOT, encoding: "utf8" }
   );
   return log.trim().length > 0;
 });
 check("no TODO entry has already been merged", landed, "landed");
+
+// 6. A game with no TODO.md is fine - it means nothing is open. A TODO.md for a
+//    folder that is not a game is not: it is a backlog nobody will find.
+const strayTodos = todos
+  .filter((f) => f !== "TODO.md")
+  .filter((f) => !games.includes(f.split("/")[1] || ""));
+check("every per-game TODO.md sits in a game folder", strayTodos, "stray");
 
 const failed = results.filter((r) => !r).length;
 console.log(`\n${results.length - failed}/${results.length} checks passed`);

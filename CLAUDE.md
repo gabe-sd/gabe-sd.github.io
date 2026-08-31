@@ -13,9 +13,11 @@ it deploys from `main` to the domain root, `https://gabe-sd.github.io/`, not to 
 `../../index.html`), so nothing depends on that prefix either way — keep it
 relative, and a future rename stays a non-event.
 
-Known gaps and unscheduled work live in `TODO.md`. Check it before starting
-something new, and delete entries there as they land rather than marking them
-done — git history is the record of what happened.
+Known gaps and unscheduled work live in `games/<name>/TODO.md` for a game, and in
+the root `TODO.md` for everything else — site-wide work, games not built yet, and
+the slug naming rules. Check the relevant one before starting something new, and
+delete entries as they land rather than marking them done — git history is the
+record of what happened.
 
 ## As simple as possible, but as complex as it needs to be
 
@@ -35,40 +37,118 @@ simpler version silently restarted the loop underneath the test harness.
 The test is the same in both directions: **name what breaks if this were simpler.**
 A concrete answer justifies the complexity. No answer means take it out.
 
-## Work on a branch, never on main
+## Several agents at once
 
-Any new feature or fix starts with a branch — `git checkout -b <short-name>`
+This site is one repo holding several small, nearly independent projects: a game
+lives entirely in `games/<name>/`, and adding one means creating that folder and a
+card in the root `index.html`. That independence is what makes it reasonable to
+have several agents working at the same time, each in its own worktree, each on a
+different part of the site.
+
+Most of what makes that safe is structural rather than procedural. Each game's
+backlog is in `games/<name>/TODO.md` and its invariants in
+`games/<name>/DESIGN.md`, so two agents on two games share no file. The checks in
+`tests/docs-check.js` find games by reading the `games/` folder rather than from a
+list someone has to extend. The rules left over are these.
+
+**Work on a branch, never on main.** A new feature or fix starts with a branch
 before the first edit, not after the work is done. `main` stays clean so a
-half-finished change can be abandoned or set aside without unpicking it, and so
-the merge commit is what records the feature (see `minesweeper-highscore` in the
-history). Name it for the change, not the game alone — and when the work has a
-`TODO.md` entry, the branch **is** that entry's slug, so the merge commit carries
-it into history and one string finds the entry, the discussion and the diff.
+half-finished change can be abandoned without unpicking it, and so the merge
+commit is what records the feature. When the work has a `TODO.md` entry the branch
+**is** that entry's slug, so one string finds the entry, the discussion and the
+diff. If you catch yourself editing on `main`, `git checkout -b <name>` carries
+uncommitted changes across.
 
-If you catch yourself editing on `main`, move the work across before committing:
-`git checkout -b <name>` carries uncommitted changes with it.
+**One agent owns one area at a time.** An area is a game folder, or the shell —
+the root page, `shared.css`, the docs, the tests. Inside your area you own
+everything and coordinate with nobody. Before the first edit, `git worktree list`
+and `git branch --no-merged main` say what else is in flight; if something already
+owns your area, do something else rather than starting beside it. Two branches
+touching one file diverge silently, and the conflict surfaces later as a puzzle
+instead of at the moment it was created.
 
-Two principles follow, both learned by breaking them:
+**Your worktree is yours; nobody else's is. Read freely, never write.** Reading
+another worktree is fine and sometimes the only way to work something out —
+diffing what two of them were serving is how a port collision got diagnosed here.
+**Writing into one you do not own is a hard rule, not a preference: never.**
 
-- **A branch is not finished until it is merged, so keep one open at a time.**
-  Unmerged work is a liability, not a safe place to leave things. Two branches
-  touching the same file diverge silently, and the conflict surfaces later as a
-  puzzle instead of at the moment it was created.
-- **Never branch from a base that is missing work you depend on.** If the change
-  builds on something unmerged, merge that first or branch from it. Cutting from
-  `main` to "keep it clean" is the one option that cannot work.
+That covers more than editing a file. A git command aimed at another tree does the
+same damage in one line (`git -C`, or a `cd` followed by a `checkout` or `reset`),
+and so does `git worktree remove` or `prune` while somebody is live in it, or
+merging, force-pushing or deleting a branch that is someone's work in progress.
+The rule is absolute because uncommitted work has no git record: clobber it and
+there is nothing to recover it from and nothing to say what happened.
+
+Processes count as well. Before killing anything you did not start, find out whose
+it is — `ls -l /proc/<pid>/cwd` names the directory it was launched from. A server
+already holding the port you wanted is far more likely to be another agent's than
+a leftover of yours.
+
+Two things stop some of this by accident, and neither is a substitute for the
+rule: git refuses to check out a branch that is already checked out in another
+worktree, and an agent session pinned to a worktree is blocked from running git
+against the shared checkout. Somebody at a terminal has neither guard.
+
+**Shared files are append-only, and get their own commit.** The root
+`index.html` card list is the one every new game touches, and `CLAUDE.md`, the
+root `TODO.md` and `shared.css` are the others. Appending rather than
+restructuring keeps a collision to a ten-second fix, and keeping the edit in a
+commit of its own means it can be replayed without unpicking the feature around
+it.
+
+**Never branch from a base that is missing work you depend on.** If the change
+builds on something unmerged, branch from that rather than from `main`. Cutting
+from `main` to "keep it clean" is the one option that cannot work.
+
+**Integrate in your own worktree; never resolve on main.** Whoever finishes first
+merges to `main` with `--no-ff` and runs the suite there. Everyone after that
+pulls `main` into their own worktree, gets green *there*, and only then merges —
+also `--no-ff`, explicitly, because a branch that has just absorbed `main` would
+otherwise fast-forward and leave no merge commit for the slug to live in. Test
+after each merge rather than after the last one: git catches conflicting text for
+free, but two changes that each apply cleanly and break only together are what
+actually costs you an afternoon, and after two merges there is nothing to tell you
+which one it was.
+
+**Share nothing at runtime.** `npm test` starts its own server on a free port, so
+suites in different worktrees cannot end up driving each other's files — that
+happened, and the run went green against the wrong checkout. The git stash stack
+*is* shared across every worktree in the repo, so do not use it; a WIP commit sets
+work aside without reaching into somebody else's.
+
+The desktop is shared in the same way, and it is the one shared thing with no
+technical guard at all. XTEST input goes to the real display and lands on whatever
+window is on top, so two agents driving the pointer at once corrupt both runs —
+and produce exactly the kind of false pass the pointer section below exists to
+prevent. Only one runs at a time. There is no lock and none is worth building for
+this: check for a headed browser you did not start (`pgrep -af chromium`, then
+`ls -l /proc/<pid>/cwd` for whose it is), and if one is up, wait rather than run
+concurrently and believe the number.
 
 A doc-only edit belonging to work already in flight rides on that branch rather
 than taking its own. The rule exists so half-finished work can be abandoned and so
 the merge commit records the feature; a one-commit note gets neither and pays the
 stale-base cost.
 
+### This convention is not settled
+
+All of the above came out of one experiment with two agents, not out of long
+practice, and the parts of it that are wrong have not been found yet. It is
+written down so there is something concrete to disagree with.
+
+So: if you hit friction with it — a rule that cost more than it saved, a collision
+it did not prevent, a step that turned out to be unnecessary — **propose a better
+version of this section rather than working around it**, and say what happened
+that prompted the change. That goes for anything you would improve about how the
+work is split, merged or verified, not only the rules listed here. A workaround
+that stays in one agent's head is the one thing this section cannot survive.
+
 ## Commands
 
 ```bash
-npm run serve                   # http.server on 8934, the port the tests expect
-npm test                        # every browser suite, then the docs check
-node tests/chording.test.js     # one suite on its own
+npm test                        # every suite, on a server it starts itself
+npm run serve                   # a server on 8934 to play in a browser; tests do not need it
+node tests/chording.test.js     # one suite on its own; needs a server (npm run serve)
 node tests/docs-check.js        # do the docs still describe this repo? no browser
 node tests/ai-sweep.js          # how often Pong's ai saves; a ruler, not a test
 node tests/volley-sweep.js      # how long a Pong volley is, and what each effect covers
@@ -81,9 +161,12 @@ claim in `games/pong/DESIGN.md` came out of one of them. Extend them rather than
 writing a third — a figure from a differently shaped harness cannot be set
 against the ones already recorded.
 
-`npm install` first (once) for the tests; see `tests/README.md`. Serve rather than
-opening `file://`; relative paths work either way, but a server matches how it is
-deployed.
+`npm install` first (once) for the tests; see `tests/README.md`. `npm test` needs
+no server running — `tests/run-all.js` starts one on a free port rooted at the
+checkout it lives in, which is what stops a run in one worktree testing another
+one's files. `BASE_URL` still overrides it. To *play* rather than test, use
+`npm run serve` and open the page: relative paths work from `file://` too, but a
+server matches how it is deployed.
 
 There is no linter or build. Tests are browser-driven and live in `tests/` — they
 open real pages and assert on real game state, since there is nothing meaningful
@@ -100,25 +183,21 @@ self-contained. Adding a game means creating that
 folder and a card in the root `index.html`: the site has no registry, no
 manifest and no build to update. What does need updating is all outside the
 site — the page contract below, the game's ids and any storage key it invents,
-a suite in `tests/`, and that suite's place in `npm test`.
+a suite in `tests/`, which `npm test` finds by reading the directory rather than
+from a list anyone has to extend.
 
 Each game page follows a contract that `shared.css` depends on:
 
 - Links `../../shared.css` **first**, then its own `style.css`.
-- Uses the ids `#board`, `#status`, `#restart`; games may add their own on top
-  (Minesweeper has `#flag-count`, `#timer`, `#best-time`, `#help-toggle`,
-  `#instructions`, and a gear button `#settings-toggle` opening `#settings`,
-  which holds `#reset-best`; Pong has `#help-toggle` and `#instructions` too,
-  plus a `#menu` over the board holding `#menu-heading`, a `#difficulty`
-  radiogroup labelled by `#difficulty-label`, a `#win-score-choice` radiogroup
-  labelled by `#win-score-label` and `#play`; a hidden `#score-reader`; and
-  `#win-score` inside the instructions panel, which the script rewrites whenever
-  the chosen win score changes; Flappy Bird has `#help-toggle` and
-  `#instructions` too, plus `#score` and `#best-score` in a HUD row above the
-  board).
-  Game scripts look these up by id, and `shared.css` styles `.page`, `.status`,
-  `.hint`, `.btn` (with `.secondary` and `.icon`), `.controls`, `.back-link`
-  for them.
+- Uses the ids `#board`, `#status`, `#restart`. Game scripts look these up by id,
+  and `shared.css` styles `.page`, `.status`, `.hint`, `.btn` (with `.secondary`
+  and `.icon`), `.controls`, `.back-link` for them.
+- **May add ids of its own, and writes them down in its own `DESIGN.md`.**
+  `tests/docs-check.js` holds every id in a game page against that game's doc, so
+  an id added to a page and never written down fails the check — which is the
+  point, since an undocumented id is how the contract drifts. Recording them per
+  game rather than in one shared list is also what keeps two games' agents out of
+  the same file.
 - Treats `#status` as game state only — what just happened, or what to do next.
   Standing instructions belong in a collapsible panel (Minesweeper, Pong and
   Flappy Bird all use `#instructions`), not the status line. `shared.css` gives
@@ -153,118 +232,34 @@ break that.
 
 ### Per-game designs worth knowing before editing
 
-Keep each entry to a paragraph or two of *invariants* — what a reader must not
-break. When one outgrows that it has started carrying design rationale instead,
-which belongs in `games/<name>/DESIGN.md` with the invariants and a pointer left
-here. Pong has one; the others do not need one yet.
+Each game's invariants — what a reader must not break — live with the game, in
+`games/<name>/DESIGN.md`, along with its model and whatever was tried and rejected
+getting there. Read that file before changing how a game plays, and update it in
+the same commit as the change.
 
-A design doc is only worth having if it is true, so **changing how a game plays
-means updating its design doc in the same commit** — the model, and anything tried
-and rejected along the way. Rejected alternatives are the most valuable thing in
-there and the easiest to lose: without them the next person re-runs the experiment
-and reaches the same answer a day later. Keep values out of it; those live in the
-code as named constants, and a doc that repeats them is wrong the first time one is
-tuned.
-
-**Chess** (`games/chess/script.js`) is the substantial one. Legality is layered:
-`generatePseudoMoves` produces moves ignoring check; `applyMove` is pure — it
-returns a new `{board, castling, enPassant}` and never mutates — so
-`getLegalMoves` filters by simulating each move and discarding any that leave the
-mover's own king attacked. `isSquareAttacked` is the single primitive underneath
-check detection, castling-through-check rules, and `isInCheck`.
-`hasAnyLegalMove` is what separates checkmate from stalemate in `updateStatus`.
-Changes to move rules belong in the pseudo-move layer; do not special-case
-legality in the click handler.
-
-**Pong** (`games/pong/script.js`) keeps its model, its measurements and its
-rejected alternatives in `games/pong/DESIGN.md` — read that before changing how it
-plays. Six things will bite you without it:
-
-- The loop only *paces*: `advance()` drains real time into whole `TICK_MS` ticks
-  and calls `update()` once per tick, so every speed constant is per tick. Nothing
-  may accumulate into `ball.vy` either — `bounce()` owns velocity outright.
-- Three things exist for the test harness. `update()` returns before touching the
-  ball outside `phase === "play"`, so a test placing the ball must set `phase`;
-  loop scheduling is guarded by `running`, not by `rafId`, so a caller that
-  cancelled the pending frame does not get it restarted underneath them; and
-  `drawPaddle` records what it computed in `lastTell`, because the paddle shakes
-  by design and counting its pixels measures the jitter rather than the tell.
-- Pointer control is deliberately *not* rate-limited, which makes a mouse faster
-  than the keys. That was fixed once and reverted on play. It looks like a bug.
-- `PADDLE_HEIGHT` is the size a paddle *starts* at, not its size. Each paddle
-  carries its own `h`, which the abilities stretch and shrink, so anything reading
-  a live paddle reads `.h` — collision, drawing and the ai's own target included.
-  `syncPaddleSize()` is the only thing that writes `hTarget`, and it decides by
-  precedence. Letting each move write it directly is a shipped bug: whichever
-  *ended* last reset the paddle to its base size, overruling an effect that was
-  still running.
-- Every knob in the `AI` and `ABILITY` objects documents the value that switches
-  its feature off. Two tests hold that up: all of `AI` off reproduces the old
-  direct mover, and all of `ABILITY` off gives back the plain game. Keep both
-  true — it is all tuned by feel, and feel changes.
-- A difficulty preset has three optional halves — `ai`, `game` and `ability` —
-  and each is applied over a **pristine copy** by a function that writes every
-  field on every call (`AI_DEFAULTS`, `applyGame`, `applyAbility`). Adding a
-  fourth means adding a fourth pristine copy. Skipping that does not fail
-  loudly: the previous mode's values simply survive into the next one, which is
-  invisible in play and quietly falsifies every measurement taken afterwards.
-
-**Minesweeper** (`games/minesweeper/script.js`) places mines lazily on the first
-reveal, excluding the 3x3 around that cell, so the first click is always safe —
-`grid` is empty until then. `floodReveal` recurses through zero-adjacency cells.
-Chording fires on middle **mousedown** (see below). The HUD counter shows flags
-left to place (`MINE_COUNT - flagCount`), which is why it carries a flag icon;
-the bomb icon means an actual revealed mine.
-
-**Flappy Bird** (`games/flappy-bird/script.js`) borrows Pong's pacing and for the
-same reasons: `advance()` drains real time into whole `TICK_MS` ticks, so every
-constant in it is per tick rather than per frame, `update()` returns before
-touching anything outside `phase === "play"` so a test can place the bird and
-step time by hand, and loop scheduling is guarded by `running` rather than by
-`rafId`. Three rules keep the game honest. The bird never moves horizontally —
-`BIRD_X` is fixed and the world scrolls past it, which is why collision only ever
-tests one x. A flap *sets* `bird.vy` rather than adding to it, so mashing the key
-cannot accumulate lift. And a pipe's hitbox is exactly the two rectangles
-`draw()` paints: no lip, no inset, nothing decorative hanging off the side, so
-what kills you is what you can see.
-
-The ceiling clamps the bird and the ground ends the run — dying to something
-above the screen reads as the game cheating. New pipes are spaced off the last
-pipe rather than off the screen edge, so the interval stays exact however the
-ticks land.
+They are kept there rather than here so that two agents working on two games are
+never editing the same file. Nothing about one game belongs in this file; what
+belongs here is only what every game shares.
 
 ### Persisted state
 
-Three games store data, all in `localStorage` and all under namespaced keys.
-Minesweeper's best time is keyed by board configuration
-(`minesweeper.bestTime.9x9-10`) so adding a difficulty later cannot compare
-records across board sizes; Pong remembers the chosen difficulty and win score
-(`pong.difficulty`, `pong.winScore`); Flappy Bird keeps the best run
-(`flappy.bestScore`). Keep it local — no network, no accounts.
-
-`tests/docs-check.js` is what holds that list to the code, and it recognises a
-storage key by the game name in front of the dot. A new game's keys are
-invisible to it until its name joins that pattern, so adding one means adding
-the name there in the same commit — the check passes either way, which is
-exactly how it would go unnoticed.
+Games that remember anything do it in `localStorage`, under a key namespaced by
+the game (`<game>.<thing>`, never a bare name). Keep it local — no network, no
+accounts. **Which keys a game owns is written down in that game's own
+`DESIGN.md`**, not here; `tests/docs-check.js` holds each game's keys against its
+own doc, and it finds the games by reading the `games/` folder, so a new one is
+covered the day its folder exists and there is no list to remember to extend.
 
 Wrap every `localStorage` access. It does not merely return `null` when
 unavailable, it *throws* — in private windows, with site data blocked, and from
 `file://` in some browsers — so an unguarded read at load time takes the whole
-game down. Every reader degrades to a default instead:
-`loadBestTime`/`saveBestTime`/`clearBestTime` in Minesweeper,
-`loadDifficulty`/`saveDifficulty`/`loadWinScore`/`saveWinScore` in Pong, and
-`loadBestScore`/`saveBestScore` in Flappy Bird.
-`tests/best-time.test.js` covers that path by making storage throw,
-`tests/pong.test.js` does the same for the win score, and
-`tests/flappy-bird.test.js` for the best score.
+game down. Every reader degrades to a default instead, and every game that stores
+anything has a test covering the throwing path.
 
-The gear panel's Reset best time button clears the key. It is disabled whenever
-`loadBestTime()` returns `null`, which covers both "no record yet" and "storage
-unavailable" — there is nothing to clear either way, and the greyed-out button is
-the whole explanation, so it carries no note. Clearing cannot be undone, so the
-button is two-step: the first click arms it, the second clears. Anything else
-destructive added to that panel should follow the same pattern.
+Anything that clears stored data is two-step: the first click arms it, the second
+does it. Minesweeper's Reset best time is the pattern — see its `DESIGN.md`.
+Clearing cannot be undone, and a confirm dialog is not available to us in a page
+that has to work with no dependencies.
 
 Collapsible panels toggle via the `hidden` attribute, so any `display` rule on
 one must be scoped to `:not([hidden])` — a display value otherwise wins over
@@ -382,6 +377,9 @@ pointer while the button is held. Do not delete it.
   not because a newer one would refuse to start — see `tests/README.md`.
 
 **Caution:** XTEST clicks go to the real shared desktop and land on whatever window
-is on top — possibly the user's own applications rather than the test window. Check
-window geometry before clicking, and check process start times before any `pkill`
-so a long-running personal browser session is not killed.
+is on top — possibly the user's own applications, or another agent's browser,
+rather than the test window. Check window geometry before clicking, and check
+process start times before any `pkill` so a long-running personal browser session
+is not killed. With more than one agent running this is not only a risk to what
+you hit but to what you measure: two of these at once corrupt both runs, so they
+are serialised across agents — see "Several agents at once".

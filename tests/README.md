@@ -24,20 +24,30 @@ whose behaviour shifts between releases.
 
 ## Running
 
-Serve the site, then run the suites:
-
 ```bash
-npm run serve &     # http.server on 8934, the port the tests expect
-npm test
+npm test            # nothing to start first
 ```
 
-`npm test` stops at the first failing suite and exits non-zero. Individual
-suites run standalone too (`node tests/chording.test.js`). Override the defaults
-if your setup differs:
+`tests/run-all.js` is what that runs. It serves *this* checkout on a port the OS
+picks, runs every `*.test.js` in this directory alphabetically and then
+`docs-check.js`, and stops at the first failing suite with a non-zero exit.
+
+Two things follow from it owning the server. Adding a suite means adding the file
+and nothing else — there is no list to extend, which is what keeps two branches
+adding two games out of the same line of `package.json`. And a run can only test
+the tree it was started from: the old fixed port belonged to whoever ran
+`npm run serve`, so with several worktrees in play a suite could drive another
+checkout's files and pass against the wrong code. That happened.
+
+A suite run on its own has no such server, so give it one — either `npm run serve`
+in another shell, which is the 8934 that `BASE_URL` defaults to, or point it
+somewhere else:
 
 ```bash
 BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test.js
 ```
+
+`BASE_URL` also works on `npm test`, where it skips the built-in server entirely.
 
 `CHROME` defaults to `/snap/bin/chromium`.
 
@@ -83,10 +93,19 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
   `pong.test.js` it cancels the animation frame and steps `update()` by hand.
 
 - **docs-check.js** — the odd one out. No browser, no `npm install`, and it
-  asserts about prose rather than about a game: that every file path and
-  function name the docs mention still resolves, and that every element id and
-  `localStorage` key in the code is written down in `CLAUDE.md`. It runs last in
-  `npm test`.
+  asserts about prose rather than about a game: that every file path and function
+  name the docs mention still resolves; that every element id and `localStorage`
+  key in a game's code is written down in that game's own `DESIGN.md` (the shared
+  ids live in `CLAUDE.md`); that a game which stores anything has documented a key
+  at all; and that no `TODO.md` entry has a merge commit behind it already. It
+  finds the games by reading `games/`, so a new one is covered the day its folder
+  exists rather than the day someone extends a list. It runs last in `npm test`,
+  because a doc claim is only worth checking once the code it describes has been.
+
+  It skips hidden directories, which matters more than it sounds: worktrees live
+  at `.claude/worktrees/<name>` inside the checkout they were made from, and each
+  is a full copy of the repo. Walking into them reads another branch's docs as if
+  they were this one's.
 
   It only catches what is mechanically decidable, which is about half of what
   goes stale. It cannot tell that "the menu is three buttons and Play" stopped
