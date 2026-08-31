@@ -64,7 +64,9 @@ half-finished change can be abandoned without unpicking it, and so the merge
 commit is what records the feature. When the work has a `TODO.md` entry the branch
 **is** that entry's slug, so one string finds the entry, the discussion and the
 diff. If you catch yourself editing on `main`, `git checkout -b <name>` carries
-uncommitted changes across.
+uncommitted changes across. If your harness named the branch `worktree-<slug>`,
+rename it to the bare slug: `tests/docs-check.js` tolerates the prefix so a landed
+entry is still recognised, but nothing else does.
 
 **One agent owns one area at a time.** An area is a game folder, or the shell —
 the root page, `shared.css`, the docs, the tests. Inside your area you own
@@ -116,7 +118,10 @@ from `main` to "keep it clean" is the one option that cannot work.
 
 **Integrate in your own worktree; you do not merge to `main` yourself.** Pull
 `main` into your worktree, resolve any conflicts *there*, and get the suite green
-*there*. Then say the branch is ready, and stop. The merge is the integrator's,
+*there*. Then say the branch is ready, and stop — say it to the person running the
+session, because agents cannot see each other. There is nothing to push either:
+worktrees share one object store, so your branch is already a ref in the shared
+checkout the moment you commit. The merge is the integrator's,
 made from the shared checkout — an agent pinned to a worktree cannot reach `main`
 in any case, since git refuses to check out a branch already checked out
 elsewhere.
@@ -150,6 +155,15 @@ A doc-only edit belonging to work already in flight rides on that branch rather
 than taking its own. The rule exists so half-finished work can be abandoned and so
 the merge commit records the feature; a one-commit note gets neither and pays the
 stale-base cost.
+
+**If you are writing it in a handoff, it belongs in a doc.** That a worker never
+merges to `main` was known and was written into a handoff message for the next
+agent — while this file said the opposite, and had said so since the day it was
+written. It survived only because the message happened to be pasted to somebody
+who noticed the contradiction. A session ends and takes its context with it; the
+repo is the only thing that does not. So when you catch yourself explaining
+something to whoever comes next, stop and put it where they will actually look:
+this file, `INTEGRATOR.md`, the game's `DESIGN.md`, or its `TODO.md`.
 
 ### This convention is not settled
 
