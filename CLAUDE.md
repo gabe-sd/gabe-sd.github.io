@@ -207,7 +207,7 @@ belongs here is only what every game shares.
 ### Persisted state
 
 Games that remember anything do it in `localStorage`, under a key namespaced by
-the game (`pong.winScore`, `flappy.bestScore`). Keep it local — no network, no
+the game (`<game>.<thing>`, never a bare name). Keep it local — no network, no
 accounts. **Which keys a game owns is written down in that game's own
 `DESIGN.md`**, not here; `tests/docs-check.js` holds each game's keys against its
 own doc, and it finds the games by reading the `games/` folder, so a new one is

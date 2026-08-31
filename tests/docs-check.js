@@ -110,15 +110,18 @@ const badKeys = games.flatMap((game) => {
 });
 check("every storage key is documented", badKeys, "undocumented");
 
-// 4b. The check above can only see a key whose prefix belongs to some game, so a
-//     key naming nothing in games/ would be skipped in silence. That is the shape
-//     of hole the old hardcoded list had, so it is worth one assertion of its own.
-const orphanKeys = [...code.matchAll(/["'`]([a-z]+\.[A-Za-z]+)[.`"']/g)]
-  .map((m) => m[1])
-  .filter((k, i, a) => a.indexOf(k) === i)
-  .filter((k) => /^(bestTime|bestScore|winScore|difficulty|best|score)\./.test(k))
-  .filter((k) => !prefixes.some((pre) => k.startsWith(pre + ".")));
-check("no storage key names a game that does not exist", orphanKeys, "orphaned");
+// 4b. The check above can only see a key whose prefix matches the game's folder,
+//     so a game storing under some other name would be checked against nothing at
+//     all and pass in silence. What is decidable is the other direction: a game
+//     that reaches for localStorage has to have written down a key of its own.
+const undocumentedStores = games.filter((game) => {
+  const script = path.join("games", game, "script.js");
+  if (!fs.existsSync(path.join(ROOT, script))) return false;
+  if (!read(script).includes("localStorage")) return false;
+  const prefix = game.split("-")[0];
+  return !new RegExp(`\\b${prefix}\\.[A-Za-z]`).test(docsFor(game));
+});
+check("every game that stores data documents a key", undocumentedStores, "silent");
 
 // 5. Entries are deleted as they land, and a slug is a branch name, so a slug with
 //    a merge commit behind it is work already done. Every TODO.md counts: the root
@@ -136,8 +139,11 @@ const landed = slugs.filter((entry) => {
   const slug = entry.split(":")[1];
   const log = execFileSync(
     "git",
-    ["log", "--all", "--oneline", "--merges",
-     `--grep=Merge branch '\(worktree-\)\?${slug}'`],
+    //  -E so the optional prefix needs no backslashes: a template literal eats
+    //  them, which silently turned the group into three literal characters and
+    //  made this check pass on everything.
+    ["log", "--all", "--oneline", "--merges", "-E",
+     `--grep=Merge branch '(worktree-)?${slug}'`],
     { cwd: ROOT, encoding: "utf8" }
   );
   return log.trim().length > 0;
