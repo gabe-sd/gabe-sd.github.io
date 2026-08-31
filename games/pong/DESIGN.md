@@ -9,6 +9,41 @@ It deliberately names knobs and directions rather than their settings. Values li
 in the code as named constants, and a document that repeats them is wrong the first
 time one is tuned.
 
+## Invariants
+
+**Pong** (`games/pong/script.js`) keeps its model, its measurements and its
+rejected alternatives in `games/pong/DESIGN.md` — read that before changing how it
+plays. Six things will bite you without it:
+
+- The loop only *paces*: `advance()` drains real time into whole `TICK_MS` ticks
+  and calls `update()` once per tick, so every speed constant is per tick. Nothing
+  may accumulate into `ball.vy` either — `bounce()` owns velocity outright.
+- Three things exist for the test harness. `update()` returns before touching the
+  ball outside `phase === "play"`, so a test placing the ball must set `phase`;
+  loop scheduling is guarded by `running`, not by `rafId`, so a caller that
+  cancelled the pending frame does not get it restarted underneath them; and
+  `drawPaddle` records what it computed in `lastTell`, because the paddle shakes
+  by design and counting its pixels measures the jitter rather than the tell.
+- Pointer control is deliberately *not* rate-limited, which makes a mouse faster
+  than the keys. That was fixed once and reverted on play. It looks like a bug.
+- `PADDLE_HEIGHT` is the size a paddle *starts* at, not its size. Each paddle
+  carries its own `h`, which the abilities stretch and shrink, so anything reading
+  a live paddle reads `.h` — collision, drawing and the ai's own target included.
+  `syncPaddleSize()` is the only thing that writes `hTarget`, and it decides by
+  precedence. Letting each move write it directly is a shipped bug: whichever
+  *ended* last reset the paddle to its base size, overruling an effect that was
+  still running.
+- Every knob in the `AI` and `ABILITY` objects documents the value that switches
+  its feature off. Two tests hold that up: all of `AI` off reproduces the old
+  direct mover, and all of `ABILITY` off gives back the plain game. Keep both
+  true — it is all tuned by feel, and feel changes.
+- A difficulty preset has three optional halves — `ai`, `game` and `ability` —
+  and each is applied over a **pristine copy** by a function that writes every
+  field on every call (`AI_DEFAULTS`, `applyGame`, `applyAbility`). Adding a
+  fourth means adding a fourth pristine copy. Skipping that does not fail
+  loudly: the previous mode's values simply survive into the next one, which is
+  invisible in play and quietly falsifies every measurement taken afterwards.
+
 ## Time
 
 The game runs on a **fixed timestep**. `loop()` only paces: `advance()` drains
@@ -787,3 +822,21 @@ passes with the fixed white core still in, because the red glow alone clears any
 reasonable threshold — it says the bolt is there, not that it has a core. The
 check counts pixels at the *opposite end of the luminance scale from the board*,
 which is the only thing a core can supply.
+
+## Page ids
+
+On top of the shared `#board`, `#status` and `#restart` from `CLAUDE.md`'s page
+contract: `#help-toggle` and `#instructions`, plus a `#menu` over the board
+holding `#menu-heading`, a `#difficulty` radiogroup labelled by
+`#difficulty-label`, a `#win-score-choice` radiogroup labelled by
+`#win-score-label`, and `#play`; a hidden `#score-reader`; and `#win-score`
+inside the instructions panel, which the script rewrites whenever the chosen win
+score changes.
+
+## Stored data
+
+`pong.difficulty` and `pong.winScore` — the chosen mode and target score. Read
+and written through `loadDifficulty`/`saveDifficulty`/`loadWinScore`/`saveWinScore`,
+each wrapped because `localStorage` throws rather than returning `null` when it is
+unavailable. `tests/pong.test.js` covers that path for the win score by making
+storage throw.
