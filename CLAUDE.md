@@ -113,9 +113,9 @@ that stays in one agent's head is the one thing this section cannot survive.
 ## Commands
 
 ```bash
-npm run serve                   # http.server on 8934, the port the tests expect
-npm test                        # every browser suite, then the docs check
-node tests/chording.test.js     # one suite on its own
+npm test                        # every suite, on a server it starts itself
+npm run serve                   # a server on 8934 to play in a browser; tests do not need it
+node tests/chording.test.js     # one suite on its own; needs a server (npm run serve)
 node tests/docs-check.js        # do the docs still describe this repo? no browser
 node tests/ai-sweep.js          # how often Pong's ai saves; a ruler, not a test
 node tests/volley-sweep.js      # how long a Pong volley is, and what each effect covers
@@ -128,9 +128,12 @@ claim in `games/pong/DESIGN.md` came out of one of them. Extend them rather than
 writing a third — a figure from a differently shaped harness cannot be set
 against the ones already recorded.
 
-`npm install` first (once) for the tests; see `tests/README.md`. Serve rather than
-opening `file://`; relative paths work either way, but a server matches how it is
-deployed.
+`npm install` first (once) for the tests; see `tests/README.md`. `npm test` needs
+no server running — `tests/run-all.js` starts one on a free port rooted at the
+checkout it lives in, which is what stops a run in one worktree testing another
+one's files. `BASE_URL` still overrides it. To *play* rather than test, use
+`npm run serve` and open the page: relative paths work from `file://` too, but a
+server matches how it is deployed.
 
 There is no linter or build. Tests are browser-driven and live in `tests/` — they
 open real pages and assert on real game state, since there is nothing meaningful
@@ -147,7 +150,8 @@ self-contained. Adding a game means creating that
 folder and a card in the root `index.html`: the site has no registry, no
 manifest and no build to update. What does need updating is all outside the
 site — the page contract below, the game's ids and any storage key it invents,
-a suite in `tests/`, and that suite's place in `npm test`.
+a suite in `tests/`, which `npm test` finds by reading the directory rather than
+from a list anyone has to extend.
 
 Each game page follows a contract that `shared.css` depends on:
 
