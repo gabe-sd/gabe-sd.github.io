@@ -51,6 +51,13 @@ backlog is in `games/<name>/TODO.md` and its invariants in
 `tests/docs-check.js` find games by reading the `games/` folder rather than from a
 list someone has to extend. The rules left over are these.
 
+**There are two roles: worker and integrator.** A worker owns one area and builds
+in a worktree of its own. The integrator owns `main`, and is the only seat that
+merges to it. Which one you are is settled before you start. This file is
+for both of you; the rules in this section are written for the worker, and
+`INTEGRATOR.md` says what differs for the other seat — read that as well if it is
+the seat you are in.
+
 **Work on a branch, never on main.** A new feature or fix starts with a branch
 before the first edit, not after the work is done. `main` stays clean so a
 half-finished change can be abandoned without unpicking it, and so the merge
@@ -89,26 +96,40 @@ rule: git refuses to check out a branch that is already checked out in another
 worktree, and an agent session pinned to a worktree is blocked from running git
 against the shared checkout. Somebody at a terminal has neither guard.
 
-**Shared files are append-only, and get their own commit.** The root
-`index.html` card list is the one every new game touches, and `CLAUDE.md`, the
-root `TODO.md` and `shared.css` are the others. Appending rather than
-restructuring keeps a collision to a ten-second fix, and keeping the edit in a
-commit of its own means it can be replayed without unpicking the feature around
-it.
+**Inside your area, edit freely. Crossing out of it, append.** The root
+`index.html` card list is the one file new work routinely touches from outside —
+every new game adds a card — and `shared.css` is the other, when a game needs a
+token that is not there yet. Add to those rather than restructuring them, and a
+collision stays a ten-second fix.
+
+Everything else belongs to whoever owns that area, and is theirs to rewrite. This
+replaced a broader rule that made every shared file append-only, the docs
+included. That rule was a precaution rather than something anyone had been bitten
+by, and it does not survive contact: landing a new game *deletes* its entry from
+the root `TODO.md`, and the paragraph below this one had to be rewritten because
+it was wrong. A file that may only be added to gets more wrong over time, not
+less.
 
 **Never branch from a base that is missing work you depend on.** If the change
 builds on something unmerged, branch from that rather than from `main`. Cutting
 from `main` to "keep it clean" is the one option that cannot work.
 
-**Integrate in your own worktree; never resolve on main.** Whoever finishes first
-merges to `main` with `--no-ff` and runs the suite there. Everyone after that
-pulls `main` into their own worktree, gets green *there*, and only then merges —
-also `--no-ff`, explicitly, because a branch that has just absorbed `main` would
-otherwise fast-forward and leave no merge commit for the slug to live in. Test
-after each merge rather than after the last one: git catches conflicting text for
-free, but two changes that each apply cleanly and break only together are what
-actually costs you an afternoon, and after two merges there is nothing to tell you
-which one it was.
+**Integrate in your own worktree; you do not merge to `main` yourself.** Pull
+`main` into your worktree, resolve any conflicts *there*, and get the suite green
+*there*. Then say the branch is ready, and stop. The merge is the integrator's,
+made from the shared checkout — an agent pinned to a worktree cannot reach `main`
+in any case, since git refuses to check out a branch already checked out
+elsewhere.
+
+What you hand over is a branch that has already absorbed `main` and passed on your
+own machine, so the merge cannot conflict, and is not the first time the two
+halves have met. That merge is `--no-ff`, explicitly, because a branch which has
+just absorbed `main` would otherwise fast-forward and leave no merge commit for
+the slug to live in — and `tests/docs-check.js` greps for `Merge branch '<slug>'`
+to tell what has landed. Branches go in one at a time with the suite run after
+each: git catches conflicting text for free, but two changes that each apply
+cleanly and break only together are what costs you an afternoon, and after two
+merges there is nothing to tell you which one it was.
 
 **Share nothing at runtime.** `npm test` starts its own server on a free port, so
 suites in different worktrees cannot end up driving each other's files — that
