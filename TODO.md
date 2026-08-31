@@ -49,31 +49,6 @@ here rather than batched.
 
 Entries with no gate need nothing from him and can run back to back.
 
-### pong-keyboard-paddle-speed — The keyboard paddle is too slow
-
-**Gate: playtest, its own.** A speed is pure feel, and this one changes how the
-whole game plays rather than how one mode does.
-
-`PADDLE_SPEED` caps keyboard movement at a fixed number of pixels per tick and has
-never been tuned. It is slow enough that crossing the board is a commitment rather
-than a decision.
-
-- **Do not "fix" the pointer while you are in here.** Pointer control sets
-  `player.y` straight from the event handler, outside the tick, so it is not
-  rate-limited at all and a mouse crosses the board in one frame. That asymmetry
-  is deliberate: it was fixed once and reverted on play, and `games/pong/DESIGN.md`
-  has the argument under Controls. Raising the key speed narrows the gap, which is
-  the point. Closing it is the thing that was already tried.
-- Per **tick**, not per frame, like every other speed here.
-- It is not part of a preset's `game` half — `applyGame()` writes `BALL_SPEED`,
-  `BALL_SPEED_MAX` and the two paddle scales and nothing else — so one number
-  changes all three modes at once. A per-mode speed means a fifth field there and
-  a fifth line in that function.
-- **This is why it comes before `pong-normal-rebalance`.** A faster paddle makes
-  every mode easier, and `node tests/ai-sweep.js` cannot see it: the sweep asks
-  only whether the ai reached the ball, never whether you could have. Tuning
-  Normal against a paddle that is about to change would have to be done twice.
-
 ### pong-pointer-beyond-board — The paddle stops when the mouse leaves the board
 
 **Gate: try it with a real mouse.** Less a feel change than a hole — the check is
@@ -159,7 +134,7 @@ currently rolls.
   thing to be true during `serve` — the ball pinned to the paddle — that such a
   test now also has to account for.
 - **This belongs before `pong-normal-rebalance`, for the same reason
-  `pong-keyboard-paddle-speed` already does.** Handing the player the opening
+  `pong-keyboard-paddle-speed` did.** Handing the player the opening
   angle is a real advantage; tuning Normal's difficulty against an opening shot
   that is about to change would have to be redone once this lands.
 - Update `games/pong/DESIGN.md`'s "The round" section in the same commit, per
@@ -171,10 +146,11 @@ currently rolls.
 **Gate: playtest, its own.** Gabriel called it, so he is the one who calls it
 fixed.
 
-Normal is the mode meant to be played and it currently asks too much. Judge it
-*after* `pong-keyboard-paddle-speed` **and** `pong-serve-from-paddle`: a faster
-paddle and a self-aimed serve may between them be most of the answer, and if they
-are, there is nothing left to do here.
+Normal is the mode meant to be played and it currently asks too much.
+`pong-keyboard-paddle-speed` has landed since this was written, so the faster
+paddle is already in; judge it *after* `pong-serve-from-paddle` as well, because a
+faster paddle and a self-aimed serve may between them be most of the answer, and
+if they are, there is nothing left to do here.
 
 The mode overrides very little, which is what makes it tunable.
 
