@@ -3,7 +3,7 @@
   "private": true,
   "description": "Static game arcade. The site has no dependencies; this manifest exists only for the browser tests.",
   "scripts": {
-    "test": "node tests/chording.test.js && node tests/instructions-panel.test.js && node tests/best-time.test.js && node tests/pong.test.js && node tests/docs-check.js",
+    "test": "node tests/chording.test.js && node tests/instructions-panel.test.js && node tests/best-time.test.js && node tests/pong.test.js && node tests/flappy-bird.test.js && node tests/docs-check.js",
     "serve": "python3 -m http.server 8934"
   },
   "devDependencies": {

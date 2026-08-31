@@ -97,7 +97,10 @@ with state worth protecting.
 Every game lives in `games/<name>/` as three files (`index.html`, `style.css`,
 `script.js`), plus a `DESIGN.md` once it has earned one, and is otherwise
 self-contained. Adding a game means creating that
-folder and a card in the root `index.html` — nothing else changes.
+folder and a card in the root `index.html`: the site has no registry, no
+manifest and no build to update. What does need updating is all outside the
+site — the page contract below, the game's ids and any storage key it invents,
+a suite in `tests/`, and that suite's place in `npm test`.
 
 Each game page follows a contract that `shared.css` depends on:
 
@@ -110,15 +113,27 @@ Each game page follows a contract that `shared.css` depends on:
   radiogroup labelled by `#difficulty-label`, a `#win-score-choice` radiogroup
   labelled by `#win-score-label` and `#play`; a hidden `#score-reader`; and
   `#win-score` inside the instructions panel, which the script rewrites whenever
-  the chosen win score changes).
+  the chosen win score changes; Flappy Bird has `#help-toggle` and
+  `#instructions` too, plus `#score` and `#best-score` in a HUD row above the
+  board).
   Game scripts look these up by id, and `shared.css` styles `.page`, `.status`,
   `.hint`, `.btn` (with `.secondary` and `.icon`), `.controls`, `.back-link`
   for them.
 - Treats `#status` as game state only — what just happened, or what to do next.
-  Standing instructions belong in a collapsible panel (both Minesweeper and Pong
-  use `#instructions`), not the status line. `shared.css` gives `.status` a reserved
-  min-height so its text can change without shifting the board.
+  Standing instructions belong in a collapsible panel (Minesweeper, Pong and
+  Flappy Bird all use `#instructions`), not the status line. `shared.css` gives
+  `.status` a reserved min-height so its text can change without shifting the
+  board.
 - Links back to `../../index.html`.
+- **Hands the focus back after a pointer click on its own buttons**, in any game
+  whose keys drive play. A clicked button keeps the focus, and a focused button
+  takes Space and Enter as its own activation — so the key that plays the game
+  quietly becomes the key that works the button. In Flappy Bird, Space stopped
+  flapping the moment How to play was clicked. Clicking the board did not recover
+  it either: `preventDefault()` on `pointerdown` suppresses the mousedown the
+  browser uses to move the focus, so the game has to blur by hand. `releaseFocus`
+  does it on a pointer click only; a keyboard activation (`detail === 0`) has to
+  keep the focus, or tabbing through the controls loses it on the first press.
 
 `shared.css` owns the theme as CSS custom properties (`--bg`, `--fg`, `--cell-bg`,
 `--cell-border`, `--accent`, `--win`, `--lose`, `--muted`) which flip under
@@ -201,22 +216,48 @@ Chording fires on middle **mousedown** (see below). The HUD counter shows flags
 left to place (`MINE_COUNT - flagCount`), which is why it carries a flag icon;
 the bomb icon means an actual revealed mine.
 
+**Flappy Bird** (`games/flappy-bird/script.js`) borrows Pong's pacing and for the
+same reasons: `advance()` drains real time into whole `TICK_MS` ticks, so every
+constant in it is per tick rather than per frame, `update()` returns before
+touching anything outside `phase === "play"` so a test can place the bird and
+step time by hand, and loop scheduling is guarded by `running` rather than by
+`rafId`. Three rules keep the game honest. The bird never moves horizontally —
+`BIRD_X` is fixed and the world scrolls past it, which is why collision only ever
+tests one x. A flap *sets* `bird.vy` rather than adding to it, so mashing the key
+cannot accumulate lift. And a pipe's hitbox is exactly the two rectangles
+`draw()` paints: no lip, no inset, nothing decorative hanging off the side, so
+what kills you is what you can see.
+
+The ceiling clamps the bird and the ground ends the run — dying to something
+above the screen reads as the game cheating. New pipes are spaced off the last
+pipe rather than off the screen edge, so the interval stays exact however the
+ticks land.
+
 ### Persisted state
 
-Two games store data, both in `localStorage` and both under namespaced keys.
+Three games store data, all in `localStorage` and all under namespaced keys.
 Minesweeper's best time is keyed by board configuration
 (`minesweeper.bestTime.9x9-10`) so adding a difficulty later cannot compare
 records across board sizes; Pong remembers the chosen difficulty and win score
-(`pong.difficulty`, `pong.winScore`). Keep it local — no network, no accounts.
+(`pong.difficulty`, `pong.winScore`); Flappy Bird keeps the best run
+(`flappy.bestScore`). Keep it local — no network, no accounts.
+
+`tests/docs-check.js` is what holds that list to the code, and it recognises a
+storage key by the game name in front of the dot. A new game's keys are
+invisible to it until its name joins that pattern, so adding one means adding
+the name there in the same commit — the check passes either way, which is
+exactly how it would go unnoticed.
 
 Wrap every `localStorage` access. It does not merely return `null` when
 unavailable, it *throws* — in private windows, with site data blocked, and from
 `file://` in some browsers — so an unguarded read at load time takes the whole
 game down. Every reader degrades to a default instead:
-`loadBestTime`/`saveBestTime`/`clearBestTime` in Minesweeper, and
-`loadDifficulty`/`saveDifficulty`/`loadWinScore`/`saveWinScore` in Pong.
-`tests/best-time.test.js` covers that path by making storage throw, and
-`tests/pong.test.js` does the same for the win score.
+`loadBestTime`/`saveBestTime`/`clearBestTime` in Minesweeper,
+`loadDifficulty`/`saveDifficulty`/`loadWinScore`/`saveWinScore` in Pong, and
+`loadBestScore`/`saveBestScore` in Flappy Bird.
+`tests/best-time.test.js` covers that path by making storage throw,
+`tests/pong.test.js` does the same for the win score, and
+`tests/flappy-bird.test.js` for the best score.
 
 The gear panel's Reset best time button clears the key. It is disabled whenever
 `loadBestTime()` returns `null`, which covers both "no record yet" and "storage

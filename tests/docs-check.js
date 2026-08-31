@@ -76,7 +76,7 @@ check("every id in a game page is in the page contract", badIds, "undocumented")
 //    the user's browser, and CLAUDE.md is where that promise is recorded.
 const badKeys = [...code.matchAll(/["'`]([a-z]+\.[A-Za-z]+)[.`"']/g)]
   .map((m) => m[1])
-  .filter((k) => /^(minesweeper|pong|chess|tic)\./.test(k))
+  .filter((k) => /^(minesweeper|pong|chess|tic|flappy)\./.test(k))
   .filter((k, i, a) => a.indexOf(k) === i)
   .filter((k) => !claude.includes(k));
 check("every storage key is documented", badKeys, "undocumented");

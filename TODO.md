@@ -623,7 +623,7 @@ thing that reads as unfinished on a live site.
 
 One file at the repo root is enough; browsers find `/favicon.ico` without a link
 tag, which also keeps it out of every game page's `<head>`. An SVG referenced
-from `shared.css`'s owning pages would need markup in all five instead.
+from `shared.css`'s owning pages would need markup in all six instead.
 
 ### site-visual-design — Improve the site's design and visual appeal
 
