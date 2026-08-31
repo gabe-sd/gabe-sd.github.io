@@ -671,15 +671,23 @@ const { check, report } = makeChecks();
       for (let i = 0; i < AI.reactionTicks; i++) update();
       const during = ai.y;
       update();
-      return { before, during, after: ai.y, ticks: AI.reactionTicks };
+      return { before, during, after: ai.y, ticks: AI.reactionTicks,
+               speed: AI.speed, panic: AI.panicSpeed };
     });
     check("it holds still through a reaction delay",
       react.during === react.before, `${react.before} -> ${react.during}`);
     check("then starts moving", react.after !== react.during,
       `${react.during} -> ${react.after}`);
+    // Bound this against the ai's own top speed, not the player's. It used to be
+    // PADDLE_SPEED, which the ai never moves at: a complete snap to AI.speed, or
+    // to the higher panicSpeed this setup actually triggers, came in under it and
+    // passed a check whose only purpose is to catch a snap. AI.speed is the
+    // slowest thing it could snap to, so it is the bound that catches every one;
+    // a real wind-up covers top/accelTicks on its first tick, far below.
     check("winding up rather than snapping to full speed",
-      Math.abs(react.after - react.during) < consts.PADDLE_SPEED,
-      `moved ${Math.abs(react.after - react.during).toFixed(2)}px on its first tick`);
+      Math.abs(react.after - react.during) < react.speed,
+      `moved ${Math.abs(react.after - react.during).toFixed(2)}px on its first tick,`
+      + ` against speed ${react.speed} / panic ${react.panic}`);
 
     // Braking later than it can stop is what produces the overshoot; it has to
     // come back, the way a hand does.
