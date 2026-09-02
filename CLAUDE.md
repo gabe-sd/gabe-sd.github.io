@@ -123,6 +123,13 @@ running. And plain `kill`, not `kill -9`: a process killed with SIGKILL cannot
 pass the signal on to its own children, which is how a wrapper dies and leaves
 its server still holding the port.
 
+Knowing *where* a process started is not knowing *whose* it is. `/proc/<pid>/cwd`
+names a directory, and every agent session on this repo shares one checkout, so a
+live session and an abandoned one are identical by that test. Ask before killing
+anything you did not start — and if you have asked and not heard back, that is not
+permission. A session was killed here while its own identification request was
+still sitting unanswered, and it turned out to be the one its user was typing in.
+
 Be as careful about *which* PID you have. `cmd &` sets `$!` to `cmd`, but
 `cd somewhere && cmd &` backgrounds the whole compound, so `$!` is a subshell and
 `cmd` is its child — kill that and the child carries on. Both traps produced a
