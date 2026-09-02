@@ -156,6 +156,13 @@ happened, and the run went green against the wrong checkout. The git stash stack
 *is* shared across every worktree in the repo, so do not use it; a WIP commit sets
 work aside without reaching into somebody else's.
 
+Port 8934 is the shared checkout's, and `npm run serve` binds it by default.
+**From a worktree, run `PORT=0 npm run serve`** and pass on the URL it prints.
+Two agents both taking 8934 is the loud version of this — the second one gets
+`Address already in use`. The quiet version is worse and is the reason for the
+rule: open 8934 to look at a change, get another worktree's files, and nothing
+tells you. The port stayed shared here long after `npm test` stopped sharing one.
+
 The desktop is shared in the same way, and it is the one shared thing with no
 technical guard at all. XTEST input goes to the real display and lands on whatever
 window is on top, so two agents driving the pointer at once corrupt both runs —
@@ -208,6 +215,7 @@ read.
 ```bash
 npm test                        # every suite, on a server it starts itself
 npm run serve                   # a server on 8934 to play in a browser; tests do not need it
+PORT=0 npm run serve            # the same, on a free port it prints - what a worktree uses
 node tests/chording.test.js     # one suite on its own; needs a server (npm run serve)
 node tests/docs-check.js        # do the docs still describe this repo? no browser
 node tests/ai-sweep.js          # how often Pong's ai saves; a ruler, not a test
