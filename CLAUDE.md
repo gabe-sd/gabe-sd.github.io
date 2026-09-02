@@ -178,6 +178,17 @@ that prompted the change. That goes for anything you would improve about how the
 work is split, merged or verified, not only the rules listed here. A workaround
 that stays in one agent's head is the one thing this section cannot survive.
 
+Say it to the person running the session, out loud and at the time — not into a
+file, and not saved for the end. A process defect left in place is paid again by
+every agent after you, which is what makes it worth interrupting the task for.
+These rules are expected to change; what they cannot survive is friction only one
+agent ever knew about.
+
+Mark it so it cannot be skimmed past: open the line with **WORKFLOW ISSUE:** in
+capitals, then what happened. A long answer gets read at speed, and the paragraph
+that mattered goes by with the rest — so the flag has to be visible without being
+read.
+
 ## Commands
 
 ```bash
