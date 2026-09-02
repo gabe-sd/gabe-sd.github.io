@@ -23,15 +23,21 @@
 // from a centred start, which says nothing; the speed at which that stops being
 // true says how much room the mode has left. Two columns:
 //
-//   reachable to  the fastest ball whose worst shot - dead straight, so the
-//                 fewest ticks in flight, at the corner furthest from the paddle
-//                 - is still reachable, and the headroom over the cap the mode
-//                 plays. Negative headroom means the mode can produce a shot no
-//                 keyboard input could save. Reported twice, because a squeezed
-//                 paddle has further to travel and less of it to arrive with.
-//   tunnelled     shots that beat a paddle pinned on the intercept every tick.
-//                 Anything but none is the ball passing *through* a paddle that
-//                 was in the right place - a bug, not a difficulty question.
+//   clean/squeezed  the fastest ball whose worst shot - dead straight, so the
+//                   fewest ticks in flight, at the corner furthest from the
+//                   paddle - is still reachable, and the headroom over the cap
+//                   the mode plays. Negative headroom means the mode can produce
+//                   a shot no keyboard input could save. Reported for both
+//                   paddle sizes, because a squeezed one has further to travel
+//                   and less of it to arrive with.
+//   tunnelled       shots that beat a paddle pinned on the intercept every tick.
+//                   Anything but none is the ball passing *through* a paddle
+//                   that was in the right place - a bug, not a difficulty
+//                   question.
+//
+// Both numeric columns are headed "worst shot reachable to" in the output rather
+// than only explained down here, because a row quoted on its own would otherwise
+// read as a fact about the game instead of about a constructed shot.
 //
 // A mouse is bound by none of it: pointer control is deliberately not rate
 // limited (see DESIGN.md), so it covers any distance in one tick.
@@ -239,23 +245,28 @@ const REACH = !!process.env.REACH;
   if (REACH) {
     console.log("\ncan you reach it? the worst shot each mode can produce,"
       + " against a perfect keyboard player\n");
+    // "worst shot" sits in the header rather than only in the legend, so a row
+    // quoted on its own still says what it is a fact about. It is a constructed
+    // shot, not ordinary play, and the difference decides things.
+    console.log("                                worst shot reachable to");
     console.log("  mode         cap  paddle"
-      + "     reachable to      squeezed       tunnelled");
+      + "         clean          squeezed      tunnelled");
     for (const level of await page.evaluate(() => Object.keys(DIFFICULTY))) {
       await reportReach(level);
     }
-    console.log("\n  reachable to  the fastest ball whose worst shot a paddle at"
-      + " PADDLE_SPEED still gets to,");
-    console.log("                and the headroom over the cap that mode"
-      + " actually plays. Negative means");
-    console.log("                the mode can produce a shot no keyboard input"
-      + " could save. A mouse is not");
-    console.log("                bound by this at all - pointer control is"
-      + " deliberately not rate limited.");
-    console.log(`  tunnelled     shots that beat a paddle pinned on the`
-      + ` intercept, out of ${N}. Anything but`);
-    console.log("                none is a bug rather than a difficulty"
-      + " question.");
+    console.log("\n  clean/squeezed  the fastest ball whose worst shot a paddle"
+      + " at PADDLE_SPEED still gets");
+    console.log("                  to, and the headroom over the cap that mode"
+      + " actually plays. Negative");
+    console.log("                  means the mode can produce a shot no"
+      + " keyboard input could save. A");
+    console.log("                  mouse is not bound by this at all - pointer"
+      + " control is deliberately");
+    console.log("                  not rate limited.");
+    console.log(`  tunnelled       shots that beat a paddle pinned on the`
+      + ` intercept, out of ${N}.`);
+    console.log("                  Anything but none is a bug rather than a"
+      + " difficulty question.");
   }
   await browser.close();
 })();
