@@ -152,6 +152,16 @@ node tests/ai-sweep.js '{"speed":3.5}'       # a one-off override
 REACH=1 node tests/ai-sweep.js               # and whether *you* could reach it
 ```
 
+Two kinds of number come out of these, and only one of them should reproduce.
+`REACH=1`'s limit columns are a binary search and deterministic: run from a
+different checkout on a different port and they come back identical to the
+hundredth, which they did three times over — 17.27/14.24, 14.99/13.57,
+14.24/12.95. If those ever differ between runs, that is a real signal and worth
+chasing. Everything else samples: the saves percentages, the tunnelled count, and
+every volley-sweep figure move a few percent run to run, and comparing two of them
+proves nothing on its own. Neither sweep's output says which is which, so a reader
+handed one row cannot tell.
+
 `REACH=1` answers the question the saves figure cannot, and which
 `games/pong/DESIGN.md` calls this harness's blind spot: it only ever asks whether
 the *ai* got a paddle to the ball. The reach columns fire the shot the other way
