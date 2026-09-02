@@ -68,6 +68,21 @@ uncommitted changes across. If your harness named the branch `worktree-<slug>`,
 rename it to the bare slug: `tests/docs-check.js` tolerates the prefix so a landed
 entry is still recognised, but nothing else does.
 
+Expect that rename to produce a false alarm much later. The worktree tooling
+records the branch name it created and does not follow a rename, so when the
+worktree is removed its warning counts commits against a ref that no longer
+exists. It read "will discard 35 commits" here against a true answer of none, and
+`git rev-parse --verify` on the name it used returned "Needed a single revision".
+The convention causes the alarm, so everyone who follows it meets the message
+eventually — and the safe-looking response, keeping a worktree nobody needs, is
+the one that costs the next agent twenty minutes. Answer it by checking the
+commits instead of the count: `git merge-base --is-ancestor <commit> main` for
+each one you authored, then remove it.
+
+Remove your own worktree from inside the session that is in it. Removing one from
+outside leaves that session's working directory pointing at a path that no longer
+exists.
+
 The bare slug is for work that **closes** the entry and deletes it. Work that
 advances one without closing it — characterising it, correcting it, filing a note
 against it — takes the slug plus a suffix: `pong-insane-ball-speed-characterised`
