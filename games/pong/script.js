@@ -57,15 +57,13 @@ const AI = {
   panicDistancePx: 90,    // how far behind it must be to lunge; Infinity = never
 };
 
-// Difficulty is a set of overrides on AI and nothing else — both sides play the
-// same game, so the share of shots the ai saves measures the difference honestly.
-// The figures are what each preset measured at; they are starting points to tune
-// by feel, not settings to preserve.
-// Assisted and Insane are characters rather than points on a difficulty scale:
-// each has moves it occasionally uses. Same contract as AI above - every knob
-// names the value that switches its feature off, so any one of these can be
-// isolated, weakened or removed without unpicking the rest. `modes: []` disables
-// a move outright.
+// The moves. Every mode has them; what a preset's `ability` half changes is how
+// often and how hard they fire, not whether they exist. The moves are the show,
+// not the difficulty - see DIFFICULTY below, which is where the presets and what
+// each of them overrides are actually described.
+// Same contract as AI above - every knob names the value that switches its
+// feature off, so any one of these can be isolated, weakened or removed without
+// unpicking the rest. `modes: []` disables a move outright.
 //
 // Every move telegraphs before it lands. That is the rule that keeps them from
 // feeling arbitrary: you see it coming, so losing to one is something that
@@ -1638,6 +1636,18 @@ function toggleHelp() {
   helpToggle.setAttribute("aria-expanded", String(opening));
 }
 
+// A clicked button keeps the focus, and a focused button takes Space as its own
+// activation - so after clicking How to play, Space toggled the panel instead of
+// serving, and no amount of pressing it started the point. The panel it happens
+// in is the one that says "Space - serve", which is the whole joke.
+// Hand the focus back on a *pointer* click only: a keyboard activation (detail 0)
+// has to keep it, or tabbing through the controls drops the focus on the first
+// press. handleKeyDown still refuses to serve while a button is focused, which is
+// what makes that keyboard case work rather than doing both things at once.
+function releaseFocus(e) {
+  if (e.detail > 0) e.currentTarget.blur();
+}
+
 // Clear a match back to nothing. Deliberately does not set `phase` or touch the
 // menu: the two ways *into* a match differ only in where they land, and both go
 // through here first. Play used to skip this entirely, which was invisible from
@@ -1687,6 +1697,7 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) setPaused(true);
 });
 restartBtn.addEventListener("click", restart);
+restartBtn.addEventListener("click", releaseFocus);
 
 for (const b of difficultyBtns) {
   b.addEventListener("click", () => {
@@ -1716,6 +1727,7 @@ playBtn.addEventListener("click", () => {
   playBtn.blur();
 });
 helpToggle.addEventListener("click", toggleHelp);
+helpToggle.addEventListener("click", releaseFocus);
 
 applyDifficulty(loadDifficulty() ?? "normal");
 applyWinScore(loadWinScore() ?? WIN_SCORES[0]);

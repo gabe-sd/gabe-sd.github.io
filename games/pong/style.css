@@ -51,9 +51,10 @@
   display: flex;
   justify-content: center;
   gap: 0.4rem;
-  /* Five across is comfortably inside a 600px board, but the canvas is
+  /* Three across is comfortably inside a 600px board, but the canvas is
      max-width: 100% and the buttons are not, so a narrow window needs them to
-     fall onto a second line rather than out of the menu. */
+     fall onto a second line rather than out of the menu. Both rows use this
+     class - the difficulties and the win score - so it is three either way. */
   flex-wrap: wrap;
 }
 
