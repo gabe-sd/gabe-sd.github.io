@@ -211,6 +211,22 @@ Two agents both taking 8934 is the loud version of this — the second one gets
 rule: open 8934 to look at a change, get another worktree's files, and nothing
 tells you. The port stayed shared here long after `npm test` stopped sharing one.
 
+The project memory directory is shared too, and unlike the rest of these, sharing
+is the point: it is how something learned in one session reaches the next. What
+breaks is writing a session's own situation into it. A note here opened "my seat
+on this repo is the integrator", written by an agent that had held one seat all
+evening and stopped noticing the seat was a variable. Every later session loads
+that as a statement about itself, and a worker who believes it holds `main` tries
+to merge and hits a git refusal that reads as broken tooling.
+
+So a memory has to be true for **every** agent that loads it. What the repo does,
+how the work is split, what Gabriel has decided — all fine. Which seat you are,
+which area you own, what you are half-way through — not memories at all: they are
+settled per session and they die with it. Where a note must mention the seat,
+write the question rather than the answer — the seat is assigned per session, ask
+if it has not been said. That goes for the one-line `description:` as much as the
+body, since it is the line read first.
+
 The desktop is shared in the same way, and it is the one shared thing with no
 technical guard at all. XTEST input goes to the real display and lands on whatever
 window is on top, so two agents driving the pointer at once corrupt both runs —
