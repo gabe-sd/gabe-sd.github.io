@@ -68,6 +68,22 @@ uncommitted changes across. If your harness named the branch `worktree-<slug>`,
 rename it to the bare slug: `tests/docs-check.js` tolerates the prefix so a landed
 entry is still recognised, but nothing else does.
 
+The bare slug is for work that **closes** the entry and deletes it. Work that
+advances one without closing it — characterising it, correcting it, filing a note
+against it — takes the slug plus a suffix: `pong-insane-ball-speed-characterised`
+rather than `pong-insane-ball-speed`. Check 5 in `tests/docs-check.js` reads a
+`Merge branch '<slug>'` commit as proof that entry has landed, and fails while the
+entry is still in the file, so the bare slug on a branch that leaves the entry
+open turns `main` red at the merge — for the integrator, not for you. The
+pattern includes the closing quote, which is what lets a suffix clear it.
+
+Two rules that each looked right on their own, and a collision only visible from
+the seat that merges. It has now been found twice, and the first time it went
+into a commit message (`315e743`) and a comment inside `docs-check.js`, where
+nobody reading this file would meet it. Note also that it cannot be smoke-tested
+with an empty commit: the check passes `--merges`, so only a real merge commit
+trips it, and an empty one passes and tells you the problem is not there.
+
 **One agent owns one area at a time.** An area is a game folder, or the shell —
 the root page, `shared.css`, the docs, the tests. A suite belongs to the game
 whose page it drives, not to the shell — `tests/chording.test.js` and
