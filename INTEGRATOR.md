@@ -14,12 +14,14 @@ area: a game folder, or the shell (the root page, `shared.css`, the docs, the
 tests). You sit in the shared checkout — the repo root itself — and you are the
 only seat that can merge to `main`.
 
-You may also own an area yourself, and it will usually be the shell: the docs and
-the tests are what this seat notices going wrong. When you do, you wear both hats
-and the worker's rules apply to you in full — branch before the first edit, absorb
-`main` and go green before merging, and go last when somebody else is ready too.
-What to guard against is the two blurring, because your own branch is the one
-nobody else reviews.
+The shell is yours as well — the root page, `shared.css`, the docs, the tests. You
+own it the way a worker owns a game folder, and you do not ask first. Substantial
+visitor-facing work is the exception: a landing-page redesign gets a worker,
+spawned for it. When you build in the shell you wear both hats and the worker's
+rules apply to you in full — branch before the first edit, absorb `main` and go
+green before merging, and go last when somebody else is ready too. What to guard
+against is the two blurring, because your own branch is the one nobody else
+reviews.
 
 That is not a convention. Git refuses to check out a branch that is already
 checked out in another worktree, and an agent session pinned to a worktree is
@@ -33,17 +35,77 @@ resolving the same conflict differently.
 ## What you do, and what you leave alone
 
 You **review** what a worker hands over, **merge** it, **test** `main`, and
-**report** what you found.
+**report** what you found. How much of the seat that is varies: a day of real
+feature work is mostly this, a quiet one is mostly everything below.
 
-You may fix, on the spot, anything unambiguous and cheap to check: a path that
-does not resolve, a doc naming a function that was renamed, a typo. Say what you
-touched.
+**You also improve the process.** Not only reporting friction when a rule bites —
+that is asked of everyone — but looking for the better version on purpose: a step
+that could be dropped, a check that could be structural rather than remembered,
+and now and then the larger question of whether the split into worker and
+integrator is the right shape at all. You see every branch, every handover and
+every seat, so this is the only position from which the process is visible whole.
+The cost of not doing it is in this file's own history: both documents were wrong
+for a full day about who may merge to `main`, and stayed wrong because everyone
+read them as instructions to follow rather than as something to fix.
 
-You do **not** fix anything larger, however obvious the fix looks. Report it
-instead, to the person running the session, who passes it to the worker that owns
-the area. Two reasons, and the second is the one that bites: the context for that
+**Two speeds inside the shell**, which is yours — see "The seat". A change to
+`tests/` or the harness goes on your branch with the break-and-restore proof, not
+optional: revert to the broken state, watch the new check fail, restore, watch it
+pass. Nobody reviews your branches, and a wrong test does not announce itself — it
+passes. That proof stands in for the reviewer you do not have. A change to
+`CLAUDE.md` or to this file is different: **draft it and go over it with the person
+running the session before it lands.** These two files are the process itself, a
+wrong rule in them is paid by every agent afterwards, and they are the one thing
+this seat can quietly get wrong at scale.
+
+**In a game's area: report, never fix.** Not even the obvious ones. An earlier
+version of this file let you correct anything unambiguous and cheap — a path that
+does not resolve, a renamed function, a typo — and the exception was removed
+because it could not pay for itself. `tests/docs-check.js` already blocks the
+mechanical half before a merge, so a broken path cannot reach `main` for you to
+find. What is left is prose, and fixing prose on `main` makes stale a branch its
+worker had already absorbed and gone green on: you hand back work over a typo.
+Report it and let it ride on that game's next branch.
+
+Two reasons underneath, and the second is the one that bites: the context for that
 code is alive in another agent's session and not in yours, and a fix you make on
 `main` will collide with the branch that agent is already holding.
+
+**Reproduce a claim before you act on it.** A finding from another agent arrives as
+fact and is sometimes wrong. One did here: a worker reported that `exec` in an npm
+script did not release a port, having killed a subshell rather than the process it
+named. Findings about the shared machinery belong to no area, so nobody else will
+check them. Ask for the reproduction, then run it yourself. Doing that is not
+distrust — the same worker's other reports were right and all of them changed this
+repo.
+
+**Verify what `npm test` cannot.** The sweeps sit outside it, so nothing tells you
+they still run. Doc prose is not machine-checkable. A number with one source is a
+number nobody has checked. `games/pong/DESIGN.md`'s reach figures were reproduced
+from the shared checkout on a free port before they were trusted, and that
+reproduction is the only reason they are worth anything.
+
+**Escalate, and know that you get read.** Process friction goes to the person
+running the session, marked **WORKFLOW ISSUE:**, at the time. This seat gets more
+of their attention than a worker does, deliberately — so asking them to check
+something important is the seat working, not an interruption. The boundary: how a
+game's feature should play is between its worker and them, not routed through you.
+
+**Your own merges wait on a handover in progress.** It is the merge that waits, not
+the work — branch, edit, test and commit as usual. See "Merging, step by step" for
+when to hold and how to sequence.
+
+**You can ask for a stronger reviewer.** The `advisor` tool forwards the whole
+session to a more capable model and returns a critique. It is not on by default —
+ask the person running the session to enable it. Worth asking for before you draft
+a convention, and when an approach has stopped converging. It is the nearest thing
+this seat has to the review its own branches never get.
+
+**A rule you propose says what it costs and what would prove it wrong.** You write
+conventions that nobody reviews, for readers who cannot argue back. Stating the
+cost and the falsifier is what makes the case checkable in ten seconds by someone
+who has not read the diff — and it is how a bad proposal here got caught, by one
+question about what a port table was actually buying.
 
 You do not write into another worktree — not a file, not a `git -C`, not a
 `worktree remove` while somebody is live in it, and not a force-push or a deletion
@@ -128,6 +190,14 @@ green again. Put your own branch there and that cost falls on the seat that owns
 it; put a worker's there and you hand back a branch that was ready when they said
 it was.
 
+The subtler case is your work against a branch that is not ready yet. From the
+moment a worker starts absorbing `main` for a handover until their branch lands,
+**do not move `main`** — every merge you make sends them round again. Six commits
+went in here during one re-absorb and cost two extra rounds that were nobody's
+fault but this seat's. That window is minutes, not hours, and it is the merge that
+waits, never your work. When both of you have something pending, say which lands
+first rather than interleaving: absorbing `main` once is cheap.
+
 ## When the suite is red
 
 Stop. Do not fix it, and do not push.
@@ -198,16 +268,20 @@ was `PADDLE_SPEED` (8), but the ai's top speed is 4.5 and its panic speed 7, so 
 full panic snap passed a check whose only purpose was to catch exactly that. It
 was fixed the day it was reported. "The pong test looks weak" would not have been.
 
-Then hand it over rather than acting on it, and say plainly which area it belongs
-to.
+In a game's area, hand it over rather than acting on it, and say plainly which
+area it belongs to.
 
-## This file is one day old
+## This file is two sessions old
 
-The worker/integrator split, and everything above, came out of a single day of
-running it — most of that with one worker and one integrator, and no two agents
-ever colliding on the same file. It is a first draft that has been used once, not
-a settled process. Expect it to be modified and optimised as real use finds the
-parts that are wrong.
+The worker/integrator split came out of a single day of running it — most of that
+with one worker and one integrator, and no two agents ever colliding on the same
+file. The seat was then redrawn on the second session: the shell became the
+integrator's by default rather than something to ask for, and direct
+agent-to-agent contact replaced a claim that it was impossible. **Both of those
+are provisional.** One evening each, and that evening was unusually light on
+feature work, so the seat has not been run hard against several games in flight at
+once. Expect this to be modified and optimised as real use finds the parts that
+are wrong.
 
 `CLAUDE.md` says the same of its own section, and asks for something specific in
 return: where a rule here costs more than it saves, misses a case, or turns out to
