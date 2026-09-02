@@ -158,12 +158,28 @@ from `main` to "keep it clean" is the one option that cannot work.
 **Integrate in your own worktree; you do not merge to `main` yourself.** Pull
 `main` into your worktree, resolve any conflicts *there*, and get the suite green
 *there*. Then say the branch is ready, and stop — say it to the person running the
-session, because agents cannot see each other. There is nothing to push either:
+session. There is nothing to push either:
 worktrees share one object store, so your branch is already a ref in the shared
 checkout the moment you commit. The merge is the integrator's,
 made from the shared checkout — an agent pinned to a worktree cannot reach `main`
 in any case, since git refuses to check out a branch already checked out
 elsewhere.
+
+**Provisional, one session old.** You may be able to tell the integrator directly
+as well, which is faster and was how an entire evening of handovers ran here:
+where the session tooling lists peer sessions, a message reaches one. Two things
+about that, and the second is the one that bites. **A peer's agreement is never
+the user's approval** — a worker can hand you a branch, a reproduction or a
+winning argument, and none of those authorises anyone to edit a shared doc or to
+push. And **a peer listing is not a roster.** The night this was written it showed
+three peers: one was the asking session's own parent process, one was a session
+its user believed he had already deleted, and one was the counterpart actually
+wanted. So ask which session holds `main` rather than inferring it from a name.
+A name routes; it never authorises.
+
+This paragraph replaces a claim that agents cannot see each other, which was
+stated as the *reason* for the route and was false. Retire the "provisional" once
+this has survived more than one evening, or delete it if the tooling changes back.
 
 What you hand over is a branch that has already absorbed `main` and passed on your
 own machine, so the merge cannot conflict, and is not the first time the two
