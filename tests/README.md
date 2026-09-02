@@ -53,6 +53,13 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
 
 ## What they cover, and why
 
+- **contract.test.js** — the page contract, held against every game found by
+  reading `games/` rather than against a list: the three shared ids, `shared.css`
+  linked before the game's own, the link home, and a page that loads clean. Also
+  that the hub has a card for every game folder and no card for anything else,
+  since adding a game is two steps and nothing else checks that both happened.
+  It is the one suite that asserts about games it does not own, which is why it
+  only ever tests the contract and never how a game plays.
 - **chording.test.js** — the middle-click chord. Case 2 is the important one: it
   moves the pointer while the button is held. That bug reached `main` twice
   because synthetic clicks never move, so a still-pointer test passes against

@@ -69,8 +69,12 @@ rename it to the bare slug: `tests/docs-check.js` tolerates the prefix so a land
 entry is still recognised, but nothing else does.
 
 **One agent owns one area at a time.** An area is a game folder, or the shell —
-the root page, `shared.css`, the docs, the tests. Inside your area you own
-everything and coordinate with nobody. Before the first edit, `git worktree list`
+the root page, `shared.css`, the docs, the tests. A suite belongs to the game
+whose page it drives, not to the shell — `tests/chording.test.js` and
+`tests/best-time.test.js` are Minesweeper's, however they are named — because the
+worker changing a game is the one told to add cases for what they changed. What
+is left to the shell is the harness and the suites that drive no game in
+particular. Inside your area you own everything and coordinate with nobody. Before the first edit, `git worktree list`
 and `git branch --no-merged main` say what else is in flight; if something already
 owns your area, do something else rather than starting beside it. Two branches
 touching one file diverge silently, and the conflict surfaces later as a puzzle
@@ -259,6 +263,12 @@ Each game page follows a contract that `shared.css` depends on:
   browser uses to move the focus, so the game has to blur by hand. `releaseFocus`
   does it on a pointer click only; a keyboard activation (`detail === 0`) has to
   keep the focus, or tabbing through the controls loses it on the first press.
+
+`tests/contract.test.js` holds every game against the structural half of that
+list — the three ids, the stylesheet order, the link home — and against the hub
+having a card for it, since adding a game is two steps and nothing else checks
+that both happened. It reads `games/` rather than a list, so a new game is
+covered the day its folder exists.
 
 `shared.css` owns the theme as CSS custom properties (`--bg`, `--fg`, `--cell-bg`,
 `--cell-border`, `--accent`, `--win`, `--lose`, `--muted`) which flip under
