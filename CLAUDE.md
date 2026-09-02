@@ -97,6 +97,16 @@ it is — `ls -l /proc/<pid>/cwd` names the directory it was launched from. A se
 already holding the port you wanted is far more likely to be another agent's than
 a leftover of yours.
 
+Kill by PID, and look the PID up first: `ss -ltnp` names whatever holds a port.
+**Never `pkill -f`.** Its pattern matches your own command line as readily as the
+process you meant, because the pattern is *in* that command line — it killed the
+shell mid-command twice in one session here, the second time while that command
+was tidying up the very server it was aimed at. If you have to match on a
+pattern, put it in a script file, where it is not on the command line you are
+running. And plain `kill`, not `kill -9`: a process killed with SIGKILL cannot
+pass the signal on to its own children, which is how a wrapper dies and leaves
+its server still holding the port.
+
 Two things stop some of this by accident, and neither is a substitute for the
 rule: git refuses to check out a branch that is already checked out in another
 worktree, and an agent session pinned to a worktree is blocked from running git
