@@ -202,6 +202,15 @@ than taking its own. The rule exists so half-finished work can be abandoned and 
 the merge commit records the feature; a one-commit note gets neither and pays the
 stale-base cost.
 
+That governs edits which belong to something in flight. When nothing is in
+flight, the rule is silent, and silence is not a prohibition: take the branch, or
+file the entry, but do not hold it until some future branch happens to touch the
+same file. Reading it the other way is how a known one-line fix ends up recorded
+only in a session that then ends — which happened here, and the fix was a column
+header. `315e743` is the precedent going the other way: a single-commit branch
+whose entire content was filing a `TODO.md` entry, named off-slug on purpose so
+the check would not read it as landed.
+
 **If you are writing it in a handoff, it belongs in a doc.** That a worker never
 merges to `main` was known and was written into a handoff message for the next
 agent — while this file said the opposite, and had said so since the day it was
