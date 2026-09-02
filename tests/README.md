@@ -135,6 +135,16 @@ shot, which is the number every claim about difficulty in `games/pong/DESIGN.md`
 rests on. The suite guards the *range* — beatable, not hopeless — and this tells
 you where inside it a change actually landed.
 
+Being outside `npm test` has a consequence worth stating outright: **nothing
+checks that these two files still run.** A green suite says nothing about
+`ai-sweep.js` or `volley-sweep.js`, so an edit that leaves either unable to start
+— a stray backtick in a template literal, a rename half-applied — is invisible
+until somebody reaches for the tool, which may be weeks later and will be
+somebody deciding something. Run the sweep you touched after editing it, and
+`node --check` first if the edit was to a string or a template. That applies to
+edits which change no measurement at all: reformatting the output is exactly the
+kind of change that feels too safe to re-run.
+
 ```bash
 node tests/ai-sweep.js                       # every entry in DIFFICULTY
 N=2000 node tests/ai-sweep.js                # more samples, tighter figure

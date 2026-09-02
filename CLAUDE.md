@@ -123,6 +123,15 @@ running. And plain `kill`, not `kill -9`: a process killed with SIGKILL cannot
 pass the signal on to its own children, which is how a wrapper dies and leaves
 its server still holding the port.
 
+Be as careful about *which* PID you have. `cmd &` sets `$!` to `cmd`, but
+`cd somewhere && cmd &` backgrounds the whole compound, so `$!` is a subshell and
+`cmd` is its child — kill that and the child carries on. Both traps produced a
+wrong finding here on the same day, and one of them was reported as fact: an
+agent concluded `exec` in an npm script did not release a port, having killed the
+subshell rather than npm. Neither trap is about the thing being tested, and both
+fail the same way, by leaving something running that you have just watched
+yourself kill.
+
 Two things stop some of this by accident, and neither is a substitute for the
 rule: git refuses to check out a branch that is already checked out in another
 worktree, and an agent session pinned to a worktree is blocked from running git
@@ -192,6 +201,15 @@ A doc-only edit belonging to work already in flight rides on that branch rather
 than taking its own. The rule exists so half-finished work can be abandoned and so
 the merge commit records the feature; a one-commit note gets neither and pays the
 stale-base cost.
+
+That governs edits which belong to something in flight. When nothing is in
+flight, the rule is silent, and silence is not a prohibition: take the branch, or
+file the entry, but do not hold it until some future branch happens to touch the
+same file. Reading it the other way is how a known one-line fix ends up recorded
+only in a session that then ends — which happened here, and the fix was a column
+header. `315e743` is the precedent going the other way: a single-commit branch
+whose entire content was filing a `TODO.md` entry, named off-slug on purpose so
+the check would not read it as landed.
 
 **If you are writing it in a handoff, it belongs in a doc.** That a worker never
 merges to `main` was known and was written into a handoff message for the next
