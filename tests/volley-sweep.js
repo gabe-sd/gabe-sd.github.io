@@ -2,6 +2,11 @@
 // many of them each effect aimed at the player actually covers. Not part of
 // `npm test`: like ai-sweep.js it is a ruler, not an assertion.
 //
+// **Being outside `npm test` means nothing checks that this file still runs.**
+// Run it after editing it, even for a change that alters no measurement, because
+// a green suite will not tell you it now dies on load. `tests/README.md` says
+// more.
+//
 //   node tests/volley-sweep.js              # every mode
 //   P=200 node tests/volley-sweep.js        # more points, tighter figure
 //

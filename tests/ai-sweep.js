@@ -3,6 +3,11 @@
 // tuning instrument, not an assertion. The suite guards the *range*; this tells
 // you where inside it a change landed.
 //
+// **Being outside `npm test` means nothing checks that this file still runs.**
+// Run it after editing it, even for a change that alters no measurement - a
+// reformatted column is exactly the edit that feels too safe to re-run, and a
+// green suite will not tell you it now dies on load. `tests/README.md` says more.
+//
 //   node tests/ai-sweep.js                        # every entry in DIFFICULTY
 //   N=2000 node tests/ai-sweep.js                 # more samples, tighter figure
 //   node tests/ai-sweep.js '{"readErrorNearPx":40,"speed":3.5}'   # a one-off
