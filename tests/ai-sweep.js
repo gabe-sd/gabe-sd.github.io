@@ -6,10 +6,31 @@
 //   node tests/ai-sweep.js                        # every entry in DIFFICULTY
 //   N=2000 node tests/ai-sweep.js                 # more samples, tighter figure
 //   node tests/ai-sweep.js '{"readErrorNearPx":40,"speed":3.5}'   # a one-off
+//   REACH=1 node tests/ai-sweep.js                # and the same shot at *you*
 //
 // Comparability is the whole point. A number produced by a differently shaped
 // harness cannot be set against the ones already recorded, so change this rather
 // than writing another one.
+//
+// REACH=1 adds the mirror question, which the ai figure cannot answer and which
+// `games/pong/DESIGN.md` flags as this harness's blind spot: not "did the ai get
+// there" but "could *you* have". It fires the same shot the other way and drives
+// your paddle perfectly - no reading error, no reaction delay, straight at the
+// true intercept from the first tick - so a miss is the shot being physically
+// out of reach at `PADDLE_SPEED` rather than the player being bad at it. Two
+// figures come out of it, and they mean different things:
+//
+//   pinned   the paddle is teleported onto the intercept every tick, so it is
+//            always exactly where the ball is going. Anything but 100% here is
+//            the ball passing *through* a paddle that was in the right place -
+//            tunnelling, a bug, not a difficulty question.
+//   optimal  the paddle starts centred and moves at `PADDLE_SPEED`. This is the
+//            ceiling on what a keyboard player can do, so the gap to 100% is
+//            the fraction of shots no keyboard input could have saved.
+//
+// A mouse is not bound by either: pointer control is deliberately not rate
+// limited (see DESIGN.md), so it can cover any distance in one tick and its
+// figure would be the pinned one by construction.
 //
 // One caveat the harness cannot fix: Assisted and Insane also change the ball, so
 // each is measured against its own ball rather than a shared one. Their figures
@@ -19,6 +40,7 @@ const { launch, url } = require("./helpers");
 
 const N = Number(process.env.N || 900);
 const adhoc = process.argv[2] ? JSON.parse(process.argv[2]) : null;
+const REACH = !!process.env.REACH;
 
 (async () => {
   const browser = await launch();
@@ -64,6 +86,140 @@ const adhoc = process.argv[2] ? JSON.parse(process.argv[2]) : null;
     console.log(`  ${label.padEnd(24)} saves ${pct.padStart(5)}%   (${saves}/${N})`);
   };
 
+  // The mirror question, asked as a limit rather than a percentage. A pass rate
+  // here reads 100% on every mode and tells you nothing; the speed at which it
+  // *stops* being 100% tells you how much room a mode has left.
+  //
+  // The shot is the worst one the game can produce: dead straight, so it spends
+  // the fewest possible ticks in flight, fired at the corner furthest from where
+  // the paddle is parked. The paddle is driven perfectly - no reading error, no
+  // reaction delay - so a miss is the shot being out of reach at `PADDLE_SPEED`,
+  // not the player being bad at it.
+  const savedAt = (level, speed, scale) => page.evaluate(([lvl, sp, s]) => {
+    cancelAnimationFrame(rafId);
+    const was = difficulty;
+    applyDifficulty(lvl);
+    // Moves off, so this measures the mode's ball rather than the ball plus
+    // whatever the opponent happened to be doing to your paddle at the time.
+    // The `scale` argument is how a squeezed paddle gets asked about instead.
+    const savedModes = Object.fromEntries(MOVES.map((m) => [m, ABILITY[m].modes]));
+    for (const m of MOVES) ABILITY[m].modes = [];
+    const h = baseHeight(player) * s;
+    let ok = true;
+    for (const low of [false, true]) {   // both corners: the paddle is not symmetric in play
+      restart();
+      phase = "play";
+      // Settled at the size being asked about - easePaddles() would otherwise
+      // spend the opening ticks still resizing it.
+      player.h = h;
+      player.hTarget = h;
+      player.y = low ? 0 : HEIGHT - h;
+      ball = { x: AI_PLANE, y: low ? HEIGHT - BALL_SIZE : 0, vx: -sp, vy: 0 };
+      let guard = 0;
+      while (ball.vx < 0 && ai.score === 0 && guard++ < 6000) {
+        const want = Math.max(0, Math.min(HEIGHT - player.h,
+          ball.y + BALL_SIZE / 2 - player.h / 2));
+        player.y += Math.max(-PADDLE_SPEED,
+          Math.min(PADDLE_SPEED, want - player.y));
+        update();
+      }
+      if (ai.score !== 0) ok = false;
+      ai.score = 0;
+      player.score = 0;
+    }
+    for (const m of MOVES) ABILITY[m].modes = savedModes[m];
+    applyDifficulty(was);
+    return ok;
+  }, [level, speed, scale]);
+
+  const limitFor = async (level, scale) => {
+    let lo = 1, hi = 60;
+    if (!(await savedAt(level, lo, scale))) return null;
+    if (await savedAt(level, hi, scale)) return Infinity;
+    while (hi - lo > 0.01) {
+      const mid = (lo + hi) / 2;
+      if (await savedAt(level, mid, scale)) lo = mid; else hi = mid;
+    }
+    return lo;
+  };
+
+  // Anything but 100% here is the ball passing a paddle that was in the right
+  // place - tunnelling, which would be a bug rather than a difficulty question.
+  const pinnedSaves = (level, n) => page.evaluate(([lvl, count]) => {
+    cancelAnimationFrame(rafId);
+    const was = difficulty;
+    applyDifficulty(lvl);
+    const savedModes = Object.fromEntries(MOVES.map((m) => [m, ABILITY[m].modes]));
+    for (const m of MOVES) ABILITY[m].modes = [];
+    // predictInterceptY only reads towards AI_PLANE. Rather than restate its
+    // physics here and let the two drift, mirror the ball and ask the game's own
+    // predictor: WIDTH - BALL_SIZE - x maps PLAYER_PLANE onto AI_PLANE exactly,
+    // and leaves y alone.
+    const interceptAtPlayer = () => {
+      const x = ball.x;
+      const vx = ball.vx;
+      ball.x = WIDTH - BALL_SIZE - x;
+      ball.vx = -vx;
+      const y = predictInterceptY();
+      ball.x = x;
+      ball.vx = vx;
+      return y;
+    };
+    let saves = 0;
+    for (let i = 0; i < count; i++) {
+      restart();
+      phase = "play";
+      const h = baseHeight(player);
+      player.h = h;
+      player.hTarget = h;
+      player.y = (HEIGHT - h) / 2;
+      const angle = (Math.random() * 2 - 1) * MAX_BOUNCE_ANGLE;
+      const speed = BALL_SPEED + Math.random() * (BALL_SPEED_MAX - BALL_SPEED);
+      ball = {
+        x: AI_PLANE,
+        y: Math.random() * (HEIGHT - BALL_SIZE),
+        vx: -speed * Math.cos(angle),
+        vy: speed * Math.sin(angle),
+      };
+      let guard = 0;
+      while (ball.vx < 0 && ai.score === 0 && guard++ < 800) {
+        const aim = interceptAtPlayer();
+        if (aim !== null) {
+          player.y = Math.max(0, Math.min(HEIGHT - player.h,
+            aim + BALL_SIZE / 2 - player.h / 2));
+        }
+        update();
+      }
+      if (ai.score === 0) saves++;
+    }
+    for (const m of MOVES) ABILITY[m].modes = savedModes[m];
+    applyDifficulty(was);
+    return saves;
+  }, [level, n]);
+
+  const reportReach = async (level) => {
+    const cfg = await page.evaluate((l) => {
+      const was = difficulty;
+      applyDifficulty(l);
+      const out = { cap: BALL_SPEED_MAX, h: baseHeight(player),
+                    squeeze: ABILITY.squeeze.scale };
+      applyDifficulty(was);
+      return out;
+    }, level);
+    const show = (v) => v === null ? " none"
+      : v === Infinity ? "  any" : v.toFixed(2).padStart(5);
+    const gap = (v) => typeof v !== "number" ? "     "
+      : (v - cfg.cap >= 0 ? "+" : "") + (v - cfg.cap).toFixed(2);
+    const clean = await limitFor(level, 1);
+    const squeezed = await limitFor(level, cfg.squeeze);
+    const pinned = await pinnedSaves(level, N);
+    console.log(`  ${level.padEnd(10)} ${String(cfg.cap).padStart(5)}`
+      + ` ${(cfg.h + "px").padStart(7)}`
+      + `   ${show(clean)} ${gap(clean).padStart(7)}`
+      + `   ${show(squeezed)} ${gap(squeezed).padStart(7)}`
+      + `   ${pinned === N ? "  none" : String(N - pinned).padStart(6)}`);
+  };
+
   console.log(`${N} shots each\n`);
   if (adhoc) {
     await report("ad hoc", null, adhoc);
@@ -74,6 +230,28 @@ const adhoc = process.argv[2] ? JSON.parse(process.argv[2]) : null;
       await report(level + (own ? " *" : ""), level, null);
     }
     console.log("\n  * plays its own ball; not comparable with the others.");
+  }
+
+  if (REACH) {
+    console.log("\ncan you reach it? the worst shot each mode can produce,"
+      + " against a perfect keyboard player\n");
+    console.log("  mode         cap  paddle"
+      + "     reachable to      squeezed       tunnelled");
+    for (const level of await page.evaluate(() => Object.keys(DIFFICULTY))) {
+      await reportReach(level);
+    }
+    console.log("\n  reachable to  the fastest ball whose worst shot a paddle at"
+      + " PADDLE_SPEED still gets to,");
+    console.log("                and the headroom over the cap that mode"
+      + " actually plays. Negative means");
+    console.log("                the mode can produce a shot no keyboard input"
+      + " could save. A mouse is not");
+    console.log("                bound by this at all - pointer control is"
+      + " deliberately not rate limited.");
+    console.log(`  tunnelled     shots that beat a paddle pinned on the`
+      + ` intercept, out of ${N}. Anything but`);
+    console.log("                none is a bug rather than a difficulty"
+      + " question.");
   }
   await browser.close();
 })();
