@@ -41,7 +41,8 @@ checkout's files and pass against the wrong code. That happened.
 
 A suite run on its own has no such server, so give it one — either `npm run serve`
 in another shell, which is the 8934 that `BASE_URL` defaults to, or point it
-somewhere else:
+somewhere else. In a worktree use `PORT=0 npm run serve` instead, which takes a
+free port rather than the shared checkout's, and pass that port in `BASE_URL`:
 
 ```bash
 BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test.js
