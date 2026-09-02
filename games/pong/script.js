@@ -57,10 +57,12 @@ const AI = {
   panicDistancePx: 90,    // how far behind it must be to lunge; Infinity = never
 };
 
-// The moves. Every mode has them; what a preset's `ability` half changes is how
-// often and how hard they fire, not whether they exist. The moves are the show,
-// not the difficulty - see DIFFICULTY below, which is where the presets and what
-// each of them overrides are actually described.
+// The moves. Every mode has some, which is what removed Easy, Medium and Hard -
+// but not every mode has all five, and the `modes` list on each one is what says
+// so: the opponent's three are Normal and Insane, and Assisted gets only the two
+// that are yours. What a preset's `ability` half tunes is how often and how hard
+// a move fires; no preset overrides `modes`. The moves are the show, not the
+// difficulty - see DIFFICULTY below for what a preset actually overrides.
 // Same contract as AI above - every knob names the value that switches its
 // feature off, so any one of these can be isolated, weakened or removed without
 // unpicking the rest. `modes: []` disables a move outright.
