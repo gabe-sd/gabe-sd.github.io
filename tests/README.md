@@ -139,7 +139,17 @@ you where inside it a change actually landed.
 node tests/ai-sweep.js                       # every entry in DIFFICULTY
 N=2000 node tests/ai-sweep.js                # more samples, tighter figure
 node tests/ai-sweep.js '{"speed":3.5}'       # a one-off override
+REACH=1 node tests/ai-sweep.js               # and whether *you* could reach it
 ```
+
+`REACH=1` answers the question the saves figure cannot, and which
+`games/pong/DESIGN.md` calls this harness's blind spot: it only ever asks whether
+the *ai* got a paddle to the ball. The reach columns fire the shot the other way
+at a perfectly driven paddle, and report the ball speed at which the worst shot
+a mode can produce stops being reachable at `PADDLE_SPEED` — a limit rather than
+a pass rate, because every mode saves 100% of ordinary shots and that number
+moves for nothing. A separate column says whether the ball ever beat a paddle
+pinned exactly on the intercept, which would be tunnelling and a bug.
 
 Change this rather than writing a second one. A figure produced by a differently
 shaped harness cannot be compared with the ones already recorded, and comparing

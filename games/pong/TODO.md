@@ -169,45 +169,78 @@ the vines-or-laser decision gating `pong-vine-attack` below.
   `pong-normal-rebalance` or `pong-insane-ball-speed` below; all three touch
   ai/ball tuning and a single playtest cannot tell them apart.
 
-### pong-insane-ball-speed — Insane's ball may be too fast to hit at all
+### pong-insane-ball-speed — Insane leaves the keyboard no room, and none at all under Squeeze
 
-**Gate: characterise first, then a decision from Gabriel if it turns out to be a
-feel question rather than a bug, then playtest.**
+**Gate: a decision from Gabriel. Characterised, so the open question is now only
+what to do about it — and it is a feel question, not a bug.** Whatever is chosen
+then needs a playtest of its own.
 
-The worry is that on Insane the ball moves fast enough that the player's own
-paddle cannot realistically get to it — a question about whether *you* can hit
-it, not whether the ai can, which `node tests/ai-sweep.js` was never built to
-answer (it only asks whether the ai reached the ball; DESIGN.md's "What actually
-changes difficulty" section already flags this blind spot for the opponent's
-moves, and it applies just as much here).
+The worry was that on Insane the ball moves fast enough that the player's own
+paddle cannot get to it. Measured with `REACH=1 node tests/ai-sweep.js`, which
+was added for this and is now the standing ruler for it. What it does: fires the
+worst shot a mode can produce — top speed, dead straight so it spends the fewest
+ticks in flight, at the corner furthest from the paddle — at a paddle driven
+perfectly, and finds the ball speed at which that stops being reachable.
 
-**Characterise before changing anything** — there are two different causes here
-and they take different fixes:
+| mode | cap it plays | worst shot reachable to | while squeezed |
+| --- | --- | --- | --- |
+| Assisted | 6.5 | 17.3 | 14.2 |
+| Normal | 10 | 15.0 | 13.6 |
+| Insane | 14 | **14.2** | **13.0** |
 
-- **The ball is simply fast, on purpose.** DESIGN.md is explicit that "Insane is
-  a great deal harder to play than the figure suggests, and always has been," and
-  that brutality is the mode's character, not a bug. If this is the whole story,
-  lowering `BALL_SPEED_MAX` for Insane is a difficulty decision indistinguishable
-  from softening the mode, and needs the same sign-off `pong-normal-rebalance`
-  needs for Normal — it is not something to decide unilaterally.
-- **The ball is tunnelling** — travelling far enough per tick at the raised cap
-  that it can cross a paddle's whole collision plane between one tick and the
-  next. DESIGN.md's "The ball" section already designed around exactly this
-  shape of bug: `crossingY()` interpolates the crossing rather than trusting the
-  end-of-tick position, specifically because at the *current* speed cap the two
-  are "at most a few pixels" apart. A cap raised enough could widen that gap past
-  the paddle's own width, which would make `crossingY()`'s existing interpolation
-  insufficient rather than wrong.
-- Work out which one this is — e.g. measure ball travel-per-tick against
-  `PADDLE_WIDTH` and the paddle's height band at Insane's cap — before picking a
-  fix. If it is tunnelling, continuous collision detection (sweeping the ball's
-  path against the paddle's swept rect between ticks, rather than point-sampling
-  at tick boundaries) extends `crossingY()`'s own approach rather than replacing
-  it. If it is not, this is a feel entry and belongs in the same conversation as
-  `pong-normal-rebalance`, not a correctness fix.
-- Do not batch this playtest with `pong-normal-rebalance` or
-  `pong-longer-volleys` — different mode, different question, but still a feel
-  change if the cause turns out to be the speed cap rather than tunnelling.
+**It is not tunnelling**, which was the other candidate and would have been a
+correctness fix rather than a feel decision. A paddle pinned on the intercept
+saves every shot at every mode's cap and still does at twice Insane's; the first
+misses appear around four times it. `crossingY()` needs no continuous collision
+detection at any setting the modes can reach. That half of the entry is closed.
+
+What is left is real but narrow, and it is two separate calls:
+
+- **Insane sits ~2% under the limit on a clean paddle** (cap 14, limit 14.2).
+  Playable, but there is nothing left in it: any raise to `BALL_SPEED_MAX`, or
+  any cut to `PLAYER_PADDLE_SCALE` or `PADDLE_SPEED`, puts the worst shot out of
+  reach. Mostly this is a thing to know before tuning, not something to fix.
+- **Under Squeeze, Insane is already past the limit** (13.0 against a cap of 14).
+  A shrunken paddle starts further away and arrives with less of itself, and both
+  push the same way. So a shot exists that no keyboard input can save. It needs a
+  rally long enough to reach the cap — 15 contacts from Insane's start speed —
+  with a Squeeze live at the time, so it is rare rather than routine.
+
+**The decision is whether that second one is a bug or the mode's character.**
+`games/pong/DESIGN.md` says Insane's brutality is deliberate and that a fast
+corner shot is *meant* to outrun the keys and be read early instead. The
+measurement already grants the early read, so this is past that line rather than
+an example of it — but "on Insane, once per long rally, a Squeeze can produce a
+shot you could not have saved" may be exactly what Insane is for. Nobody but
+Gabriel can call that.
+
+If it should be fixed, **there is really only one usable lever**, which was not
+the expected answer. Measured, at Insane's cap of 14:
+
+- **Softening the squeeze does not work.** `ABILITY.squeeze.scale` on Insane is
+  0.55; taking it to Normal's 0.62 moves the limit only to 13.25, and even 0.80 —
+  a squeeze you would struggle to notice — reaches 13.57. Nothing short of 1.0,
+  which is no squeeze at all, clears 14. The paddle height is not what dominates
+  this; the time in flight is.
+- **`BALL_SPEED_MAX` is the lever.** 14 → 12.95 or below makes the worst shot
+  reachable even while squeezed. That is a ~7.5% cut and it is unambiguously
+  softening the mode, so per DESIGN.md it needs the same sign-off
+  `pong-normal-rebalance` needs for Normal.
+- **`PLAYER_PADDLE_SCALE` would have to go from 0.8 to about 1.45** for a
+  squeezed paddle to clear the cap — larger than Normal's paddle, which is the
+  opposite of what the mode is. Not a real option, but worth recording so nobody
+  re-derives it.
+- Raising `PADDLE_SPEED` is shared by every mode, and DESIGN.md's "Controls"
+  section explains it is set where it is against *Normal's* geometry on purpose.
+  Changing it to fix Insane would move Normal's whole positional game.
+
+**A mouse is not affected by any of this** — pointer control is deliberately not
+rate limited, so it covers any distance in one tick. Whatever is decided, it
+changes Insane only for keyboard players, which is itself worth knowing: the mode
+is meaningfully harder on the keys than with a mouse, and that was not a
+deliberate choice anyone made.
+
+Do not batch this playtest with `pong-normal-rebalance` or `pong-longer-volleys`.
 
 ### pong-feel-pass — Tune what just shipped, now that it can be played
 
