@@ -97,6 +97,16 @@ it is — `ls -l /proc/<pid>/cwd` names the directory it was launched from. A se
 already holding the port you wanted is far more likely to be another agent's than
 a leftover of yours.
 
+Kill by PID, and look the PID up first: `ss -ltnp` names whatever holds a port.
+**Never `pkill -f`.** Its pattern matches your own command line as readily as the
+process you meant, because the pattern is *in* that command line — it killed the
+shell mid-command twice in one session here, the second time while that command
+was tidying up the very server it was aimed at. If you have to match on a
+pattern, put it in a script file, where it is not on the command line you are
+running. And plain `kill`, not `kill -9`: a process killed with SIGKILL cannot
+pass the signal on to its own children, which is how a wrapper dies and leaves
+its server still holding the port.
+
 Two things stop some of this by accident, and neither is a substitute for the
 rule: git refuses to check out a branch that is already checked out in another
 worktree, and an agent session pinned to a worktree is blocked from running git
@@ -145,6 +155,13 @@ suites in different worktrees cannot end up driving each other's files — that
 happened, and the run went green against the wrong checkout. The git stash stack
 *is* shared across every worktree in the repo, so do not use it; a WIP commit sets
 work aside without reaching into somebody else's.
+
+Port 8934 is the shared checkout's, and `npm run serve` binds it by default.
+**From a worktree, run `PORT=0 npm run serve`** and pass on the URL it prints.
+Two agents both taking 8934 is the loud version of this — the second one gets
+`Address already in use`. The quiet version is worse and is the reason for the
+rule: open 8934 to look at a change, get another worktree's files, and nothing
+tells you. The port stayed shared here long after `npm test` stopped sharing one.
 
 The desktop is shared in the same way, and it is the one shared thing with no
 technical guard at all. XTEST input goes to the real display and lands on whatever
@@ -198,6 +215,7 @@ read.
 ```bash
 npm test                        # every suite, on a server it starts itself
 npm run serve                   # a server on 8934 to play in a browser; tests do not need it
+PORT=0 npm run serve            # the same, on a free port it prints - what a worktree uses
 node tests/chording.test.js     # one suite on its own; needs a server (npm run serve)
 node tests/docs-check.js        # do the docs still describe this repo? no browser
 node tests/ai-sweep.js          # how often Pong's ai saves; a ruler, not a test

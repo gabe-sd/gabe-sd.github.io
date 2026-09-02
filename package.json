@@ -4,7 +4,7 @@
   "description": "Static game arcade. The site has no dependencies; this manifest exists only for the browser tests.",
   "scripts": {
     "test": "node tests/run-all.js",
-    "serve": "python3 -m http.server 8934"
+    "serve": "exec python3 -u -m http.server ${PORT:-8934}"
   },
   "devDependencies": {
     "playwright-core": "1.45.0"
