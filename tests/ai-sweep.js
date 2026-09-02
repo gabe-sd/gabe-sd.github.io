@@ -44,6 +44,13 @@
 // than only explained down here, because a row quoted on its own would otherwise
 // read as a fact about the game instead of about a constructed shot.
 //
+// **Only the limit columns reproduce.** They are a binary search and
+// deterministic: a different checkout on a different port returns them identical
+// to the hundredth, so if they ever move between runs that is a real signal and
+// worth chasing. Everything else here samples - the saves percentages and the
+// tunnelled count both move run to run - so two of those compared prove nothing
+// on their own. The output does not say which is which; this is where it is said.
+//
 // A mouse is bound by none of it: pointer control is deliberately not rate
 // limited (see DESIGN.md), so it covers any distance in one tick.
 //
