@@ -10,6 +10,12 @@
 //   node tests/volley-sweep.js              # every mode
 //   P=200 node tests/volley-sweep.js        # more points, tighter figure
 //
+// **Every figure here samples.** Nothing this file prints reproduces exactly, so
+// two runs compared prove nothing on their own — 12 points per mode gave 273/184/123
+// ticks and then 306/182/127 from another checkout, which is the spread working
+// rather than a change. Raise `P` before reading anything into a difference.
+// (ai-sweep.js is the mixed case: its limit columns *are* deterministic.)
+//
 // Why this exists. `games/pong/DESIGN.md` sets the duration of anything aimed at
 // the player in volleys rather than ticks, because an effect that starts while
 // the ball is heading *away* from you spends part of its life before you can
