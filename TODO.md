@@ -50,6 +50,28 @@ It is the front page of a public repo, but it reads like the internal docs besid
 it. Review with Gabriel before rewriting — what a visitor should get from it is
 his call.
 
+### workflow-worktree-exit-warning — Removing a worktree warns about commits that are not at risk
+
+The worktree tooling records the branch name it created and does not follow a
+rename. `CLAUDE.md` tells every worker to rename `worktree-<slug>` to the bare
+slug, so by the time the worktree is removed the recorded name is a ref that no
+longer exists — and the removal warning counts commits against it. On 2026-09-02
+that read "will discard 35 commits" when the true answer was none: every commit
+involved was already an ancestor of `main`, and `git rev-parse --verify` on the
+recorded name returned "Needed a single revision".
+
+Following the documented convention is what produces the false alarm, so the next
+worker to clean up meets the same message, and the safe-looking response to it is
+to keep a worktree nobody needs. What to decide is whether `CLAUDE.md` gains a
+line saying the warning is expected, and how to answer it properly: check each
+commit you authored with `git merge-base --is-ancestor <commit> main` rather than
+trusting or fearing the count.
+
+Filed rather than written straight into `CLAUDE.md` because changes to that file
+are reviewed with Gabriel first — see `INTEGRATOR.md`, "Two speeds inside the
+shell". Found by the Pong worker while removing its own worktree, and verified
+from the shared checkout after the removal.
+
 ### site-favicon — The site has no favicon
 
 Every page 404s `/favicon.ico`, because browsers ask for it whether or not you
