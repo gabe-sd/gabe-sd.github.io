@@ -14,23 +14,27 @@
 //
 // REACH=1 adds the mirror question, which the ai figure cannot answer and which
 // `games/pong/DESIGN.md` flags as this harness's blind spot: not "did the ai get
-// there" but "could *you* have". It fires the same shot the other way and drives
-// your paddle perfectly - no reading error, no reaction delay, straight at the
-// true intercept from the first tick - so a miss is the shot being physically
-// out of reach at `PADDLE_SPEED` rather than the player being bad at it. Two
-// figures come out of it, and they mean different things:
+// there" but "could *you* have". It fires the shot the other way, at a paddle
+// driven perfectly - no reading error, no reaction delay, straight at the true
+// intercept from the first tick - so a miss is the shot being physically out of
+// reach at `PADDLE_SPEED` rather than the player being bad at it.
 //
-//   pinned   the paddle is teleported onto the intercept every tick, so it is
-//            always exactly where the ball is going. Anything but 100% here is
-//            the ball passing *through* a paddle that was in the right place -
-//            tunnelling, a bug, not a difficulty question.
-//   optimal  the paddle starts centred and moves at `PADDLE_SPEED`. This is the
-//            ceiling on what a keyboard player can do, so the gap to 100% is
-//            the fraction of shots no keyboard input could have saved.
+// It reports a **limit**, not a pass rate. Every mode saves 100% of random shots
+// from a centred start, which says nothing; the speed at which that stops being
+// true says how much room the mode has left. Two columns:
 //
-// A mouse is not bound by either: pointer control is deliberately not rate
-// limited (see DESIGN.md), so it can cover any distance in one tick and its
-// figure would be the pinned one by construction.
+//   reachable to  the fastest ball whose worst shot - dead straight, so the
+//                 fewest ticks in flight, at the corner furthest from the paddle
+//                 - is still reachable, and the headroom over the cap the mode
+//                 plays. Negative headroom means the mode can produce a shot no
+//                 keyboard input could save. Reported twice, because a squeezed
+//                 paddle has further to travel and less of it to arrive with.
+//   tunnelled     shots that beat a paddle pinned on the intercept every tick.
+//                 Anything but none is the ball passing *through* a paddle that
+//                 was in the right place - a bug, not a difficulty question.
+//
+// A mouse is bound by none of it: pointer control is deliberately not rate
+// limited (see DESIGN.md), so it covers any distance in one tick.
 //
 // One caveat the harness cannot fix: Assisted and Insane also change the ball, so
 // each is measured against its own ball rather than a shared one. Their figures

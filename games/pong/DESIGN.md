@@ -358,6 +358,62 @@ for *you*, and the sweep never asks about you — it only ever asks whether the 
 got a paddle to the ball. Insane is a great deal harder to play than the figure
 suggests, and always has been.
 
+### Whether you could have reached it
+
+`REACH=1 node tests/ai-sweep.js` asks the other half: not whether the ai got
+there, but whether *you* could have. It fires the shot the other way at a paddle
+driven perfectly — no misread, no reaction delay — so a miss is the shot being
+out of reach at `PADDLE_SPEED` rather than the player being bad at it.
+
+It reports a **limit rather than a rate**, and the reason is worth keeping. Every
+mode saves 100% of random shots from a centred start, so a percentage says
+nothing and moves for nothing. The speed at which that stops being true says how
+much room the mode has left:
+
+| mode | cap it plays | worst shot reachable to | while squeezed |
+| --- | --- | --- | --- |
+| Assisted | 6.5 | 17.3 | 14.2 |
+| Normal | 10 | 15.0 | 13.6 |
+| Insane | 14 | **14.2** | **13.0** |
+
+The worst shot is the fastest the mode allows, dead straight so it spends the
+fewest ticks in flight, at the corner furthest from the paddle. Two things follow
+and neither was known before it was measured.
+
+**Insane is tuned to within about 2% of the keyboard-reachability limit** — a cap
+of 14 against a limit of 14.2. Nothing there is broken, but there is almost no
+room in it: raising `BALL_SPEED_MAX` past 14.2, or lowering `PLAYER_PADDLE_SCALE`
+or `PADDLE_SPEED` at all, puts Insane's worst shot beyond what a keyboard can
+answer. Assisted sits 165% under its limit and Normal 50% under, so neither is
+anywhere near this and only Insane needs watching.
+
+This is the same line the "Controls" section is drawn against, and it is a
+sharper version of it. That section sets `PADDLE_SPEED` just under the steepest
+descent **Normal** can produce, so a fast corner shot "has to be read early
+rather than chased down". The measurement here already grants the early read —
+the paddle heads for the true intercept from the first tick — so what it finds is
+what is left after reading perfectly, and Insane spends it all.
+
+**With Squeeze active, Insane is already past it** — a limit of 13.0 against a
+cap of 14. A shrunken paddle starts further from the ball and arrives with less
+of itself, and both work the same direction. So on Insane there exists a shot no
+keyboard input can save, and it is reachable only in a rally long enough for the
+ball to hit the cap (15 contacts from Insane's starting speed) with a Squeeze
+live at the time.
+
+A **mouse is bound by none of this**, which is worth holding next to the
+"Controls" section's note that pointer control is deliberately not rate limited.
+That decision is what keeps Insane playable at its current numbers, and it means
+the mode is meaningfully harder on the keys than with a mouse.
+
+**It is not tunnelling.** That was the other candidate explanation and it is
+ruled out: a paddle pinned on the intercept saves every shot at every mode's cap,
+and keeps doing so at twice Insane's. The first misses appear around a cap of 56,
+four times Insane's, which is where `crossingY()`'s straight-line interpolation
+starts disagreeing with a path that would have bounced off a wall inside the same
+tick. Nothing in the game can reach that speed, so `crossingY()` needs no
+continuous collision detection at any setting the modes can produce.
+
 Blink is the exception, and it moves the number: once it was bound to the ball
 rather than to a clock it became a guaranteed save on the approaches it fires, so
 the same preset reads higher than it used to. That is the whole of the change
