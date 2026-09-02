@@ -77,7 +77,7 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
   scoring, the round lifecycle (serve prompt, the pause after a point, serving
   back at whoever conceded), the win condition, paddle clamping, and the hidden
   live region that carries the score to a screen reader. Then the things layered
-  on top: the five difficulty presets and that switching between them leaks
+  on top: the difficulty presets and that switching between them leaks
   nothing, the chosen win score and its storage, and every ability — including
   the two contracts that say turning all of `AI` off gives back the old direct
   mover and turning all of `ABILITY` off gives back the plain game. It cancels
