@@ -56,34 +56,6 @@ the paddle wherever it had got to.
   input rather than `page.mouse` — see the section in `CLAUDE.md` and what
   believing synthetic input cost Minesweeper.
 
-### pong-rename-anime-pong — Rename the game to Anime Pong
-
-**Gate: none** — a copy change, not a feel change.
-
-Display name only, decided this way to keep the blast radius small: the folder
-`games/pong/`, the `pong.difficulty`/`pong.winScore` localStorage keys, and every
-`pong-` slug in this file and in branch history stay exactly as they are. Renaming
-any of those would break the naming convention in the root `TODO.md` (the slug
-has to keep matching the folder and the history), invalidate saved preferences on
-upgrade for
-no benefit, and force a rename of every open and historical `pong-*` entry here —
-none of which the new name is actually about.
-
-What does change is what a player sees:
-
-- `games/pong/index.html` — the `<title>` and the `<h1>`.
-- root `index.html` — the hub card's `.game-name` text for this entry.
-- Anywhere else the word "Pong" appears as copy rather than as an id, path or
-  storage key — check the `?` panel and `#status` strings too.
-
-Leave `games/pong/DESIGN.md`'s own title and prose alone unless doing this makes
-it read strangely next to the new in-game name; it is an internal document about
-the code, not player-facing copy, so it is not part of the contract either way.
-
-`tests/docs-check.js` checks names, ids, paths and storage keys, not prose, so it
-will not catch a half-renamed page — reread the touched files the way
-`CLAUDE.md`'s "Reread the docs before merging" section describes.
-
 ### pong-serve-from-paddle — Serve from your own paddle, aimed where you choose
 
 **Gate: playtest, its own.** It changes the opening of every single point and
