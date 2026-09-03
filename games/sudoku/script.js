@@ -139,12 +139,26 @@ function buildBoard() {
       const btn = document.createElement("button");
       btn.className = "cell";
       btn.setAttribute("aria-label", `Row ${r + 1}, column ${c + 1}`);
-      btn.addEventListener("click", () => selectCell(r, c));
+      btn.addEventListener("click", (e) => {
+        selectCell(r, c);
+        releaseFocus(e);
+      });
       boardEl.appendChild(btn);
       row.push(btn);
     }
     cellEls.push(row);
   }
+}
+
+// A clicked button keeps the focus, and a focused button takes Space and
+// Enter as its own activation - so after a pointer click on Restart or New
+// puzzle, the next Space or Enter (which the player means as "type nothing" /
+// game input) re-fires that button instead, silently discarding entered
+// digits. Release on a *pointer* click only: a keyboard activation (detail 0)
+// has to keep the focus, or tabbing through the controls would drop it on the
+// first press. See CLAUDE.md's page contract and games/flappy-bird/script.js.
+function releaseFocus(e) {
+  if (e.detail > 0) e.currentTarget.blur();
 }
 
 function selectCell(r, c) {
@@ -231,11 +245,16 @@ function handleKeydown(e) {
 
 buildBoard();
 restartBtn.addEventListener("click", restart);
+restartBtn.addEventListener("click", releaseFocus);
 newPuzzleBtn.addEventListener("click", newPuzzle);
+newPuzzleBtn.addEventListener("click", releaseFocus);
 numberPad.addEventListener("click", (e) => {
   const btn = e.target.closest(".num-btn");
   if (!btn) return;
   placeDigit(Number(btn.dataset.digit));
+  // Delegated on the container, so currentTarget there is #number-pad, not
+  // the button that was actually clicked - release the button by hand.
+  if (e.detail > 0) btn.blur();
 });
 document.addEventListener("keydown", handleKeydown);
 restart();

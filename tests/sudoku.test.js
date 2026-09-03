@@ -105,6 +105,43 @@ const { check, report } = makeChecks();
   check("grid matches the new puzzle's givens",
     await page.evaluate(() => JSON.stringify(grid) === JSON.stringify(givens)));
 
+  console.log("10. a pointer click on a control hands the focus back");
+  // A clicked button keeps the focus by default, and a focused button takes
+  // Space and Enter as its own click - so without releasing it, playing a
+  // move right after clicking New puzzle re-fires that button on the very
+  // key meant as game input, silently discarding what was just entered.
+  await page.click("#new-puzzle");
+  check("focus not stuck on New puzzle",
+    (await page.evaluate(() => document.activeElement.id)) !== "new-puzzle");
+  const puzzleIndexAfterClick = await page.evaluate(() => puzzleIndex);
+
+  const editable = await page.evaluate(() => {
+    for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++)
+      if (givens[r][c] === 0) return r * 9 + c;
+  });
+  await (await cells())[editable].click();
+  await page.keyboard.press("5");
+  check("digit landed", (await (await cells())[editable].textContent()) === "5");
+
+  await page.keyboard.press("Space");
+  check("Space does not re-trigger New puzzle",
+    (await page.evaluate(() => puzzleIndex)) === puzzleIndexAfterClick);
+  check("the entered digit survives the keypress",
+    (await (await cells())[editable].textContent()) === "5");
+
+  await page.keyboard.press("Enter");
+  check("Enter does not re-trigger New puzzle either",
+    (await page.evaluate(() => puzzleIndex)) === puzzleIndexAfterClick);
+
+  console.log("11. the number pad and Restart release focus the same way");
+  await page.click('.num-btn[data-digit="3"]');
+  check("focus not stuck on the number pad button",
+    (await page.evaluate(() => document.activeElement.tagName)) !== "BUTTON" ||
+    !(await page.evaluate(() => document.activeElement.classList.contains("num-btn"))));
+  await page.click("#restart");
+  check("focus not stuck on Restart",
+    (await page.evaluate(() => document.activeElement.id)) !== "restart");
+
   check("no page errors", errors.length === 0, errors.join("; "));
 
   await browser.close();
