@@ -42,6 +42,12 @@ still describes what it names in both places.
 
 See the Human Benchmark version for the shape of it.
 
+### sudoku-game — Sudoku
+
+Deliberately minimal: a small fixed set of hardcoded puzzles rather than a
+generator, so no solver or uniqueness-checker is needed. See
+`games/sudoku/DESIGN.md`.
+
 ## Site-wide
 
 ### site-readme-for-humans — The README is written for agents, not visitors
