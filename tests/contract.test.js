@@ -25,6 +25,36 @@ const games = fs
 
 const missing = (a, b) => a.filter((x) => !b.includes(x));
 
+// A game whose keys drive play has to hand focus back after a pointer click on
+// its own buttons (see the page contract in CLAUDE.md) - a focused button takes
+// Space and Enter as its own activation, so a stuck focus turns the key that
+// plays the game into the key that re-fires whatever was clicked last. That is
+// exactly how a Sudoku "New puzzle" click, followed by the Space or Enter meant
+// as a move, silently replaced the board instead.
+//
+// "Keys drive play" is read structurally rather than guessed per game: does the
+// script attach a keydown/keyup/keypress listener at document or window level?
+// That is what makes a key reach the game at all rather than only ever landing
+// on whatever element the page last focused.
+const KEY_DRIVEN = /(document|window)\.addEventListener\(\s*["']key(down|up|press)["']/;
+
+const POINTER_NOTE =
+  "the page contract requires a key-driven game to hand focus back after a " +
+  "pointer click - copy releaseFocus from games/flappy-bird/script.js (its " +
+  "`e.detail > 0` guard is what tells a pointer click from a keyboard one)";
+
+const KEYBOARD_NOTE =
+  "a keyboard activation has to KEEP the focus, or tabbing through the " +
+  "controls loses it on the first press - see the same releaseFocus in " +
+  "games/flappy-bird/script.js, which blurs only when `e.detail > 0`";
+
+// A button's own label for a failure message: id first since that is how a
+// reader would find it in the page, then its text, then its class as a last
+// resort for an icon-only button.
+async function describe(button) {
+  return button.evaluate((el) => el.id || el.textContent.trim() || el.className);
+}
+
 (async () => {
   const browser = await launch();
 
@@ -87,6 +117,88 @@ const missing = (a, b) => a.filter((x) => !b.includes(x));
     );
     check(`${game}: links back to the hub`, back.includes("../../index.html"),
       back.join(", "));
+
+    const scriptSource = fs.readFileSync(
+      path.join(ROOT, "games", game, "script.js"), "utf8"
+    );
+    if (KEY_DRIVEN.test(scriptSource)) {
+      // In scope: the game's own action buttons - restart, a help toggle, a
+      // number pad, whatever it has. Out of scope on structural grounds, not a
+      // hand-picked exclusion:
+      //   - anything inside #board is the play surface itself, which the file
+      //     header above already rules out testing here; Sudoku's 81 cells are
+      //     buttons, and clicking and typing into one is its own suite's job
+      //     (sudoku.test.js), not this one's.
+      //   - a role="radio" button is a settings selector, not an action. Keeping
+      //     focus after being chosen is ordinary radiogroup keyboard behaviour -
+      //     the same as a native <input type="radio"> - not the hazard this
+      //     clause exists for. That reading only holds because the focus cannot
+      //     survive into a phase where a key does anything dangerous: Pong's six
+      //     radios live only inside the pre-match menu, and Play unconditionally
+      //     blurs on the way out of it (see releaseFocus's sibling in
+      //     games/pong/script.js) - so by the time Space serves or drives a
+      //     paddle, document.activeElement is back to BODY regardless of which
+      //     radio a player last clicked. A radio a future game leaves reachable
+      //     during play would not get this exemption for free.
+      //   - hidden or disabled at load: nothing a player can click yet, so a real
+      //     click would just hang waiting for it to become actionable instead of
+      //     reporting anything.
+      const candidates = await page.$$('button:not([role="radio"])');
+      const scoped = [];
+      for (const b of candidates) {
+        const eligible = await b.evaluate((el) =>
+          !el.closest("#board") && !el.disabled && el.offsetParent !== null
+        );
+        if (eligible) scoped.push(b);
+      }
+
+      const stuck = [];
+      for (const b of scoped) {
+        await b.click();
+        if (await b.evaluate((el) => document.activeElement === el)) {
+          stuck.push(await describe(b));
+        }
+        await page.evaluate(() =>
+          document.activeElement instanceof HTMLElement && document.activeElement.blur()
+        );
+      }
+      check(`${game}: a pointer click on its own buttons hands the focus back`,
+        stuck.length === 0,
+        stuck.length
+          ? `${stuck.join(", ")} kept focus after a real click - ${POINTER_NOTE}`
+          : `released: ${scoped.length} button(s)`);
+
+      // The other half of the same rule: a keyboard activation has to KEEP the
+      // focus, or tabbing through the controls loses it on the first press.
+      // Only meaningful for a button still there afterwards to tab back to - one
+      // that hides itself on activation (Pong's Play, which starts the match and
+      // closes the menu) has nothing left to hold focus on and is exempt.
+      const lost = [];
+      let exempt = 0;
+      for (const b of scoped) {
+        await b.evaluate((el) => el.focus());
+        await page.keyboard.press("Enter");
+        const stillThere = await b.evaluate((el) =>
+          document.body.contains(el) && el.offsetParent !== null
+        );
+        if (!stillThere) {
+          exempt++;
+        } else if (!(await b.evaluate((el) => document.activeElement === el))) {
+          lost.push(await describe(b));
+        }
+        await page.evaluate(() =>
+          document.activeElement instanceof HTMLElement && document.activeElement.blur()
+        );
+      }
+      check(`${game}: a keyboard activation of its own buttons keeps the focus`,
+        lost.length === 0,
+        lost.length
+          ? `${lost.join(", ")} lost focus after Enter - ${KEYBOARD_NOTE}`
+          : `kept: ${scoped.length - exempt} of ${scoped.length} checked` +
+            (exempt ? ` (${exempt} exempt - hides itself on activation)` : ""));
+    } else {
+      console.log("   (keys do not drive play here - focus handback not required)");
+    }
 
     // A settle before reading errors: a game whose loop throws on its first
     // frame is still loaded and quiet at the moment goto() resolves.
