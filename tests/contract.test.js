@@ -127,15 +127,22 @@ async function describe(button) {
       // hand-picked exclusion:
       //   - anything inside #board is the play surface itself, which the file
       //     header above already rules out testing here; Sudoku's 81 cells are
-      //     buttons and are its own suite's job (see sudoku.test.js cases 10-11).
+      //     buttons, and clicking and typing into one is its own suite's job
+      //     (sudoku.test.js), not this one's.
       //   - a role="radio" button is a settings selector, not an action. Keeping
       //     focus after being chosen is ordinary radiogroup keyboard behaviour -
       //     the same as a native <input type="radio"> - not the hazard this
       //     clause exists for.
+      //   - hidden or disabled at load: nothing a player can click yet, so a real
+      //     click would just hang waiting for it to become actionable instead of
+      //     reporting anything.
       const candidates = await page.$$('button:not([role="radio"])');
       const scoped = [];
       for (const b of candidates) {
-        if (!(await b.evaluate((el) => el.closest("#board")))) scoped.push(b);
+        const eligible = await b.evaluate((el) =>
+          !el.closest("#board") && !el.disabled && el.offsetParent !== null
+        );
+        if (eligible) scoped.push(b);
       }
 
       const stuck = [];
