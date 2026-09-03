@@ -61,6 +61,17 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
   since adding a game is two steps and nothing else checks that both happened.
   It is the one suite that asserts about games it does not own, which is why it
   only ever tests the contract and never how a game plays.
+
+  Also the focus-handback clause, for whichever games are key-driven - found by
+  reading each game's own `script.js` for a document/window-level keydown,
+  keyup or keypress listener, not by naming games. Every in-scope button (its
+  own control buttons, not the board's cells and not a `role="radio"` settings
+  selector) gets a real click and, where it survives one, a real keyboard
+  Enter, and `document.activeElement` is checked against it either way - the
+  outcome, not whether the code happens to call `releaseFocus`. This is what
+  would have caught Sudoku shipping a New Puzzle button that kept the focus
+  after being clicked, letting the very next Space or Enter re-fire it and
+  silently replace the board.
 - **chording.test.js** — the middle-click chord. Case 2 is the important one: it
   moves the pointer while the button is held. That bug reached `main` twice
   because synthetic clicks never move, so a still-pointer test passes against

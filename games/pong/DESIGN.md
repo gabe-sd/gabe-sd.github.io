@@ -163,6 +163,32 @@ The pointer only takes control after moving far enough to look deliberate, becau
 the problem it guards against is the mouse being *brushed* mid-rally rather than
 moved. Handing over on any pointer movement would not have fixed anything.
 
+**Tracking is bound to the window, not the canvas.** A canvas-only listener stops
+seeing the pointer the moment it crosses the board edge, which strands the paddle
+wherever it had got to — overshoot chasing a ball to the top and the paddle simply
+stops. `handlePointerMove` already converts client coordinates against the
+canvas's own rect and clamps to the board, so nothing about the arithmetic needed
+to change, only what the listener is attached to. This covers everywhere inside
+the browser window; the cursor leaving the window entirely delivers no pointer
+events to the page at all, and nothing here reaches that case — pointer lock
+would, but it trades away the 1:1 spatial mapping this section just spent several
+paragraphs justifying, so it was not used for this.
+
+**Moving the listener to the window does not move the takeover guard's border
+with it — that stays the board.** Widening where movement is *seen* widens where
+it can be *brushed* too: before this change, only a mouse resting over the canvas
+could ever clear `POINTER_TAKEOVER_PX`, because nothing else reached the handler.
+On the window, reaching for Restart or the help button while playing keyboard is
+also "12px of movement" now, and unlike a rally the player is not even looking at
+the board when it happens. So the guard keeps its old question — is this landing
+on the board? — and only the answer to "should tracking keep going once the
+pointer already has control" changed. A move is a takeover only if `handlePointerMove`
+sees it while `e.clientX`/`e.clientY` fall inside the canvas's own rect; once
+control is already `"pointer"`, no such check applies, which is what lets a
+chase carry the paddle past the edge in the first place. Decided this way rather
+than surveyed with a playtest because it restores an existing invariant — the
+brushed-mouse guard predates this entry — rather than setting a new one.
+
 ## On a phone
 
 Not designed for, but measured. An emulated phone with real touch events was
