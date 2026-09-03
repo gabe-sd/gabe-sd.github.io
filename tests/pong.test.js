@@ -495,6 +495,50 @@ const { check, report } = makeChecks();
     await page.keyboard.up("w");
     check("a keypress reclaims control from the pointer",
       (await read()).player.y < got, `${got} -> ${(await read()).player.y}`);
+
+    // pong-pointer-beyond-board: a canvas-only listener stops seeing the pointer
+    // the moment it crosses the board edge, stranding the paddle wherever it had
+    // got to. Moving the listener to window fixes that, but widens where
+    // POINTER_TAKEOVER_PX can be cleared too - reaching for a button while
+    // playing keyboard is now "12px of movement" the same as a rally is, so
+    // takeover itself still requires landing on the board; only tracking once
+    // the pointer already has control reaches past the edge.
+    const viewport = page.viewportSize();
+    const midX = box.x + box.width / 2;
+
+    await page.keyboard.down("w");
+    await step(1);
+    await page.keyboard.up("w");
+    check("preconditions: keyboard back in control",
+      (await page.evaluate(() => control)) === "keyboard",
+      await page.evaluate(() => control));
+
+    const offBoardX = box.x - 60;
+    await page.mouse.move(offBoardX, box.y + box.height / 2);
+    await page.mouse.move(offBoardX, box.y + box.height / 2 + 30);
+    await page.waitForTimeout(60);
+    check("brushing the mouse off the board does not steal control from the keyboard",
+      (await page.evaluate(() => control)) === "keyboard",
+      await page.evaluate(() => control));
+
+    await page.mouse.move(midX, box.y + box.height / 2);
+    await page.mouse.move(midX, box.y + box.height * 0.1);
+    await page.waitForTimeout(60);
+    check("a deliberate move onto the board still takes over",
+      (await page.evaluate(() => control)) === "pointer",
+      await page.evaluate(() => control));
+
+    const aboveBoard = Math.max(0, box.y - 40);
+    await page.mouse.move(midX, aboveBoard);
+    await page.waitForTimeout(60);
+    check("and once it has control, the paddle keeps tracking past the top edge",
+      (await read()).player.y === 0, (await read()).player.y);
+
+    const belowBoard = Math.min(viewport.height - 1, box.y + box.height + 40);
+    await page.mouse.move(midX, belowBoard);
+    await page.waitForTimeout(60);
+    check("...and the bottom edge",
+      (await read()).player.y === MAX_Y, (await read()).player.y);
   }
 
   console.log("13. the canvas palette follows the OS theme");

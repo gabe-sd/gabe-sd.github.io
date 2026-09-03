@@ -1617,6 +1617,7 @@ function handleKeyUp(e) {
 }
 
 function handlePointerMove(e) {
+  const rect = canvas.getBoundingClientRect();
   if (control === "keyboard") {
     if (pointerAnchor === null) {
       pointerAnchor = { x: e.clientX, y: e.clientY };
@@ -1624,9 +1625,19 @@ function handlePointerMove(e) {
     }
     const moved = Math.hypot(e.clientX - pointerAnchor.x, e.clientY - pointerAnchor.y);
     if (moved < POINTER_TAKEOVER_PX) return;
+    // Takeover itself still requires landing on the board, even though tracking
+    // afterwards does not (below). Listening on window means every mouse move in
+    // the whole page now clears the distance guard, not just moves over the
+    // board - so without this, reaching for Restart or the help button while
+    // playing keyboard is "movement", and it silently hands the paddle to the
+    // pointer. Requiring the move that crosses the threshold to land on the
+    // board keeps the guard doing the one thing it was for: telling a brushed
+    // mouse from a deliberate one.
+    const onBoard = e.clientX >= rect.left && e.clientX <= rect.right
+      && e.clientY >= rect.top && e.clientY <= rect.bottom;
+    if (!onBoard) return;
     control = "pointer";
   }
-  const rect = canvas.getBoundingClientRect();
   const scale = HEIGHT / rect.height;
   const y = (e.clientY - rect.top) * scale;
   player.y = Math.max(0, Math.min(HEIGHT - player.h, y - player.h / 2));
@@ -1685,7 +1696,11 @@ function restart() {
 
 window.addEventListener("keydown", handleKeyDown);
 window.addEventListener("keyup", handleKeyUp);
-canvas.addEventListener("pointermove", handlePointerMove);
+// On window, not the canvas: a canvas-only listener stops tracking the moment
+// the pointer crosses the board edge, stranding the paddle wherever it had got
+// to. handlePointerMove already converts client coordinates against the
+// canvas's own rect and clamps to the board, so nothing else here changes.
+window.addEventListener("pointermove", handlePointerMove);
 canvas.addEventListener("pointerdown", () => {
   // A mouse-only player has to be able to get going again without the keyboard.
   if (paused) return setPaused(false);
