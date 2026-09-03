@@ -132,7 +132,14 @@ async function describe(button) {
       //   - a role="radio" button is a settings selector, not an action. Keeping
       //     focus after being chosen is ordinary radiogroup keyboard behaviour -
       //     the same as a native <input type="radio"> - not the hazard this
-      //     clause exists for.
+      //     clause exists for. That reading only holds because the focus cannot
+      //     survive into a phase where a key does anything dangerous: Pong's six
+      //     radios live only inside the pre-match menu, and Play unconditionally
+      //     blurs on the way out of it (see releaseFocus's sibling in
+      //     games/pong/script.js) - so by the time Space serves or drives a
+      //     paddle, document.activeElement is back to BODY regardless of which
+      //     radio a player last clicked. A radio a future game leaves reachable
+      //     during play would not get this exemption for free.
       //   - hidden or disabled at load: nothing a player can click yet, so a real
       //     click would just hang waiting for it to become actionable instead of
       //     reporting anything.
