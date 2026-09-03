@@ -446,10 +446,12 @@ and down the board like a cartoon villain, charges a shot that comes back faster
 than the game normally permits, and throws lightning that leaves your paddle
 shrunken and crackling. You get moves of your own back.
 
-Every mode has them. That was not always so: they were built for Assisted and
+Every mode has some. That was not always so: they were built for Assisted and
 Insane while the middle three had none, which is exactly what left five names
-describing three differences. What varies between modes now is the *tuning* — a
-preset's `ability` half — not whether the moves exist.
+describing three differences. **Not every mode has all five**, though, and the
+`modes` list on each move is what decides: the opponent's three are Normal and
+Insane, and Assisted gets only the two that are yours. What a preset's `ability`
+half varies is the *tuning* of the moves a mode already has.
 
 ### Two kinds of tell
 

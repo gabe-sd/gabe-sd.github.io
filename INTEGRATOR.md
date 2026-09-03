@@ -32,6 +32,10 @@ happen somewhere, and this is the only place it can.
 One seat, one `main`, one merge at a time. Two integrators would be two people
 resolving the same conflict differently.
 
+**A background session cannot edit the shared checkout** — take a worktree to
+author; merging through `Bash` is unaffected. It also refuses a `git commit`
+heredoc, so pass the message with `-F <file>`.
+
 ## What you do, and what you leave alone
 
 You **review** what a worker hands over, **merge** it, **test** `main`, and
@@ -95,11 +99,13 @@ game's feature should play is between its worker and them, not routed through yo
 the work — branch, edit, test and commit as usual. See "Merging, step by step" for
 when to hold and how to sequence.
 
-**You can ask for a stronger reviewer.** The `advisor` tool forwards the whole
-session to a more capable model and returns a critique. It is not on by default —
-ask the person running the session to enable it. Worth asking for before you draft
-a convention, and when an approach has stopped converging. It is the nearest thing
-this seat has to the review its own branches never get.
+**A stronger reviewer, and on process changes it is not optional.** The `advisor`
+tool forwards the whole session to a more capable model and returns a critique. It
+may need enabling — ask if you do not have it. **Any change to the workflow, to
+`CLAUDE.md`, or to either seat's definition goes through it**, before the
+draft-and-review above rather than instead of it. Elsewhere it is yours to judge,
+and it earns the call when an approach has stopped converging. It is the nearest
+thing this seat has to the review its own branches never get.
 
 **A rule you propose says what it costs and what would prove it wrong.** You write
 conventions that nobody reviews, for readers who cannot argue back. Stating the
@@ -134,8 +140,8 @@ you do not have.
 You do not fetch to see it. Worktrees share one object store, so a worker's branch
 is a ref in your checkout the moment they commit; `git branch` lists it with no
 push involved. How you *hear* it is ready may be out of band — the person running
-the session tells you — or direct, **provisionally**, where the session tooling
-lets you message the worker's session. Both carry status equally well and the
+the session tells you — or direct, where the session tooling lets you message the
+worker's session. Both carry status equally well and the
 direct route is faster.
 
 Neither changes what a message can do. Nothing you write in a file will reach a
@@ -224,12 +230,13 @@ nothing on the site; a change to `index.html`, `shared.css` or any game page doe
 
 A merged branch holds nothing that `main` does not: the merge commit is the
 record, and `tests/docs-check.js` reads merge commit messages rather than branch
-refs. Delete them once their work has landed, locally and on the remote.
+refs. Delete them once their work has landed. Workers do not push, so there is no
+remote branch to delete.
 
 ```bash
 git branch --no-merged main         # anything listed here is somebody's - leave it
 git branch -d <branch>              # refuses anything unmerged, which is the safety
-git push origin --delete <branch>
+git worktree remove <path>          # refuses a dirty tree, and refuses a locked one
 git worktree prune                  # a directory already deleted still leaves a registration
 ```
 
@@ -243,6 +250,12 @@ one is a single `npm install`. Delete one once its branch has landed rather than
 leaving it for the next agent: a worktree sitting on an old commit fails its own
 suite for reasons that have nothing to do with the code, and whoever inherits it
 spends their first twenty minutes on a problem that does not exist.
+
+`git worktree remove` refuses a locked tree and suggests `unlock` or `-f -f`. Take
+neither. A lock means a session may still be in it, and the pid it names is the one
+the worktree was created with, so a dead pid proves nothing — one here named a dead
+pid while that session was alive under a new one. `git worktree list --porcelain`
+names the session; then ask.
 
 What is not disposable is uncommitted work, which no branch and no reflog knows
 about. Before a worktree goes idle its agent should commit — a WIP commit costs
@@ -271,16 +284,17 @@ was fixed the day it was reported. "The pong test looks weak" would not have bee
 In a game's area, hand it over rather than acting on it, and say plainly which
 area it belongs to.
 
-## This file is two sessions old
+## This file is still provisional
 
 The worker/integrator split came out of a single day of running it — most of that
 with one worker and one integrator, and no two agents ever colliding on the same
 file. The seat was then redrawn on the second session: the shell became the
 integrator's by default rather than something to ask for, and direct
-agent-to-agent contact replaced a claim that it was impossible. **Both of those
-are provisional.** One evening each, and that evening was unusually light on
-feature work, so the seat has not been run hard against several games in flight at
-once. Expect this to be modified and optimised as real use finds the parts that
+agent-to-agent contact replaced a claim that it was impossible. The second of
+those has since carried real traffic and is no longer provisional; see
+`CLAUDE.md`. **The first still is** — one evening, and an evening unusually light
+on feature work, so the seat has not been run hard against several games in flight
+at once. Expect this to be modified and optimised as real use finds the parts that
 are wrong.
 
 `CLAUDE.md` says the same of its own section, and asks for something specific in

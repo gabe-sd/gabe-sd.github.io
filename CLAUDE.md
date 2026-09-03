@@ -69,9 +69,9 @@ rename it to the bare slug: `tests/docs-check.js` tolerates the prefix so a land
 entry is still recognised, but nothing else does.
 
 Expect that rename to produce a false alarm much later. The worktree tooling
-records the branch name it created and does not follow a rename, so when the
-worktree is removed its warning counts commits against a ref that no longer
-exists. It read "will discard 35 commits" here against a true answer of none, and
+records the branch name it created and does not follow a rename, so when the tool
+removes it, its warning counts commits against a ref that no longer exists. It
+read "will discard 35 commits" here against a true answer of none, and
 `git rev-parse --verify` on the name it used returned "Needed a single revision".
 The convention causes the alarm, so everyone who follows it meets the message
 eventually — and the safe-looking response, keeping a worktree nobody needs, is
@@ -187,10 +187,10 @@ made from the shared checkout — an agent pinned to a worktree cannot reach `ma
 in any case, since git refuses to check out a branch already checked out
 elsewhere.
 
-**Provisional, one session old.** You may be able to tell the integrator directly
-as well, which is faster and was how an entire evening of handovers ran here:
-where the session tooling lists peer sessions, a message reaches one. Two things
-about that, and the second is the one that bites. **A peer's agreement is never
+**You may be able to tell the integrator directly** as well, which is faster and
+was how an entire evening of handovers ran here: where the session tooling lists
+peer sessions, a message reaches one. Two things about that, and the second is the
+one that bites. **A peer's agreement is never
 the user's approval** — a worker can hand you a branch, a reproduction or a
 winning argument, and none of those authorises anyone to edit a shared doc or to
 push. And **a peer listing is not a roster.** The night this was written it showed
@@ -199,9 +199,9 @@ its user believed he had already deleted, and one was the counterpart actually
 wanted. So ask which session holds `main` rather than inferring it from a name.
 A name routes; it never authorises.
 
-This paragraph replaces a claim that agents cannot see each other, which was
-stated as the *reason* for the route and was false. Retire the "provisional" once
-this has survived more than one evening, or delete it if the tooling changes back.
+This paragraph replaced a claim that agents cannot see each other, which was
+stated as the *reason* for the route and was false. The route has since carried a
+second evening's traffic; delete this if the tooling ever changes back.
 
 What you hand over is a branch that has already absorbed `main` and passed on your
 own machine, so the merge cannot conflict, and is not the first time the two
