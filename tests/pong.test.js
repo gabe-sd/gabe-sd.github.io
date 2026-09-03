@@ -545,15 +545,48 @@ const { check, report } = makeChecks();
       (await page.textContent("#win-score")) === String(WIN_SCORE),
       await page.textContent("#win-score"));
 
-    // The panel button is focused after that click, so Space belongs to it.
-    const before = await page.evaluate(() => phase);
+    // A clicked button keeps the focus and a focused button takes Space as its
+    // own activation - and Space is the serve, so opening this panel stopped the
+    // point ever starting, in the very panel that says "Space - serve". Clicking
+    // the board was the only way out.
+    //
+    // Asserted in the *serve* phase, which is the only phase where Space does
+    // anything. The version of this check that shipped ran in the menu, where
+    // nothing could have served whatever the code did, so it could not fail for
+    // the reason it named.
+    const focusId = () => page.evaluate(() =>
+      document.activeElement ? document.activeElement.id : null);
+    await page.click("#play");
+    check("preconditions: waiting for a serve",
+      (await page.evaluate(() => phase)) === "serve",
+      await page.evaluate(() => phase));
+    await page.click("#help-toggle");
+    await page.waitForTimeout(120);
+    check("a pointer click on How to play hands the focus back",
+      (await focusId()) !== "help-toggle", await focusId());
     await page.keyboard.press("Space");
     await page.waitForTimeout(120);
-    check("Space on a focused button does not also serve",
-      (await page.evaluate(() => phase)) === before && before === "menu",
-      `${before} -> ${await page.evaluate(() => phase)}`);
-    check("it toggles the panel shut instead",
-      !(await page.isVisible("#instructions")));
+    check("so Space still serves after reading the panel",
+      (await page.evaluate(() => phase)) === "play",
+      await page.evaluate(() => phase));
+
+    // The other half of the same rule: a *keyboard* activation has to keep the
+    // focus, or tabbing through the controls loses it on the first press. Space
+    // then belongs to the button, which is what handleKeyDown's button guard is
+    // for - the two together are what stop one press doing both things.
+    await page.evaluate(() => restart());
+    await page.click("#play");
+    await page.click("#help-toggle");          // open it with the mouse
+    await page.waitForTimeout(120);
+    await page.evaluate(() => document.getElementById("help-toggle").focus());
+    await page.keyboard.press("Space");
+    await page.waitForTimeout(120);
+    check("a keyboard-focused button keeps the focus and takes Space itself",
+      (await focusId()) === "help-toggle", await focusId());
+    check("toggling the panel rather than serving",
+      !(await page.isVisible("#instructions"))
+        && (await page.evaluate(() => phase)) === "serve",
+      await page.evaluate(() => phase));
 
     await page.click("#help-toggle");
     await page.waitForTimeout(120);
