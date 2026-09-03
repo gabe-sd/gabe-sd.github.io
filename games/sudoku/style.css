@@ -1,0 +1,75 @@
+#board {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(30px, 42px));
+  grid-template-rows: repeat(9, minmax(30px, 42px));
+  gap: 1px;
+  background: var(--cell-border);
+  border: 2px solid var(--fg);
+}
+
+.cell {
+  background: var(--cell-bg);
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--fg);
+  user-select: none;
+}
+
+/* Thicker lines every 3rd row/column mark the 3x3 boxes. nth-child is 1-based,
+   so column/row 4 and 7 are where a new box starts. */
+.cell:nth-child(9n + 4),
+.cell:nth-child(9n + 7) {
+  border-left: 2px solid var(--fg);
+}
+
+.cell:nth-child(n + 28):nth-child(-n + 36),
+.cell:nth-child(n + 55):nth-child(-n + 63) {
+  border-top: 2px solid var(--fg);
+}
+
+.cell.given {
+  color: var(--muted);
+  cursor: default;
+}
+
+.cell.selected {
+  background: color-mix(in srgb, var(--accent) 25%, var(--cell-bg));
+}
+
+.cell.wrong {
+  color: var(--lose);
+}
+
+.cell.won {
+  color: var(--win);
+}
+
+#number-pad {
+  display: grid;
+  grid-template-columns: repeat(5, 42px);
+  gap: 4px;
+}
+
+.num-btn {
+  padding: 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  border: 2px solid var(--cell-border);
+  border-radius: 6px;
+  background: var(--cell-bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.num-btn:hover {
+  border-color: var(--accent);
+}
+
+.num-btn.erase {
+  color: var(--muted);
+}
