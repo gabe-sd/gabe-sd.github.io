@@ -29,33 +29,6 @@ here rather than batched.
 
 Entries with no gate need nothing from him and can run back to back.
 
-### pong-pointer-beyond-board — The paddle stops when the mouse leaves the board
-
-**Gate: try it with a real mouse.** Less a feel change than a hole — the check is
-whether the paddle keeps up when the cursor goes past the edge of the canvas.
-
-`pointermove` is bound to the canvas, so the paddle only tracks a pointer that is
-over the board. Chasing a ball to the top and overshooting the canvas edge strands
-the paddle wherever it had got to.
-
-- Listening on `window` rather than the canvas covers everything inside the
-  browser window. `handlePointerMove` already converts client coordinates against
-  the canvas's own rect and clamps to the board, so it needs no new arithmetic.
-- **Outside the browser window is a different problem, and possibly not solvable
-  as asked.** The page receives no pointer events at all once the cursor leaves
-  it, so no listener reaches that case. Pointer lock does, and it takes the cursor
-  away and gives relative movement instead — which discards the 1:1 spatial
-  mapping that `games/pong/DESIGN.md` says is the entire reason a mouse is worth
-  using. Decide which "outside" this entry means before starting.
-- The takeover guard stays. Control only moves to the pointer after
-  `POINTER_TAKEOVER_PX` of movement, because the case it guards against is the
-  mouse being *brushed* mid-rally. A window-level listener sees far more movement
-  than a canvas-level one, so re-read that logic instead of assuming it survives
-  the move.
-- Pointer behaviour is the one thing here that must be verified with real XTEST
-  input rather than `page.mouse` — see the section in `CLAUDE.md` and what
-  believing synthetic input cost Minesweeper.
-
 ### pong-serve-from-paddle — Serve from your own paddle, aimed where you choose
 
 **Gate: playtest, its own.** It changes the opening of every single point and
