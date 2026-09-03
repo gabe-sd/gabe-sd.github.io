@@ -10,11 +10,11 @@ rejected along the way. Rejected alternatives are the most valuable thing here
 and the easiest to lose. Keep values out of it; those live in the code as named
 constants, and a doc that repeats them is wrong the first time one is tuned.
 
-**Sudoku** (`games/sudoku/script.js`) ships as a small fixed set of hand-picked
-puzzles rather than generating them on the fly. That single choice is what keeps
-the rest of this simple: `script.js` itself never needs a solver or a
+**Sudoku** (`games/sudoku/script.js`) ships as a small fixed set of puzzles
+rather than generating them on the fly. That single choice is what keeps the
+rest of this simple: `script.js` itself never needs a solver or a
 uniqueness-checker — see "Puzzle data" below for where that logic actually
-lives.
+lives, and for how the set was produced.
 
 "Is this cell wrong" is real Sudoku legality — a filled editable cell is wrong
 if its digit duplicates another cell's digit in the same row, column, or 3x3
@@ -79,9 +79,22 @@ column, and box a permutation of 1-9) whose `givens` is consistent with it and
 has exactly one solution. None of that is checked at runtime — checking it
 there is exactly the generator complexity this design avoids. Instead
 `tests/sudoku-puzzles.test.js` runs a solver once per puzzle at test time and
-fails if any bundled puzzle is malformed or non-unique, so a typo in hand-
-authored puzzle data cannot reach `main` silently. That test is the only place
-in this game a Sudoku solver exists.
+fails if any bundled puzzle is malformed or non-unique. That test is the only
+place in this game a Sudoku solver exists.
+
+The first 3 puzzles were hand-picked (three shifts of one formula grid, dug
+down by hand). The other 20 were produced by a one-off Node script — random
+full-grid backtracking for a fresh `solution` each time, then digging cells
+out while a solver confirmed uniqueness stayed at exactly one, keeping only
+puzzles with at least 24 givens and discarding any that duplicated an
+existing one. That script was not kept; it lived outside this repo for one
+run and its output is only these puzzle entries. A generator bug in it could
+in principle have produced a malformed or non-unique puzzle despite passing
+locally — which is exactly what `tests/sudoku-puzzles.test.js` exists to
+catch before it can reach `main`, machine-generated puzzle data included, not
+only hand-authored typos. Whoever adds puzzle 24 either writes a similar
+throwaway generator or hand-picks one; either way, run it through that test
+before it lands.
 
 ## Page ids
 
