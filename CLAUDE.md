@@ -83,6 +83,13 @@ Remove your own worktree from inside the session that is in it. Removing one fro
 outside leaves that session's working directory pointing at a path that no longer
 exists.
 
+That is for a session that entered a worktree and can leave it again. An agent
+*launched* into one cannot: `ExitWorktree` refuses a subagent whose working
+directory was pinned at launch, so its only route out is `git worktree remove`
+aimed at its own path, which strands it. It can break the rule or ignore it, not
+obey it — so it leaves the tree alone and says so in its report, and whoever
+launched it removes the tree once the branch has landed.
+
 The bare slug is for work that **closes** the entry and deletes it. Work that
 advances one without closing it — characterising it, correcting it, filing a note
 against it — takes the slug plus a suffix: `pong-insane-ball-speed-characterised`
@@ -93,11 +100,22 @@ open turns `main` red at the merge — for the integrator, not for you. The
 pattern includes the closing quote, which is what lets a suffix clear it.
 
 Two rules that each looked right on their own, and a collision only visible from
-the seat that merges. It has now been found twice, and the first time it went
+the seat that merges. It has now been found three times, and the first time it went
 into a commit message (`315e743`) and a comment inside `docs-check.js`, where
 nobody reading this file would meet it. Note also that it cannot be smoke-tested
 with an empty commit: the check passes `--merges`, so only a real merge commit
 trips it, and an empty one passes and tells you the problem is not there.
+
+**An entry you filed yourself still has to be deleted.** The third way this was
+found: every paragraph above imagines an entry that already exists on `main`, and
+none of them covers the branch that files one and closes it in the same breath.
+That is the ordinary shape of a new game — the root `TODO.md` entry and the game
+itself land together — and it is how `sudoku-game` reached handover with its own
+entry still in the file. Check 5 reads the merged tree and does not care who wrote
+the entry or when. So the question to ask is not "did I inherit this entry" but
+"is this entry still true once this branch is on `main`" — and for a game you have
+just built, it is not. Deleting it changes nothing you can observe, for the reason
+just given: the check cannot fire until the merge commit exists.
 
 **One agent owns one area at a time.** An area is a game folder, or the shell —
 the root page, `shared.css`, the docs, the tests. A suite belongs to the game
@@ -373,8 +391,11 @@ Each game page follows a contract that `shared.css` depends on:
 `tests/contract.test.js` holds every game against the structural half of that
 list — the three ids, the stylesheet order, the link home — and against the hub
 having a card for it, since adding a game is two steps and nothing else checks
-that both happened. It reads `games/` rather than a list, so a new game is
-covered the day its folder exists.
+that both happened. For a game whose keys drive play it also holds both
+directions of the focus handback: a pointer click has to release the focus, a
+keyboard activation has to keep it. Which games exist and which are key-driven
+are both read from the folder and the script rather than from a list, so a new
+game is covered the day its folder exists.
 
 `shared.css` owns the theme as CSS custom properties (`--bg`, `--fg`, `--cell-bg`,
 `--cell-border`, `--accent`, `--win`, `--lose`, `--muted`) which flip under
