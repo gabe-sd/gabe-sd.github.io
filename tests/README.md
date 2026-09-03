@@ -87,6 +87,16 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
   the wrong behaviour, so that fixing it turns a check red and the before/after
   evidence arrives without anyone having to remember to look for it. Rewrite such
   an assertion as part of the fix rather than deleting it.
+- **sudoku.test.js** — gameplay: selecting an editable cell (a given cell
+  cannot be selected), filling it via keyboard or the number pad, that a digit
+  duplicating a row/column/box peer is marked wrong and the marker clears with
+  the digit, the win condition, and that Restart keeps the same puzzle while
+  New puzzle moves to a different one.
+- **sudoku-puzzles.test.js** — no browser. Runs a backtracking solver once per
+  bundled puzzle to check it is well-formed, that `givens` agrees with
+  `solution`, and — the reason this suite exists — that each puzzle has
+  exactly one solution. This is the only place in the game a Sudoku solver
+  exists; see "Puzzle data" in `games/sudoku/DESIGN.md`.
 - **flappy-bird.test.js** — the flight model and everything hanging off it:
   that nothing moves before the first flap, that a flap sets the climb rather
   than adding to it, gravity and its terminal speed, the ceiling holding the

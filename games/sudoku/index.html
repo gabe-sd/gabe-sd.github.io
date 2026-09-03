@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sudoku · Game Arcade</title>
+<link rel="stylesheet" href="../../shared.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+    <a class="back-link" href="../../index.html">← All games</a>
+    <h1>Sudoku</h1>
+    <p id="status" class="status">Select a cell, then type a digit</p>
+    <div id="board" role="grid" aria-label="Sudoku board"></div>
+    <div id="number-pad" aria-label="Number pad">
+      <button class="num-btn" data-digit="1">1</button>
+      <button class="num-btn" data-digit="2">2</button>
+      <button class="num-btn" data-digit="3">3</button>
+      <button class="num-btn" data-digit="4">4</button>
+      <button class="num-btn" data-digit="5">5</button>
+      <button class="num-btn" data-digit="6">6</button>
+      <button class="num-btn" data-digit="7">7</button>
+      <button class="num-btn" data-digit="8">8</button>
+      <button class="num-btn" data-digit="9">9</button>
+      <button class="num-btn erase" data-digit="0" aria-label="Erase">⌫</button>
+    </div>
+    <div class="controls">
+      <button id="restart" class="btn">Restart</button>
+      <button id="new-puzzle" class="btn secondary">New puzzle</button>
+    </div>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
