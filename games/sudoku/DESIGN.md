@@ -112,17 +112,24 @@ must also clear these, checked in `tests/sudoku-puzzles.test.js`:
 - **No formula grid.** A `solution` where one row is a cyclic rotation of
   another lets a player read the whole grid off a single row with no
   deduction — that's the defect above, generalized past the exact rotation
-  offsets it used. Do not assume randomized backtracking makes this rare: an
-  earlier draft of this section put it at roughly 9-in-362880 per row pair, on
-  the reasoning that a row is one of 9! permutations and 9 of those are
-  rotations of any given row. The generator's own output refutes that. Of the
-  20 puzzles it produced, one — the old puzzle 22 — had rows 0 and 1 as
-  rotations, which is 1 in 20 rather than 1 in ~1000. The estimate assumed
-  uniformly random permutations, and Sudoku rows are not: a cyclic rotation
-  never repeats a value in a column, so it satisfies the column constraint
-  automatically and is over-represented among legal grids rather than being a
-  1-in-9! coincidence. Reroll when the check fires; do not treat a hit as
-  surprising. Checked by `tests/sudoku-puzzles.test.js`.
+  offsets it used. **Do not work out how likely that is from first
+  principles.** Two attempts here did, and both were wrong, in opposite
+  directions. The first put it at 9-in-362880 per row pair — a row is one of 9!
+  permutations, 9 of which are rotations of any given row — and concluded a hit
+  meant a bad generator. The second corrected it by generalising from one
+  observation, the old puzzle 22 being 1 of the 20 grids the generator
+  produced, and called the rate 1 in 20.
+
+  It was measured instead, over 200,000 grids built the way the generator built
+  these (full-grid backtracking, candidate order shuffled at every cell): **1
+  row pair in 5,248 is a rotation, and 0.68% of grids — about 1 in 146 —
+  contain at least one.** Rotations are therefore ~7.7x more likely than
+  permutation-counting predicts, because a cyclic rotation never repeats a
+  value in a column and so satisfies the column constraint for free. And one
+  hit in a 20-grid run is ordinary luck, not a broken generator. Reroll when
+  the check fires. The measuring script was a one-off and was not kept, as the
+  generator was not; the method above is the whole of it. Checked by
+  `tests/sudoku-puzzles.test.js`.
 - **At least 24 givens** (the uniqueness floor is 17; this repo's bar is
   higher so a puzzle has room to start without immediately forcing a long
   forced-chain deduction). Checked by `tests/sudoku-puzzles.test.js`, which
