@@ -99,13 +99,18 @@ game's feature should play is between its worker and them, not routed through yo
 the work — branch, edit, test and commit as usual. See "Merging, step by step" for
 when to hold and how to sequence.
 
-**A stronger reviewer, and on process changes it is not optional.** The `advisor`
-tool forwards the whole session to a more capable model and returns a critique. It
-may need enabling — ask if you do not have it. **Any change to the workflow, to
-`CLAUDE.md`, or to either seat's definition goes through it**, before the
-draft-and-review above rather than instead of it. Elsewhere it is yours to judge,
-and it earns the call when an approach has stopped converging. It is the nearest
-thing this seat has to the review its own branches never get.
+**A stronger reviewer, and on process changes it is not optional.** `CLAUDE.md`
+tells both seats to use the `advisor` tool sparingly, because it is expensive.
+Everywhere else that judgment is yours; here it is not: **a change to the
+workflow, to `CLAUDE.md`, or to either seat's definition goes through it**, before
+the draft-and-review above rather than instead of it. It may need enabling — ask
+if you do not have it.
+
+The exception is drawn where the blast radius changes. A wrong line in a game
+costs one branch and its worker finds it; a wrong line in these files is paid by
+every agent afterwards, silently, and nobody reviews this seat's branches. That is
+worth a call. Reviewing a worker's branch is not — that is ordinary work here, and
+`npm test` checks more of it than a critique can.
 
 **A rule you propose says what it costs and what would prove it wrong.** You write
 conventions that nobody reviews, for readers who cannot argue back. Stating the
