@@ -162,6 +162,17 @@ const strayTodos = todos
   .filter((f) => !games.includes(f.split("/")[1] || ""));
 check("every per-game TODO.md sits in a game folder", strayTodos, "stray");
 
+// 7. The seat router. The first thing an agent does here is read its own seat's
+//    file, and check 1 cannot guard that pointer: it only matches paths with a
+//    directory in them, so a bare `WORKER.md` at the root is prose to it. Rename
+//    or delete one and the router in CLAUDE.md points nowhere, leaving the next
+//    worker with no rule telling it to take a worktree - which is the failure
+//    that put this check here.
+const brokenRouter = ["WORKER.md", "INTEGRATOR.md"].filter(
+  (f) => !files.includes(f) || !claude.includes(`\`${f}\``)
+);
+check("CLAUDE.md routes to a seat file that exists", brokenRouter, "unrouted");
+
 const failed = results.filter((r) => !r).length;
 console.log(`\n${results.length - failed}/${results.length} checks passed`);
 process.exit(failed ? 1 : 0);
