@@ -1,8 +1,11 @@
-// Validates the hand-authored puzzle data in games/sudoku/script.js: each
-// solution must be a legal complete grid, each givens grid must agree with its
-// solution, and — the one this file exists for — each puzzle must have
-// exactly one solution. This is the only place in the game a Sudoku solver
-// exists; see "Puzzle data" in games/sudoku/DESIGN.md. No browser needed.
+// Validates the puzzle data in games/sudoku/script.js: each solution must be
+// a legal complete grid, each givens grid must agree with its solution, each
+// puzzle must have exactly one solution, and each must clear the
+// board-content bar in "What makes a puzzle good" (games/sudoku/DESIGN.md) —
+// added after a playtester caught puzzles that were legal and unique but
+// still a shifted 1-9 formula grid, readable off one row with no deduction.
+// This is the only place in the game a Sudoku solver exists. No browser
+// needed.
 const fs = require("fs");
 const path = require("path");
 
@@ -49,6 +52,30 @@ function givensMatchSolution(givens, solution) {
   for (let r = 0; r < 9; r++)
     for (let c = 0; c < 9; c++)
       if (givens[r][c] !== 0 && givens[r][c] !== solution[r][c]) return false;
+  return true;
+}
+
+// A row that's a cyclic rotation of another lets a player read the whole grid
+// off one row with no deduction — see "What makes a puzzle good" in
+// DESIGN.md. Genuinely random grids hit this by chance at ~9/9! odds per
+// pair, negligible across the 36 pairs in a 9x9 grid.
+function isRotation(a, b) {
+  for (let s = 0; s < 9; s++) {
+    if (a.every((v, i) => b[(i + s) % 9] === v)) return true;
+  }
+  return false;
+}
+
+function hasCyclicShiftRows(solution) {
+  for (let i = 0; i < 9; i++)
+    for (let j = i + 1; j < 9; j++)
+      if (isRotation(solution[i], solution[j])) return true;
+  return false;
+}
+
+function everyRowAndColumnHasAGiven(givens) {
+  for (let r = 0; r < 9; r++) if (givens[r].every((v) => v === 0)) return false;
+  for (let c = 0; c < 9; c++) if (givens.every((row) => row[c] === 0)) return false;
   return true;
 }
 
@@ -112,7 +139,17 @@ PUZZLES.forEach((p, i) => {
   check(`puzzle ${i}: exactly one solution`, solutionCount === 1, solutionCount);
 });
 
-console.log("3. puzzles are distinct from each other");
+console.log("3. every puzzle clears the board-content bar in DESIGN.md's \"What makes a puzzle good\"");
+PUZZLES.forEach((p, i) => {
+  check(`puzzle ${i}: solution has no cyclic-shift row pair`, !hasCyclicShiftRows(p.solution));
+
+  const clueCount = p.givens.flat().filter((v) => v !== 0).length;
+  check(`puzzle ${i}: has at least 24 givens`, clueCount >= 24, clueCount);
+
+  check(`puzzle ${i}: every row and column has a given`, everyRowAndColumnHasAGiven(p.givens));
+});
+
+console.log("4. puzzles are distinct from each other");
 const signatures = PUZZLES.map((p) => JSON.stringify(p.givens));
 check("no two puzzles share the same givens", new Set(signatures).size === signatures.length);
 

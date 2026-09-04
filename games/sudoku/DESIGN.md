@@ -82,19 +82,54 @@ there is exactly the generator complexity this design avoids. Instead
 fails if any bundled puzzle is malformed or non-unique. That test is the only
 place in this game a Sudoku solver exists.
 
-The first 3 puzzles were hand-picked (three shifts of one formula grid, dug
-down by hand). The other 20 were produced by a one-off Node script — random
-full-grid backtracking for a fresh `solution` each time, then digging cells
-out while a solver confirmed uniqueness stayed at exactly one, keeping only
-puzzles with at least 24 givens and discarding any that duplicated an
-existing one. That script was not kept; it lived outside this repo for one
-run and its output is only these puzzle entries. A generator bug in it could
-in principle have produced a malformed or non-unique puzzle despite passing
-locally — which is exactly what `tests/sudoku-puzzles.test.js` exists to
-catch before it can reach `main`, machine-generated puzzle data included, not
-only hand-authored typos. Whoever adds puzzle 24 either writes a similar
-throwaway generator or hand-picks one; either way, run it through that test
-before it lands.
+All 23 puzzles were produced by a one-off Node script — random full-grid
+backtracking for a fresh `solution` each time, then digging cells out while a
+solver confirmed uniqueness stayed at exactly one, keeping only puzzles with
+at least 24 givens and discarding any that duplicated an existing one. That
+script was not kept; it lived outside this repo for one run and its output is
+only these puzzle entries. A generator bug in it could in principle have
+produced a malformed or non-unique puzzle despite passing locally — which is
+exactly what `tests/sudoku-puzzles.test.js` exists to catch before it can
+reach `main`, machine-generated puzzle data included, not only hand-authored
+typos. Whoever adds puzzle 24 either writes a similar throwaway generator or
+hand-picks one; either way, run it through that test before it lands.
+
+The first 3 puzzles were originally hand-picked instead: three shifts of one
+formula grid (row *r* = row 0 rotated by a fixed offset per row), dug down by
+hand. A playtester caught it immediately — "the bot literally placed 1-9 in
+each row, but shifted" — because once you see the rotation in one row, every
+other row is readable off it without ever touching Sudoku logic. Legal by the
+uniqueness check (nothing above requires a grid to be *hard*, only correct),
+but not what "puzzle" means to a player. They were replaced with generator
+output; see "What makes a puzzle good" below for the guideline this became.
+
+## What makes a puzzle good
+
+Legal and unique is necessary but not sufficient — the formula-grid puzzles
+above were both, and still weren't Sudoku to play. Everything in `PUZZLES`
+must also clear these, checked in `tests/sudoku-puzzles.test.js`:
+
+- **No formula grid.** A `solution` where one row is a cyclic rotation of
+  another lets a player read the whole grid off a single row with no
+  deduction — that's the defect above, generalized past the exact rotation
+  offsets it used. A grid from genuine randomized backtracking (candidate
+  order shuffled at every cell, as the generator script does) hits this by
+  chance for a given row pair at roughly 9-in-362880 odds; across the 36 pairs
+  in a 9x9 grid that's near enough to never that a hit means reroll, not bad
+  luck. Checked by `tests/sudoku-puzzles.test.js`.
+- **At least 24 givens** (the uniqueness floor is 17; this repo's bar is
+  higher so a puzzle has room to start without immediately forcing a long
+  forced-chain deduction). Checked by `tests/sudoku-puzzles.test.js`, which
+  also keeps the absolute 17-given floor as a structural sanity check
+  independent of this repo's stricter bar.
+- **Every row and every column has at least one given.** A row with zero
+  clues is what "give enough clues to begin with so numbers can be placed"
+  (the same playtester feedback) is pointing at directly — nowhere in that
+  row to even start. Checked by `tests/sudoku-puzzles.test.js`.
+- **Exactly one solution**, already covered above.
+
+None of this is a difficulty tier — see "Not in v1" above. It's a floor on
+board *content*, orthogonal to how hard a legally-unique puzzle is to solve.
 
 ## Page ids
 
