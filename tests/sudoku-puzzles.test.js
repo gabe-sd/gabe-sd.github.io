@@ -79,6 +79,19 @@ function everyRowAndColumnHasAGiven(givens) {
   return true;
 }
 
+function everyBoxHasAGiven(givens) {
+  for (let br = 0; br < 9; br += 3) {
+    for (let bc = 0; bc < 9; bc += 3) {
+      let has = false;
+      for (let dr = 0; dr < 3 && !has; dr++)
+        for (let dc = 0; dc < 3 && !has; dc++)
+          if (givens[br + dr][bc + dc] !== 0) has = true;
+      if (!has) return false;
+    }
+  }
+  return true;
+}
+
 // Plain backtracking solver, capped so it stops as soon as a second solution
 // is found — a uniqueness check never needs to enumerate every solution.
 function countSolutions(givens, cap) {
@@ -147,6 +160,7 @@ PUZZLES.forEach((p, i) => {
   check(`puzzle ${i}: has at least 24 givens`, clueCount >= 24, clueCount);
 
   check(`puzzle ${i}: every row and column has a given`, everyRowAndColumnHasAGiven(p.givens));
+  check(`puzzle ${i}: every box has a given`, everyBoxHasAGiven(p.givens));
 });
 
 console.log("4. puzzles are distinct from each other");
