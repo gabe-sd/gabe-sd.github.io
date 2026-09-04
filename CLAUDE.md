@@ -190,10 +190,10 @@ this file, `WORKER.md`, `INTEGRATOR.md`, the game's `DESIGN.md`, or its `TODO.md
 
 ### This convention is not settled
 
-The split into two seats — this section, `WORKER.md` and `INTEGRATOR.md` —
-came out of one experiment with two agents, not out of long
-practice, and the parts of it that are wrong have not been found yet. It is
-written down so there is something concrete to disagree with.
+The split into two seats — this section, `WORKER.md` and `INTEGRATOR.md` — came
+out of one experiment with two agents, not out of long practice, and the parts of
+it that are wrong have not been found yet. It is written down so there is
+something concrete to disagree with.
 
 So: if you hit friction with it — a rule that cost more than it saved, a collision
 it did not prevent, a step that turned out to be unnecessary — **propose a better
