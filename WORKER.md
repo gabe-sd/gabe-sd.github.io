@@ -35,15 +35,18 @@ git worktree add .claude/worktrees/<slug> -b <slug>      # then work in there
 ```
 
 If your session has an `EnterWorktree` tool it will do this and move you into the
-tree, but check where it put things: the harness has used `.claude/worktrees/`
-before (`tests/README.md`) and names the branch `worktree-<slug>`, which needs the
-rename described below. Neither is guaranteed. **If the tree lands anywhere but
-under this project folder, stop and say so — open the line with WORKFLOW ISSUE:.**
+tree, but check where it put things. It names the branch `worktree-<slug>`, which
+needs the rename described below — that part is settled, and check 5 in
+`tests/docs-check.js` tolerates the prefix because of it. Where it puts the tree
+is not: `tests/README.md` records `.claude/worktrees/`, and that is the only
+evidence there is. **If the tree lands anywhere but under this project folder,
+stop and say so — open the line with WORKFLOW ISSUE:.**
 
 The location is not a preference. `.claude/worktrees/` is gitignored, and
 `tests/docs-check.js` deliberately refuses to walk into hidden directories,
 because a worktree is a full checkout whose `TODO.md` would otherwise be read as
-this branch's — which has already failed a run on `main`. A tree outside the
+this branch's — which is how a stale worktree once turned `main` red, per the
+comment at `tests/docs-check.js:32`. A tree outside the
 project folder also puts an agent's files somewhere Gabriel has said they must not
 go; see `site-worktree-location` in the root `TODO.md`.
 

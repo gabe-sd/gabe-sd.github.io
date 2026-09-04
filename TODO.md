@@ -85,12 +85,14 @@ the command by hand now has the path in front of it. This entry exists to record
 the decision and to set the trigger:
 
 **If a worker that has read `WORKER.md` still puts a tree outside the project
-folder, the doc is not enough and the answer is structural.** What that looks
-like is not decided — the cheapest candidate is a check that fails when
-`git worktree list` names a path outside the repo, which would catch it at the
-next `npm test` rather than whenever somebody notices. Do not build it before the
-second occurrence; one instance with a known cause is not evidence a rule needs
-machinery behind it.
+folder, the doc is not enough and something structural is needed.** What that
+should be is not decided, and is Gabriel's call before anyone builds it. Note that
+the obvious candidate — a check that fails when `git worktree list` names a path
+outside the repo — is weaker than it sounds: a test runs after the tree already
+exists, so it reports rather than prevents. The cheapest thing that could work is
+already in place, which is the path sitting inside the command in `WORKER.md`.
+One instance with a known cause is not evidence a rule needs machinery behind
+it.
 
 ### site-visual-design — Improve the site's design and visual appeal
 
