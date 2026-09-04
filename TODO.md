@@ -34,6 +34,10 @@ Run both before inventing a slug. Nothing else is needed: git is the record of
 retired slugs, so there is no list to maintain, and a slug that did somehow repeat
 still describes what it names in both places.
 
+Work on how the repo is run rather than on the site takes a `workflow-` prefix and
+belongs in the `## Workflow` section at the end of this file, which says who acts
+on it.
+
 ## New games
 
 ### reaction-time-game — Reaction time test
@@ -61,7 +65,33 @@ One file at the repo root is enough; browsers find `/favicon.ico` without a link
 tag, which also keeps it out of every game page's `<head>`. An SVG referenced
 from `shared.css`'s owning pages would need markup in all six instead.
 
-### site-worktree-location — Worktrees must live inside the project folder
+### site-visual-design — Improve the site's design and visual appeal
+
+### highscore-backend — A backend for stored values
+
+Everything is `localStorage` today, so nothing is shared between devices or
+players. A high score table is the obvious first thing that needs a server, and
+also the first thing that would break the "no build, no dependencies, files served
+as-is" property the site has now. Worth planning before it is wanted.
+
+## Workflow
+
+How the work is run, rather than what the site does: the seat split, the merge
+rules, and the conventions in `CLAUDE.md`, `WORKER.md` and `INTEGRATOR.md`. An
+entry here starts life as a **WORKFLOW ISSUE:** raised out loud during a session,
+which is why the prefix is `workflow-` and not `site-` — the flag and the slug are
+the same thing at two stages.
+
+**If you are a worker, this is not your backlog.** Read it freely; it is often
+where the reason behind a rule is written down, and `WORKER.md` sends you to one
+of these entries on purpose. But do not take work from it. Every entry here lands
+in `CLAUDE.md`, in a seat file, or in the checks behind them — all the
+integrator's, and the first two only after review with Gabriel. A worker fixing
+one is rewriting the rules it is working under. If a rule bites you, that is not
+a task to pick up — say so at the time, marked **WORKFLOW ISSUE:**, which is what
+puts an entry here in the first place.
+
+### workflow-worktree-location — Worktrees must live inside the project folder
 
 Gabriel's decision, 2026-09-03: every Claude instance keeps its files under the
 project folder, for security. A worktree at `.claude/worktrees/<slug>` satisfies
@@ -94,7 +124,7 @@ already in place, which is the path sitting inside the command in `WORKER.md`.
 One instance with a known cause is not evidence a rule needs machinery behind
 it.
 
-### site-cleared-worker-findings — "Report, never fix" assumes a live worker
+### workflow-cleared-worker-findings — "Report, never fix" assumes a live worker
 
 `INTEGRATOR.md` tells the integrator to report a finding in a game's area rather
 than fixing it, and to let it ride on that game's next branch. The reasoning holds
@@ -114,11 +144,29 @@ cheap, but it is still an edit in somebody else's area, which is the thing the
 rule exists to prevent. Ask Gabriel rather than picking one — the boundary of that
 rule is his, and the answer belongs in `INTEGRATOR.md` once it is settled.
 
-### site-visual-design — Improve the site's design and visual appeal
+### workflow-worktree-server-orphan — Removing a worktree leaves its server running
 
-### highscore-backend — A backend for stored values
+`git worktree remove` succeeds while a preview server is still serving that path,
+and the process outlives the tree with its cwd pointing at a directory that no
+longer exists. One did on 2026-09-03: the `sudoku-how-to-play` worker said it had
+stopped its own server, removed the tree and went offline, and a
+`python3 -m http.server` rooted in that tree was still listening afterwards. It
+was found by the integrator at end of session and killed by pid.
 
-Everything is `localStorage` today, so nothing is shared between devices or
-players. A high score table is the obvious first thing that needs a server, and
-also the first thing that would break the "no build, no dependencies, files served
-as-is" property the site has now. Worth planning before it is wanted.
+It is quiet rather than harmful, which is the problem. A worktree serves on
+`PORT=0`, so an orphan holds a random port and the usual check — is 8934 taken? —
+sees nothing wrong. And neither seat file covers it: `WORKER.md` has no cleanup
+section — "Handing over" is about the branch — and never mentions a server or a
+process anywhere, while `INTEGRATOR.md`'s "Cleaning up" is written entirely about
+branches and trees.
+
+Two candidates, neither decided. `WORKER.md` could require stopping the server
+before removing the tree, and verifying with `ss -ltnp` rather than trusting that
+it stopped. Or `INTEGRATOR.md`'s cleanup could sweep for listeners whose
+`/proc/<pid>/cwd` names a deleted path. The second is the stronger one, because it
+catches the case where the worker believed it had cleaned up — which is the case
+that actually happened — but it costs more: it has the integrator killing a
+process it did not start, which "Shared ground" forbids without asking first. That
+is only safe once the owning session is known to be gone, so any such rule has to
+say how that is established. Decide the boundary with Gabriel before writing
+either one.

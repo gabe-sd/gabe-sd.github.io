@@ -48,7 +48,7 @@ because a worktree is a full checkout whose `TODO.md` would otherwise be read as
 this branch's — which is how a stale worktree once turned `main` red, per the
 comment at `tests/docs-check.js:32`. A tree outside the
 project folder also puts an agent's files somewhere Gabriel has said they must not
-go; see `site-worktree-location` in the root `TODO.md`.
+go; see `workflow-worktree-location` in the root `TODO.md`.
 
 **This holds even when you are the only agent working.** The reason is not
 politeness to a peer who might turn up; it is that **the shared checkout is the
