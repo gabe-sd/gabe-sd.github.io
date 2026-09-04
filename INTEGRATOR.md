@@ -1,7 +1,8 @@
 # The integrator
 
 Read this if you are the integrator. If you are building a game or a feature you
-are a worker, and `WORKER.md` is your file, not this one.
+are a worker, and `WORKER.md` is your file, not this one. If you own the site's
+look rather than an area you are the art director, and `ART-DIRECTOR.md` is yours.
 
 Everything in `CLAUDE.md` still applies to you — the page contract, how the games
 work, how verification is done here. This file is only the part that is different
@@ -15,9 +16,11 @@ tests). You sit in the shared checkout — the repo root itself — and you are 
 only seat that can merge to `main`.
 
 The shell is yours as well — the root page, `shared.css`, the docs, the tests. You
-own it the way a worker owns a game folder, and you do not ask first. Substantial
-visitor-facing work is the exception: a landing-page redesign gets a worker,
-spawned for it. When you build in the shell you wear both hats and the worker's
+own it the way a worker owns a game folder, and you do not ask first. How it
+*looks* is the exception: colour, typeface, spacing and the rest belong to the art
+director, and while that seat is taken they are not yours to adjust in passing —
+`shared.css`'s token values included. A restyle is a seat, not a task; see
+`ART-DIRECTOR.md`. When you build in the shell you wear both hats and the worker's
 rules in `WORKER.md` apply to you in full — branch before the first edit, absorb
 `main` and go green before merging, and go last when somebody else is ready too. What to guard
 against is the two blurring, because your own branch is the one nobody else
@@ -102,9 +105,16 @@ when to hold and how to sequence.
 **A stronger reviewer, and on process changes it is not optional.** `CLAUDE.md`
 tells both seats to use the `advisor` tool sparingly, because it is expensive.
 Everywhere else that judgment is yours; here it is not: **a change to the
-workflow, to `CLAUDE.md`, or to either seat's definition goes through it**, before
+workflow, to `CLAUDE.md`, or to any seat's definition goes through it**, before
 the draft-and-review above rather than instead of it. It may need enabling — ask
 if you do not have it.
+
+**Unless Gabriel says otherwise.** If he names the reviewer, or gives a rule for
+picking one — "whichever is cheaper", "use a subagent" — that is the instruction
+and this paragraph is not a reason to override it. Where the two collide, ask him
+in one sentence and act on the answer; do not resolve it yourself and explain
+afterwards. This clause exists because that happened: the rule above was read as
+outranking a direct instruction, and it does not.
 
 The exception is drawn where the blast radius changes. A wrong line in a game
 costs one branch and its worker finds it; a wrong line in these files is paid by
@@ -208,6 +218,56 @@ went in here during one re-absorb and cost two extra rounds that were nobody's
 fault but this seat's. That window is minutes, not hours, and it is the merge that
 waits, never your work. When both of you have something pending, say which lands
 first rather than interleaving: absorbing `main` once is cheap.
+
+## A project on an integration branch
+
+Everything above assumes work merges to `main` one branch at a time, and almost
+all of it does. A project that crosses every area at once and runs across many
+sessions cannot: `main` would sit half-finished for weeks, every session after the
+first would branch from a base nobody has seen whole, and anything urgent that
+needed to ship would drag the unfinished work out with it.
+
+When that happens the project gets an **integration branch**, and `main` is left
+alone until the whole of it is done.
+
+- **The shared checkout — your seat — sits on the integration branch** for the
+  duration rather than on `main`. One seat holds it, for the same reason one seat
+  holds `main`.
+- **Phase branches are cut from it explicitly**, never from `main`:
+  `git worktree add .claude/worktrees/<slug> -b <slug> <integration-branch>`.
+  Left off, the command takes `HEAD` — whatever the checkout happened to have out
+  at that moment.
+- **You merge each phase into it**, `--no-ff`, one at a time, suite after each.
+  Everything in "Merging, step by step" applies unchanged with the integration
+  branch standing where `main` does, the ancestor check included: it is still what
+  tells you a branch is ready rather than stale.
+- **Push the integration branch to `origin`.** Pages deploys from `main` only, so
+  a side branch is not a deploy. It buys two things: the recovery target "When the
+  suite is red" needs — `git reset --hard origin/<branch>` — and an offsite copy
+  of work that would otherwise be local-only for weeks. On a public repo the
+  branch is public; say so before pushing, not after.
+- **`main` stays clean and deployable throughout.** That is the point of the
+  arrangement, and the thing to protect if any of the rest turns out to be wrong.
+- **At the end, one `--no-ff` merge into `main` and one push**, confirmed like any
+  other deploy.
+
+Two traps, both found before the first of these was ever run:
+
+**Keep the project's backlog entries off `main`.** Check 5 in
+`tests/docs-check.js` searches every ref for a merge commit matching each slug it
+finds — `git log --all`, not the current branch. So an entry sitting in a file on
+`main` is read as landed the moment its phase merges on the integration branch,
+and the suite goes red on `main` in the middle of the project, for somebody who
+checked `main` out to do something else entirely. The entries belong on the
+integration branch; `main` carries the conventions and nothing else.
+
+**Never give an entry the integration branch's own name.** The final
+`Merge branch '<integration-branch>'` would land every slug that matches it.
+
+One cost to accept going in: the final merge is a diff nobody can review in one
+sitting. That is survivable only because each phase was reviewed as it landed —
+which makes the phase gates load-bearing rather than ceremony. If you catch
+yourself waving one through, the arrangement has already stopped working.
 
 ## When the suite is red
 

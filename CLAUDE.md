@@ -39,16 +39,20 @@ A concrete answer justifies the complexity. No answer means take it out.
 
 ## Which seat are you?
 
-There are two, and which one you are is settled before you start. A **worker**
+There are three, and which one you are is settled before you start. A **worker**
 owns one area — a game folder, or the shell — builds it in a worktree of its own,
 and hands the finished branch over. The **integrator** owns `main` and is the only
-seat that merges to it.
+seat that merges to it. The **art director** owns the site's look — colour,
+typeface, spacing, motion, across every game at once — and is a standing seat that
+is usually unoccupied, taken when the look itself is the work.
 
 - Worker → read **`WORKER.md`**, and take a worktree before your first edit.
 - Integrator → read **`INTEGRATOR.md`**.
+- Art director → read **`ART-DIRECTOR.md`**, and take a worktree before your
+  first edit.
 
-This file is the ground both stand on: the page contract, how the games work, how
-verification is done here, and the shared rules below. Your seat's file is only
+This file is the ground all three stand on: the page contract, how the games work,
+how verification is done here, and the shared rules below. Your seat's file is only
 what differs.
 
 **If nobody has told you which seat you are, ask — before branching, editing or
@@ -63,7 +67,7 @@ looks like before it has taken a worktree, which is the mistake this rule exists
 to stop. Being in a worktree is not evidence either. The seat is assigned, not
 deduced. Ask.
 
-## Shared ground: what both seats obey
+## Shared ground: what every seat obeys
 
 This site is one repo holding several small, nearly independent projects: a game
 lives entirely in `games/<name>/`, and adding one means creating that folder and a
@@ -187,6 +191,15 @@ who noticed the contradiction. A session ends and takes its context with it; the
 repo is the only thing that does not. So when you catch yourself explaining
 something to whoever comes next, stop and put it where they will actually look:
 this file, `WORKER.md`, `INTEGRATOR.md`, the game's `DESIGN.md`, or its `TODO.md`.
+
+**Visitor-facing prose is Gabriel's.** `README.md` is the front page of a public
+repo and `about.html` is a page people read: both are written for somebody
+visiting the site rather than for an agent working on it. Style them, lay them
+out, link them, restyle them entirely — but do not write or rewrite their *words*
+unless you have been asked to. What a visitor should get from them is his call,
+and an agent filling one in with plausible copy is how a site ends up describing
+itself in a voice nobody chose. The root `TODO.md` has said this of `README.md`
+since it was written, in `site-readme-for-humans`; it holds for any such page.
 
 **The `advisor` tool is expensive — use it sparingly.** It forwards the whole
 session to a stronger model and returns a critique, and every call costs real

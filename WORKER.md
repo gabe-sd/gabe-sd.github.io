@@ -1,12 +1,13 @@
 # The worker
 
 Read this if you are a worker. If you hold `main` and do the merging you are the
-integrator, and `INTEGRATOR.md` is your file, not this one. If nobody has told you
-which you are, **ask before you touch anything** — see "Which seat are you" in
-`CLAUDE.md`.
+integrator, and `INTEGRATOR.md` is your file, not this one. If you own the site's
+look rather than an area you are the art director, and `ART-DIRECTOR.md` is yours.
+If nobody has told you which you are, **ask before you touch anything** — see
+"Which seat are you" in `CLAUDE.md`.
 
 Everything in `CLAUDE.md` still applies to you — the page contract, how the games
-work, how verification is done here, and the hygiene that binds both seats. This
+work, how verification is done here, and the hygiene that binds every seat. This
 file is only the part that is different because you do **not** hold `main`.
 
 Spawning one of these is one line:
@@ -22,8 +23,9 @@ build in a worktree of your own, and you hand the finished branch to the
 integrator, who is the only seat that merges to `main`.
 
 The shell is the integrator's by default, so a worker gets it only when it is
-handed to them deliberately — substantial visitor-facing work, a landing-page
-redesign. Ask rather than assume.
+handed to them deliberately. Ask rather than assume. Work on how the site *looks*
+is a third seat's rather than yours — see `ART-DIRECTOR.md`; a restyle crosses
+every area at once, which is the one thing the rule below forbids.
 
 ## Take a worktree before your first edit
 
