@@ -83,8 +83,24 @@
   font-size: 0.85rem;
 }
 
+.instructions h3 {
+  margin: 0.7rem 0 0.3rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.instructions h3:first-child {
+  margin-top: 0;
+}
+
+.instructions p {
+  margin: 0;
+}
+
 .instructions ul {
-  margin: 0 0 0.6rem;
+  margin: 0;
   padding-left: 1.1rem;
 }
 
@@ -92,7 +108,6 @@
   margin-bottom: 0.2rem;
 }
 
-.instructions p {
-  margin: 0;
-  color: var(--muted);
+.instructions li:last-child {
+  margin-bottom: 0;
 }

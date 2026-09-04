@@ -155,6 +155,8 @@ const { check, report } = makeChecks();
   check("label flips", (await page.textContent("#help-toggle")).includes("Hide"),
     await page.textContent("#help-toggle"));
   const instr = await page.textContent("#instructions");
+  check("has a Rules section and a Controls section",
+    ["Rules", "Controls"].every((s) => instr.includes(s)), instr.trim());
   check("covers the rule and the controls",
     ["row", "column", "3x3 box", "1-9", "number pad", "Backspace"].every((s) => instr.includes(s)),
     instr.trim());
