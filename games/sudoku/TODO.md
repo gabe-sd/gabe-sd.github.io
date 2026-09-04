@@ -21,3 +21,19 @@ puzzles rather than folding them into the 100 — since mixing generated and
 curated puzzles in one list would need a way to tell them apart or lose the
 point of naming them. Discuss the shape with Gabriel before building; this
 entry exists to record the idea, not a decided design.
+
+### sudoku-status-line-duplicate-instructions — The start prompt never clears, and now repeats the panel
+
+`loadPuzzle()` (`games/sudoku/script.js`) sets `#status` to "Select a cell, then
+type a digit" and nothing ever clears it — it sits there for the whole game
+until "Solved! 🎉" replaces it on a win. CLAUDE.md's page contract says
+`#status` is game state only, and standing instructions belong in the
+collapsible panel instead. Minesweeper clears its own start prompt after the
+first reveal (`tests/instructions-panel.test.js` §4 pins that behaviour), so
+Sudoku is the odd one out here.
+
+This predates the How to play panel added on `sudoku-how-to-play`, but that
+branch made it visible in a new way: the panel's Controls section now says
+"Click a cell, then type a digit or use the number pad" — almost the same
+sentence sitting permanently in `#status` above it. Fix by clearing `#status`
+after the first successful `placeDigit`, the same shape as Minesweeper's fix.
