@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gabe-SD Arcade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+<style>
+  *{ box-sizing: border-box; }
+  body{ margin: 0; }
+
+  /* exact tokens/values from the original 7e mockup — base green untouched */
+  .phosphor-base{
+    --p-bg: #040604;
+    --p-panel: #0a0f0a;
+    --p-green: #33ff66;
+    --p-dim: #1f9e46;
+
+    /* NEW: category accent family, same "single phosphor tint" idea as green,
+       just different real CRT/vector-monitor colors */
+    --p-amber: #ffb000;      /* P3 amber monochrome monitor */
+    --p-amber-dim: #b8790a;
+    --p-cyan: #3fd4ff;       /* vector-monitor ice blue (Asteroids/Tempest) */
+    --p-cyan-dim: #1f7d99;
+
+    background: var(--p-bg);
+    color: var(--p-green);
+    font-family: "VT323", monospace;
+    padding: 1.8rem 1.4rem 2.2rem;
+  }
+  .px-grid-hero{ padding-top: 1.2rem; }
+  .px-grid-hero .gd-hero{ text-align: center; margin-bottom: 0.9rem; }
+  .px-grid-hero .gd-nav{ display: flex; justify-content: center; gap: 1.1rem; font-size: 0.72rem; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+  .px-grid-hero .gd-nav a{ color: var(--p-dim); text-decoration: none; transition: color 0.12s ease; }
+  .px-grid-hero .gd-nav a:hover, .px-grid-hero .gd-nav a:focus-visible{ color: var(--p-green); text-shadow: 0 0 4px rgba(51,255,102,0.5); outline: none; }
+  .px-grid-hero .gd-nav a.active{ color: var(--p-green); }
+  .px-grid-hero .gd-title{
+    font-size: clamp(1.7rem, 4.4vw, 2.3rem);
+    margin: 0;
+    line-height: 1.05;
+    text-shadow: 0 0 6px rgba(51,255,102,0.55), 0 0 16px rgba(51,255,102,0.2);
+    letter-spacing: 0.02em;
+  }
+  .px-grid-hero .gcount{ text-align: center; margin-bottom: 0.8rem; }
+  .px-grid-hero .chips{ justify-content: center; }
+  .px-grid-hero .gd-info-panel{
+    border-top: 1px solid var(--p-dim);
+    margin-top: 1.2rem;
+    padding-top: 0.85rem;
+    font-size: 1.05rem;
+  }
+  .px-grid-hero .gd-info-panel .mt{ color: var(--p-dim); margin-left: 0.5rem; font-size: 0.9rem; }
+  .px-grid-hero .gd-info-panel .ds{ display: block; color: rgba(51,255,102,0.75); font-size: 0.92rem; margin-top: 0.2rem; }
+
+  /* NEW: info-panel headline picks up the selected tile's accent color */
+  .gd-info-panel .nm{ color: var(--p-green); text-shadow: 0 0 6px rgba(51,255,102,0.45); transition: color 0.15s ease, text-shadow 0.15s ease; }
+  .gd-info-panel[data-cat="puzzle"] .nm{ color: var(--p-amber); text-shadow: 0 0 6px rgba(255,176,0,0.45); }
+  .gd-info-panel[data-cat="arcade"] .nm{ color: var(--p-cyan); text-shadow: 0 0 6px rgba(63,212,255,0.45); }
+
+  .px-grid-dir .gcount{ font-size: 0.82rem; color: var(--p-dim); margin-bottom: 0.7rem; }
+  .px-grid-dir .chips{ display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.1rem; }
+  .px-grid-dir .chip{
+    font-family: "VT323", monospace; background: transparent; border: 1px solid var(--accent-dim, var(--p-dim)); color: var(--accent-dim, var(--p-dim));
+    padding: 0.22rem 0.7rem; font-size: 0.94rem; cursor: pointer; transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  }
+  /* NEW: resting dot hints at each chip's category color before you ever touch it */
+  .px-grid-dir .chip::before{ content:""; display:inline-block; width:6px; height:6px; margin-right:0.4em; background: var(--accent-dim, var(--p-dim)); vertical-align:middle; }
+  .px-grid-dir .chip:hover{ border-color: var(--accent, var(--p-green)); color: var(--accent, var(--p-green)); }
+  .px-grid-dir .chip.active{ background: var(--accent, var(--p-green)); border-color: var(--accent, var(--p-green)); color: #04120a; }
+  .px-grid-dir .gwrap{ display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 0.75rem; }
+  .px-grid-dir .gtile{
+    border: 1px solid var(--accent-dim, var(--p-dim)); padding: 0.7rem 0.4rem 0.55rem; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 0.4rem; cursor: pointer;
+    font-size: 0.6rem; transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease, color 0.12s ease;
+    color: var(--accent, inherit); text-decoration: none;
+    box-shadow: 0 0 7px var(--accent-glow, transparent);
+  }
+  .px-grid-dir .gtile .icon{ width: 24px; height: 24px; color: var(--accent, var(--p-dim)); transition: color 0.12s ease; }
+  .px-grid-dir .gtile:hover, .px-grid-dir .gtile:focus-visible{
+    border-color: var(--accent, var(--p-green)); box-shadow: 0 0 14px var(--accent-glow, rgba(51,255,102,0.4)); transform: translateY(-3px); outline: none;
+  }
+  .px-grid-dir .gtile:hover .icon, .px-grid-dir .gtile:focus-visible .icon{ color: var(--accent, var(--p-green)); }
+  .px-grid-dir .gtile.is-active{ border-color: var(--accent, var(--p-green)); box-shadow: 0 0 14px var(--accent-glow, rgba(51,255,102,0.4)); }
+  .px-grid-dir .gtile.is-active .icon{ color: var(--accent, var(--p-green)); }
+
+  /* NEW: category → accent mapping. Same 2-color CRT structure per game,
+     just a different real phosphor/vector-monitor tint per category. */
+  .gtile[data-cat="strategy"], .chip[data-cat="strategy"]{ --accent: var(--p-green); --accent-dim: var(--p-dim); --accent-glow: rgba(51,255,102,0.4); }
+  .gtile[data-cat="puzzle"], .chip[data-cat="puzzle"]{ --accent: var(--p-amber); --accent-dim: var(--p-amber-dim); --accent-glow: rgba(255,176,0,0.4); }
+  .gtile[data-cat="arcade"], .chip[data-cat="arcade"]{ --accent: var(--p-cyan); --accent-dim: var(--p-cyan-dim); --accent-glow: rgba(63,212,255,0.4); }
+  .gtile[data-cat="idea"], .chip[data-cat="idea"]{ --accent: var(--p-dim); --accent-dim: var(--p-dim); --accent-glow: rgba(31,158,70,0.18); }
+  .chip[data-cat="all"]{ --accent: var(--p-green); --accent-dim: var(--p-dim); --accent-glow: rgba(51,255,102,0.4); }
+
+  /* not-live tiles: dimmed + dashed, deliberately never take on a category color —
+     reinforces that ideas aren't "real" cabinets yet */
+  .px-grid-dir .gtile[data-status="idea"]{ opacity: 0.55; cursor: default; border-style: dashed; }
+  .px-grid-dir .gtile[data-status="idea"]:hover{ border-color: var(--p-dim); box-shadow: none; transform: none; }
+  .px-grid-dir .gtile[data-status="idea"] .icon{ color: var(--p-dim); }
+  .px-grid-dir .badge{
+    font-size: 0.52rem; letter-spacing: 0.03em; color: var(--p-dim);
+    border: 1px solid var(--p-dim); padding: 0.04rem 0.3rem; margin-bottom: 0.1rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- shared icon defs — identical to the original mockup, reused via currentColor -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-ttt" viewBox="0 0 48 48">
+      <g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="18" y1="6" x2="18" y2="42"/>
+        <line x1="30" y1="6" x2="30" y2="42"/>
+        <line x1="6" y1="18" x2="42" y2="18"/>
+        <line x1="6" y1="30" x2="42" y2="30"/>
+        <line x1="9" y1="9" x2="15" y2="15"/>
+        <line x1="15" y1="9" x2="9" y2="15"/>
+        <circle cx="24" cy="24" r="5"/>
+      </g>
+    </symbol>
+    <symbol id="i-pong" viewBox="0 0 48 48">
+      <g stroke="currentColor" stroke-width="2.5" fill="none">
+        <line x1="24" y1="6" x2="24" y2="42" stroke-dasharray="3 5" stroke-linecap="round"/>
+      </g>
+      <rect x="6" y="18" width="3.4" height="13" rx="1.2" fill="currentColor"/>
+      <rect x="38.6" y="17" width="3.4" height="13" rx="1.2" fill="currentColor"/>
+      <circle cx="24" cy="24" r="3.2" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-mine" viewBox="0 0 48 48">
+      <g stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+        <line x1="24" y1="24" x2="34" y2="24"/>
+        <line x1="24" y1="24" x2="40" y2="24"/>
+        <line x1="24" y1="24" x2="31.1" y2="31.1"/>
+        <line x1="24" y1="24" x2="35.3" y2="35.3"/>
+        <line x1="24" y1="24" x2="24" y2="34"/>
+        <line x1="24" y1="24" x2="24" y2="40"/>
+        <line x1="24" y1="24" x2="16.9" y2="31.1"/>
+        <line x1="24" y1="24" x2="12.7" y2="35.3"/>
+        <line x1="24" y1="24" x2="14" y2="24"/>
+        <line x1="24" y1="24" x2="8" y2="24"/>
+        <line x1="24" y1="24" x2="16.9" y2="16.9"/>
+        <line x1="24" y1="24" x2="12.7" y2="12.7"/>
+        <line x1="24" y1="24" x2="24" y2="14"/>
+        <line x1="24" y1="24" x2="24" y2="8"/>
+        <line x1="24" y1="24" x2="31.1" y2="16.9"/>
+        <line x1="24" y1="24" x2="35.3" y2="12.7"/>
+      </g>
+      <circle cx="24" cy="24" r="8.5" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-chess" viewBox="0 0 48 48">
+      <g stroke="currentColor" stroke-linecap="round">
+        <line x1="24" y1="4" x2="24" y2="10" stroke-width="2.5"/>
+        <line x1="20.5" y1="7" x2="27.5" y2="7" stroke-width="2.5"/>
+      </g>
+      <path d="M18,14 L30,14 L27,27 L21,27 Z" fill="currentColor"/>
+      <rect x="20.5" y="27" width="7" height="4" fill="currentColor"/>
+      <path d="M14,40 L34,40 L30.5,31 L17.5,31 Z" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-bird" viewBox="0 0 48 48">
+      <ellipse cx="22" cy="25" rx="12" ry="9.5" stroke="currentColor" stroke-width="2.5" fill="none"/>
+      <path d="M33,24 L41,20.5 L33,29 Z" fill="currentColor"/>
+      <circle cx="27" cy="20.5" r="1.9" fill="currentColor"/>
+      <path d="M12,27 Q19,20 27,25" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-sudoku" viewBox="0 0 48 48">
+      <g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="18" y1="6" x2="18" y2="42"/>
+        <line x1="30" y1="6" x2="30" y2="42"/>
+        <line x1="6" y1="18" x2="42" y2="18"/>
+        <line x1="6" y1="30" x2="42" y2="30"/>
+      </g>
+      <g fill="currentColor">
+        <circle cx="12" cy="12" r="1.7"/>
+        <circle cx="21.3" cy="21.3" r="1.7"/>
+        <circle cx="24" cy="24" r="1.7"/>
+        <circle cx="26.7" cy="26.7" r="1.7"/>
+        <circle cx="34" cy="34" r="1.7"/>
+        <circle cx="38" cy="38" r="1.7"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="phosphor-base px-grid-dir px-grid-hero">
+  <div class="gd-hero">
+    <nav class="gd-nav">
+      <a href="index.html" class="active">HOME</a>
+      <a href="about.html">ABOUT</a>
+      <a href="https://github.com/gabe-sd/gabe-sd.github.io">GITHUB &#8599;</a>
+    </nav>
+    <div class="gd-title">GABE-SD ARCADE</div>
+  </div>
+  <div class="gcount">13 games — 6 live, 7 ideas</div>
+  <div class="chips">
+    <button class="chip active" data-cat="all" onclick="pxFilterGrid(this,'all')">ALL</button>
+    <button class="chip" data-cat="strategy" onclick="pxFilterGrid(this,'strategy')">STRATEGY</button>
+    <button class="chip" data-cat="puzzle" onclick="pxFilterGrid(this,'puzzle')">PUZZLE</button>
+    <button class="chip" data-cat="arcade" onclick="pxFilterGrid(this,'arcade')">ARCADE</button>
+    <button class="chip" data-cat="idea" onclick="pxFilterGrid(this,'idea')">IDEAS</button>
+  </div>
+  <div class="gwrap">
+    <a class="gtile is-active" href="games/chess/index.html" tabindex="0" data-cat="strategy" data-status="live" onmouseenter="pxSelectGridTile(this)" onfocus="pxSelectGridTile(this)" data-name="Chess" data-desc="Full rules, two players, local pass-and-play." data-meta="Strategy · 2P"><svg class="icon"><use href="#i-chess"/></svg>CHESS</a>
+    <a class="gtile" href="games/tic-tac-toe/index.html" tabindex="0" data-cat="strategy" data-status="live" onmouseenter="pxSelectGridTile(this)" onfocus="pxSelectGridTile(this)" data-name="Tic Tac Toe" data-desc="Classic 3x3, two players." data-meta="Strategy · 2P"><svg class="icon"><use href="#i-ttt"/></svg>TIC-TAC-TOE</a>
+    <a class="gtile" href="games/minesweeper/index.html" tabindex="0" data-cat="puzzle" data-status="live" onmouseenter="pxSelectGridTile(this)" onfocus="pxSelectGridTile(this)" data-name="Minesweeper" data-desc="Clear the board, avoid the mines." data-meta="Puzzle · 1P"><svg class="icon"><use href="#i-mine"/></svg>MINESWEEPER</a>
+    <a class="gtile" href="games/sudoku/index.html" tabindex="0" data-cat="puzzle" data-status="live" onmouseenter="pxSelectGridTile(this)" onfocus="pxSelectGridTile(this)" data-name="Sudoku" data-desc="Fill the grid, no repeats in any row, column, or box." data-meta="Puzzle · 1P"><svg class="icon"><use href="#i-sudoku"/></svg>SUDOKU</a>
+    <a class="gtile" href="games/pong/index.html" tabindex="0" data-cat="arcade" data-status="live" onmouseenter="pxSelectGridTile(this)" onfocus="pxSelectGridTile(this)" data-name="Anime Pong" data-desc="You vs. the AI paddle." data-meta="Arcade · 1P"><svg class="icon"><use href="#i-pong"/></svg>ANIME PONG</a>
+    <a class="gtile" href="games/flappy-bird/index.html" tabindex="0" data-cat="arcade" data-status="live" onmouseenter="pxSelectGridTile(this)" onfocus="pxSelectGridTile(this)" data-name="Flappy Bird" data-desc="Flap through the pipes, one tap at a time." data-meta="Arcade · 1P"><svg class="icon"><use href="#i-bird"/></svg>FLAPPY BIRD</a>
+
+    <div class="gtile" tabindex="0" data-cat="idea" data-status="idea"><span class="badge">IDEA</span><svg class="icon"><use href="#i-sudoku"/></svg>WORDLE</div>
+    <div class="gtile" tabindex="0" data-cat="idea" data-status="idea"><span class="badge">IDEA</span><svg class="icon"><use href="#i-ttt"/></svg>SCRABBLE</div>
+    <div class="gtile" tabindex="0" data-cat="idea" data-status="idea"><span class="badge">IDEA</span><svg class="icon"><use href="#i-mine"/></svg>ASTEROIDS</div>
+    <div class="gtile" tabindex="0" data-cat="idea" data-status="idea"><span class="badge">IDEA</span><svg class="icon"><use href="#i-pong"/></svg>GALAGA</div>
+    <div class="gtile" tabindex="0" data-cat="idea" data-status="idea"><span class="badge">IDEA</span><svg class="icon"><use href="#i-chess"/></svg>SOLITAIRE</div>
+    <div class="gtile" tabindex="0" data-cat="idea" data-status="idea"><span class="badge">IDEA</span><svg class="icon"><use href="#i-bird"/></svg>SPIDER SOLITAIRE</div>
+    <div class="gtile" tabindex="0" data-cat="idea" data-status="idea"><span class="badge">IDEA</span><svg class="icon"><use href="#i-sudoku"/></svg>BREAKOUT</div>
+  </div>
+  <div class="gd-info-panel" data-cat="strategy">
+    <b class="nm">Chess</b><span class="mt">Strategy · 2P</span>
+    <span class="ds">Full rules, two players, local pass-and-play.</span>
+  </div>
+</div>
+
+<script>
+  function pxSelectGridTile(el){
+    if(el.dataset.status === 'idea') return;
+    document.querySelectorAll('.gtile').forEach(function(t){ t.classList.remove('is-active'); });
+    el.classList.add('is-active');
+    var panel = document.querySelector('.gd-info-panel');
+    panel.dataset.cat = el.dataset.cat || '';
+    document.querySelector('.nm').textContent = el.dataset.name || '';
+    document.querySelector('.mt').textContent = el.dataset.meta || '';
+    document.querySelector('.ds').textContent = el.dataset.desc || '';
+  }
+  function pxFilterGrid(btn, cat){
+    document.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); });
+    btn.classList.add('active');
+    var visible = 0;
+    document.querySelectorAll('.gtile').forEach(function(t){
+      var show = cat === 'all' || t.dataset.cat === cat;
+      t.style.display = show ? '' : 'none';
+      if(show) visible++;
+    });
+    document.querySelector('.gcount').textContent = visible + ' games — showing ' + (cat === 'all' ? 'all' : cat);
+  }
+</script>
+</body>
+</html>

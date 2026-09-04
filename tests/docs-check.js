@@ -42,8 +42,13 @@ const walk = (dir, out = []) => {
 };
 const files = walk(".").map((f) => f.replace(/^\.\//, ""));
 const docs = files.filter((f) => f.endsWith(".md"));
+// design/mockups/ is reference material rather than the site: hand-built pages
+// that were never served and whose markup is deliberately not ported. Feeding them
+// to the checks below would let a function that exists only in a dead mockup
+// satisfy a doc naming it, and would offer a storage key nobody ever wrote.
 const code = files
   .filter((f) => /\.(js|html|css)$/.test(f))
+  .filter((f) => !f.startsWith("design/mockups/"))
   .map((f) => read(f))
   .join("\n");
 const allDocs = docs.map((d) => read(d)).join("\n");
