@@ -16,6 +16,16 @@ see "Shared ground" in `CLAUDE.md`, and `WORKER.md`.
 What stays here is everything belonging to no single game: the naming rules
 below, games that do not exist yet, and site-wide work.
 
+**The site is mid-redesign, and other work on it is paused.** A complete visual
+overhaul is running on the `redesign` branch — Gabriel's decision, 2026-09-04,
+that everything else waits until it lands, so that a restyle touching every game
+is not racing a change to one of them. The integrator's checkout sits on that
+branch rather than on `main` for the duration; `main` stays clean and deployable
+if something urgent has to ship. The project's backlog is `design/TODO.md` on that
+branch rather than here, and deliberately not on `main` — the copy of that file
+here says why. The seat doing the work is the art director, `ART-DIRECTOR.md`.
+**Delete this note when the redesign merges.**
+
 ## Naming entries
 
 Every entry is headed by a slug — the game, then **the work**:
