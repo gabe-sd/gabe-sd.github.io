@@ -142,6 +142,31 @@ const { check, report } = makeChecks();
   check("focus not stuck on Restart",
     (await page.evaluate(() => document.activeElement.id)) !== "restart");
 
+  console.log("12. How to play toggles the instructions panel");
+  check("panel hidden by default", !(await page.isVisible("#instructions")));
+  check("aria-expanded starts false",
+    (await page.getAttribute("#help-toggle", "aria-expanded")) === "false");
+  await page.click("#help-toggle");
+  check("focus not stuck on How to play",
+    (await page.evaluate(() => document.activeElement.id)) !== "help-toggle");
+  check("panel visible", await page.isVisible("#instructions"));
+  check("aria-expanded flips to true",
+    (await page.getAttribute("#help-toggle", "aria-expanded")) === "true");
+  check("label flips", (await page.textContent("#help-toggle")).includes("Hide"),
+    await page.textContent("#help-toggle"));
+  const instr = await page.textContent("#instructions");
+  check("has a Rules section and a Controls section",
+    ["Rules", "Controls"].every((s) => instr.includes(s)), instr.trim());
+  check("covers the rule and the controls",
+    ["row", "column", "3x3 box", "1-9", "number pad", "Backspace"].every((s) => instr.includes(s)),
+    instr.trim());
+  check("mentions the live conflict check",
+    instr.includes("red"), instr.trim());
+  await page.click("#help-toggle");
+  check("panel hides again", !(await page.isVisible("#instructions")));
+  check("label restored", (await page.textContent("#help-toggle")) === "How to play",
+    await page.textContent("#help-toggle"));
+
   check("no page errors", errors.length === 0, errors.join("; "));
 
   await browser.close();

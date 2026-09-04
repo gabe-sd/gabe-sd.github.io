@@ -25,9 +25,25 @@
       <button class="num-btn" data-digit="9">9</button>
       <button class="num-btn erase" data-digit="0" aria-label="Erase">⌫</button>
     </div>
-    <div class="controls">
-      <button id="restart" class="btn">Restart</button>
-      <button id="new-puzzle" class="btn secondary">New puzzle</button>
+    <div class="game-controls">
+      <div class="controls">
+        <button id="restart" class="btn">Restart</button>
+        <button id="new-puzzle" class="btn secondary">New puzzle</button>
+      </div>
+      <button id="help-toggle" class="btn secondary full-width"
+              aria-expanded="false" aria-controls="instructions">How to play</button>
+    </div>
+    <div id="instructions" class="instructions" hidden>
+      <h3>Rules</h3>
+      <p>
+        Fill every row, column, and 3x3 box with 1-9, no repeats. A conflicting
+        digit turns red right away.
+      </p>
+      <h3>Controls</h3>
+      <ul>
+        <li>Click a cell, then type a digit or use the number pad</li>
+        <li>Backspace, Delete, or ⌫ — clear a cell</li>
+      </ul>
     </div>
   </main>
   <script src="script.js"></script>

@@ -1,3 +1,13 @@
+.game-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.game-controls .full-width {
+  width: 100%;
+}
+
 #board {
   display: grid;
   grid-template-columns: repeat(9, minmax(30px, 42px));
@@ -72,4 +82,42 @@
 
 .num-btn.erase {
   color: var(--muted);
+}
+
+.instructions {
+  max-width: 340px;
+  padding: 0.85rem 1rem;
+  background: var(--card-bg);
+  border: 2px solid var(--cell-border);
+  border-radius: 10px;
+  font-size: 0.85rem;
+}
+
+.instructions h3 {
+  margin: 0.7rem 0 0.3rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.instructions h3:first-child {
+  margin-top: 0;
+}
+
+.instructions p {
+  margin: 0;
+}
+
+.instructions ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.instructions li {
+  margin-bottom: 0.2rem;
+}
+
+.instructions li:last-child {
+  margin-bottom: 0;
 }
