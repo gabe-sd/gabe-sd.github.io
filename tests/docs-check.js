@@ -162,6 +162,32 @@ const strayTodos = todos
   .filter((f) => !games.includes(f.split("/")[1] || ""));
 check("every per-game TODO.md sits in a game folder", strayTodos, "stray");
 
+// 7. The seat router. The first thing an agent does here is read its own seat's
+//    file, and check 1 cannot guard that pointer: it only matches paths with a
+//    directory in them, so a bare `WORKER.md` at the root is prose to it. Rename
+//    or delete one and the router points nowhere, leaving the next worker with no
+//    rule telling it to take a worktree - which is the failure that put this
+//    check here.
+//
+//    It reads the router section rather than the whole file, because the whole
+//    file mentions both names in passing and the first version of this check
+//    passed with the router bullet deleted. Anchoring on the heading means a
+//    reworded router still passes and a renamed heading fails loudly, which is
+//    the right way round: the heading is part of what an agent is told to look
+//    for.
+const ROUTER_HEADING = "## Which seat are you?";
+const routerStart = claude.indexOf(ROUTER_HEADING);
+const router =
+  routerStart === -1
+    ? ""
+    : claude.slice(routerStart).split(/\n## /)[0];
+const brokenRouter = (routerStart === -1 ? [ROUTER_HEADING] : []).concat(
+  ["WORKER.md", "INTEGRATOR.md"].filter(
+    (f) => !files.includes(f) || !router.includes(`\`${f}\``)
+  )
+);
+check("CLAUDE.md routes to a seat file that exists", brokenRouter, "unrouted");
+
 const failed = results.filter((r) => !r).length;
 console.log(`\n${results.length - failed}/${results.length} checks passed`);
 process.exit(failed ? 1 : 0);

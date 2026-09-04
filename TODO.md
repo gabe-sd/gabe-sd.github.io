@@ -11,7 +11,7 @@ Within a section, entries are in priority order. The first one is what to do nex
 Each game keeps its own backlog in its own folder, beside its `DESIGN.md`:
 `games/pong/TODO.md`, `games/minesweeper/TODO.md`. A game with no such file has
 no open work recorded. That split is what lets several agents work at once —
-see "Several agents at once" in `CLAUDE.md`.
+see "Shared ground" in `CLAUDE.md`, and `WORKER.md`.
 
 What stays here is everything belonging to no single game: the naming rules
 below, games that do not exist yet, and site-wide work.

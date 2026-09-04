@@ -1,7 +1,7 @@
 # The integrator
 
 Read this if you are the integrator. If you are building a game or a feature you
-are a worker, and `CLAUDE.md` is your file, not this one.
+are a worker, and `WORKER.md` is your file, not this one.
 
 Everything in `CLAUDE.md` still applies to you — the page contract, how the games
 work, how verification is done here. This file is only the part that is different
@@ -18,8 +18,8 @@ The shell is yours as well — the root page, `shared.css`, the docs, the tests.
 own it the way a worker owns a game folder, and you do not ask first. Substantial
 visitor-facing work is the exception: a landing-page redesign gets a worker,
 spawned for it. When you build in the shell you wear both hats and the worker's
-rules apply to you in full — branch before the first edit, absorb `main` and go
-green before merging, and go last when somebody else is ready too. What to guard
+rules in `WORKER.md` apply to you in full — branch before the first edit, absorb
+`main` and go green before merging, and go last when somebody else is ready too. What to guard
 against is the two blurring, because your own branch is the one nobody else
 reviews.
 
@@ -292,13 +292,13 @@ file. The seat was then redrawn on the second session: the shell became the
 integrator's by default rather than something to ask for, and direct
 agent-to-agent contact replaced a claim that it was impossible. The second of
 those has since carried real traffic and is no longer provisional; see
-`CLAUDE.md`. **The first still is** — one evening, and an evening unusually light
+`WORKER.md`. **The first still is** — one evening, and an evening unusually light
 on feature work, so the seat has not been run hard against several games in flight
 at once. Expect this to be modified and optimised as real use finds the parts that
 are wrong.
 
-`CLAUDE.md` says the same of its own section, and asks for something specific in
-return: where a rule here costs more than it saves, misses a case, or turns out to
+`CLAUDE.md` and `WORKER.md` say the same of themselves, and ask for something
+specific in return: where a rule here costs more than it saves, misses a case, or turns out to
 be unnecessary, **propose a better version of it rather than working around it**,
 and say what happened that prompted the change. A workaround that stays in one
 agent's head is the thing this cannot survive — and that is not hypothetical, it
