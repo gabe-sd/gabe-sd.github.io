@@ -193,13 +193,21 @@ something to whoever comes next, stop and put it where they will actually look:
 this file, `WORKER.md`, `INTEGRATOR.md`, the game's `DESIGN.md`, or its `TODO.md`.
 
 **Visitor-facing prose is Gabriel's.** `README.md` is the front page of a public
-repo and `about.html` is a page people read: both are written for somebody
-visiting the site rather than for an agent working on it. Style them, lay them
-out, link them, restyle them entirely — but do not write or rewrite their *words*
-unless you have been asked to. What a visitor should get from them is his call,
-and an agent filling one in with plausible copy is how a site ends up describing
-itself in a voice nobody chose. The root `TODO.md` has said this of `README.md`
-since it was written, in `site-readme-for-humans`; it holds for any such page.
+repo, and any page written to be read by somebody visiting the site is the same
+kind of thing. Style them, lay them out, link them, restyle them entirely — but do
+not write or rewrite their *words* unless you have been asked to. What a visitor
+should get from them is his call, and an agent filling one in with plausible copy
+is how a site ends up describing itself in a voice nobody chose. The root
+`TODO.md` has said this of `README.md` since it was written, in
+`site-readme-for-humans`.
+
+One narrow exception, because without it the rule is a trap: **a statement of fact
+about this repo that has become false may be corrected.** `README.md` describes how
+the work here is split, and that description goes stale every time the split
+changes — it did the day this rule was written, when a third seat appeared and left
+the README saying there were two. Correcting that is not writing prose for him;
+adding a paragraph about what the site is *for* would be. If you cannot tell which
+you are doing, you are doing the second one.
 
 **The `advisor` tool is expensive — use it sparingly.** It forwards the whole
 session to a stronger model and returns a critique, and every call costs real
@@ -214,9 +222,10 @@ if you can name what you would do next without it, do that instead.
 
 ### This convention is not settled
 
-The split into two seats — this section, `WORKER.md` and `INTEGRATOR.md` — came
-out of one experiment with two agents, not out of long practice, and the parts of
-it that are wrong have not been found yet. It is written down so there is
+The split into seats — this section, `WORKER.md`, `INTEGRATOR.md` and
+`ART-DIRECTOR.md` — came out of one experiment with two agents, not out of long
+practice, and the parts of it that are wrong have not been found yet. The third
+seat is newer still and has never been occupied. It is written down so there is
 something concrete to disagree with.
 
 So: if you hit friction with it — a rule that cost more than it saved, a collision

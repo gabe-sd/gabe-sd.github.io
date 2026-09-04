@@ -10,11 +10,16 @@ Everything in `CLAUDE.md` still applies to you — the page contract, how the ga
 work, and the hygiene that binds every seat. This file is only the part that is
 different because you own the **look** rather than an area.
 
+Spawning one of these is one line:
+
+> You are the art director. Read `ART-DIRECTOR.md`, then `design/DESIGN.md` and
+> `design/TODO.md`, and take a worktree before your first edit.
+
 ## The seat
 
 The art director owns the site's visual layer: every colour, typeface, border,
-spacing and motion decision, across the hub, `shared.css` and all six game
-folders at once.
+spacing and motion decision, across the hub, `shared.css` and every game folder at
+once.
 
 That crosses every area in the repo, which is the one thing `WORKER.md` forbids,
 and it is why this is a seat and not a worker with a large task. A visual system
@@ -23,17 +28,58 @@ palette has to be decided in one head or it is not a system.
 
 It is a **standing seat and usually unoccupied.** Most work here belongs to a
 worker or the integrator. The art director is taken when the look itself is the
-work, and released when it is done.
+work, and it is Gabriel who takes it and releases it — finishing a phase does not
+end it, and neither does a quiet week.
 
-**You own how it looks, not how it works.** That line is the whole boundary. A
-change that alters what a player can do, how hard the game is, or what the rules
-are, is a worker's even when it would look better your way. Recolouring Pong's
-paddles is yours; changing how they move is not. If you find something that ought
-to play differently, report it and let it ride on that game's next branch.
+**While the seat is empty**, a visual fix confined to one area belongs to whoever
+owns that area, inside whatever `design/DESIGN.md` already lays down. What stays
+the art director's either way is the *system*: a new colour, a changed token, or
+anything that would let two pages disagree with each other. Anyone unsure which
+they are holding is asking the right question, and the cheap answer is to file it
+in `design/TODO.md` rather than decide alone.
+
+**You own how it looks, not how it works.** A change that alters what a player can
+do, how hard the game is, or what the rules are, is a worker's even when it would
+look better your way. Recolouring Pong's paddles is yours; changing how they move
+is not. If you find something that ought to play differently, report it and let it
+ride on that game's next branch.
+
+That line is not quite enough on its own, because two games paint themselves.
+`games/pong/script.js` and `games/flappy-bird/script.js` draw to a canvas, so
+their look lives in JavaScript rather than in `style.css` — a restyle that stopped
+at the stylesheets would leave a third of the site untouched. The boundary inside
+those files is the same one: **what is drawn, and in what colour, is yours; when
+it fires, how far it reaches and what it does to play are not.** Pong's lightning
+bolt is a case of both at once — its colour and shape are yours, the fact that it
+shrinks your paddle is not.
+
+## Working beside a worker
+
+Your branch touches every game at once, and `WORKER.md` tells a worker not to
+start beside something that already owns its area. Read literally that halts every
+other kind of work for as long as this seat is occupied, which is far too
+expensive to be the default. The split inside a game folder, when both seats are
+live:
+
+- **Yours** — `style.css`, the class names and markup in `index.html`, what a
+  canvas draws, and the part of `DESIGN.md` describing the look.
+- **The worker's** — `script.js` apart from its drawing, `TODO.md`, and everything
+  in `DESIGN.md` about how the game plays.
+
+That leaves one genuine overlap: `index.html` and `script.js` in a game being
+restyled and changed at the same time. The answer is the one used everywhere else
+here — say so before starting and let one of you go first. Absorbing a branch once
+is cheap; two branches diverging quietly on one file is not.
+
+A worker who finds a visual problem **files it in `design/TODO.md` rather than
+fixing it**, appending an entry the way a new game appends a card to the hub. That
+is the one thing another seat writes into your area, and it is deliberate: the
+alternative is six people each fixing the look of one page.
 
 ## Your home is `design/`
 
-Three things live there and they are all yours:
+What lives there is yours. The first two always exist; the third appears once
+there is reference material to keep:
 
 - **`design/DESIGN.md`** — the visual system. The palette with real values, the
   type scale, spacing, motion, the rules that hold it together, and what was
@@ -63,8 +109,9 @@ four re-proposes the amber that session one threw out for reading as mustard.
 A worker is told its area. Yours never changes, so you can start yourself:
 
 1. Read this file, then `design/DESIGN.md`, then `design/TODO.md`.
-2. Take the top entry of `design/TODO.md`.
-3. Take a worktree, naming the base branch explicitly:
+2. Take the top entry of `design/TODO.md`, and note the branch it says to cut
+   from.
+3. Take a worktree, naming that base branch explicitly:
 
 ```bash
 git worktree add .claude/worktrees/<slug> -b <slug> <base>
@@ -74,6 +121,16 @@ The base is spelled out because `git worktree add` takes `HEAD` when you leave i
 off, and `HEAD` is whatever the shared checkout happened to have out at that
 moment. The entry says what to branch from; do not guess, and do not assume it is
 `main` — visual work often runs on an integration branch (see `INTEGRATOR.md`).
+
+**If `design/TODO.md` says nothing is open, you are the first session of a
+project and there is nothing to pick up.** That file on `main` deliberately holds
+conventions and no entries, because a backlog entry sitting on `main` is read as
+landed the moment its phase merges elsewhere — see `INTEGRATOR.md`. So the entries
+are on the project's own branch, and the branch is not named on `main` either.
+`git branch --no-merged main` lists the candidates. If none of them is it, the
+project has not started: ask Gabriel to scope the first phase, and the integrator
+to cut the branch. Do not invent either, and do not branch from `main` because it
+was the only thing you could find.
 
 Everything in `WORKER.md` about worktrees applies to you unchanged: the tree goes
 under `.claude/worktrees/`, inside the project folder, and if your tooling puts it
@@ -93,19 +150,32 @@ deference.
 - Every colour, and every token **value** in `shared.css`.
 - `hub.css` entirely, and the hub's markup.
 - Every game's `style.css`.
+- **What a canvas game draws**, in `games/pong/script.js` and
+  `games/flappy-bird/script.js`, within the boundary above.
 - Typography, spacing, borders, radii, shadows, motion.
 - Icons — the emoji on the hub included.
 - Markup inside a page, as long as the contract below survives.
-- **Tests that assert the old look.** A check on a colour, a theme flip or a pixel
-  count is describing the design you are replacing. Rewriting it is expected, not
-  a liberty taken — but see "Verification", because a rewritten test still owes a
-  proof.
+- **A game's own `DESIGN.md`, where it describes the look.** Change what a game
+  looks like and any claim in its doc saying otherwise is now false; `CLAUDE.md`
+  requires that fixed in the same commit as the change. What that file says about
+  how the game *plays* stays its worker's.
+- **Tests, where they measure the old palette.** Careful here, because this is the
+  bullet most likely to do damage. A check that counts red pixels or compares two
+  themes is almost always guarding a *mechanic* through a colour signal — that the
+  bolt's core is visible against the board, that a selected label is not the same
+  colour as its background — and `CLAUDE.md`'s "canvas measurement" section is an
+  entire list of how easily those break. **Rewrite the measurement for the new
+  palette; keep the guard.** Deleting one because it mentions a colour removes a
+  check on how a game plays, which is not yours to remove. Every one of them lives
+  in a game's own suite, so name each in the handover — and see "Verification",
+  because a rewritten test still owes a proof.
 
 ### Must keep
 
-Structural contracts other things depend on. Breaking one is not a bold choice,
-it is a bug, and most of them are enforced by `tests/contract.test.js` or
-`tests/docs-check.js`:
+Structural contracts other things depend on. Breaking one is not a bold choice, it
+is a bug. Several are enforced by `tests/contract.test.js` or
+`tests/docs-check.js`, several more only by a game's own suite, and the last few by
+nothing at all — so do not read a green suite as permission:
 
 - `#board`, `#status` and `#restart` on every game page.
 - `shared.css` linked **before** the game's own `style.css`.
@@ -128,16 +198,31 @@ it is a bug, and most of them are enforced by `tests/contract.test.js` or
   the browser fetches; a package the site cannot run without is not.
 - Any id you add to a game page goes into that game's `DESIGN.md`, or
   `tests/docs-check.js` fails the merge.
+- **The token names a canvas game reads.** `games/pong/script.js` and
+  `games/flappy-bird/script.js` look up `--fg`, `--accent`, `--cell-border`,
+  `--win`, `--lose` and `--cell-bg` by name at runtime, and each falls back to a
+  hardcoded hex of the *old* palette if one is missing. So a renamed or deleted
+  token breaks nothing loudly — the canvas quietly keeps painting the design you
+  replaced, and every test still passes. Change the values freely; change a name
+  only by changing the script in the same commit, fallback included.
+- **Hub cards stay `<a href="games/<name>/…">`.** `tests/contract.test.js` finds
+  them with `a[href^="games/"]` and reads the folder name straight out of the
+  path, so a leading `./`, an absolute path, or a stray link to `games/` breaks
+  the check that every game has a card and every card has a game.
 
 ### Propose, do not touch
 
 - `CLAUDE.md`, `WORKER.md`, `INTEGRATOR.md` and this file. Hand the diff over; the
   integrator lands it after Gabriel has read it.
-- Game logic, rules, difficulty, physics.
-- **Visitor-facing prose.** `README.md`, `about.html` and anything else written to
-  be read by a person visiting the site are Gabriel's. Style them however you
-  like; do not write or rewrite their words without being asked to.
-- Pushing. That is the integrator's, and it is a deploy.
+- Game logic, rules, difficulty, physics — including anything a game's own
+  `DESIGN.md` records as an invariant of *play* even though it is expressed in
+  colour. Pong's "three wind-ups, one colour" is a rule about reading the game,
+  not a palette choice; changing it is a proposal to that game, not a restyle.
+- **Visitor-facing prose.** `README.md`, and any page written to be read by
+  somebody visiting the site, are Gabriel's. Style them however you like — the
+  words are his, and he has said so explicitly.
+- Pushing. That is the integrator's; a push to `main` is a deploy of the live
+  site.
 
 ## Verification
 
@@ -158,9 +243,10 @@ PORT=0 npm run serve     # from a worktree; 8934 belongs to the shared checkout
 
 **A test you rewrite still owes the break-and-restore proof.** Commit first, then
 revert to the broken state, watch the new check fail, restore, watch it pass.
-Nobody reviews these branches and a wrong test does not announce itself — it
-passes. That proof stands in for the reviewer you do not have, and it is the same
-rule the integrator works under for the same reason.
+The integrator does review your branch — but a test that passes for the wrong
+reason is indistinguishable from one that passes for the right reason, in a diff
+and in a test run alike. The proof is the only thing that separates them, and it
+is what makes a rewritten assertion safe for anyone to accept.
 
 **Name every test you changed in the handover**, with one line on why. A rewritten
 assertion buried in a large visual diff is invisible, and "the suite is green" is

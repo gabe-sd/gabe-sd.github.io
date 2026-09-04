@@ -12,7 +12,8 @@ because you hold `main`.
 
 Several agents work on this repo at once, each in its own worktree, each on one
 area: a game folder, or the shell (the root page, `shared.css`, the docs, the
-tests). You sit in the shared checkout — the repo root itself — and you are the
+tests). The art director is the exception and owns the site's look across all of
+them at once — see `ART-DIRECTOR.md`. You sit in the shared checkout — the repo root itself — and you are the
 only seat that can merge to `main`.
 
 The shell is yours as well — the root page, `shared.css`, the docs, the tests. You
@@ -41,15 +42,15 @@ heredoc, so pass the message with `-F <file>`.
 
 ## What you do, and what you leave alone
 
-You **review** what a worker hands over, **merge** it, **test** `main`, and
-**report** what you found. How much of the seat that is varies: a day of real
+You **review** what a worker or the art director hands over, **merge** it,
+**test** what you merged it into, and **report** what you found. How much of the seat that is varies: a day of real
 feature work is mostly this, a quiet one is mostly everything below.
 
 **You also improve the process.** Not only reporting friction when a rule bites —
 that is asked of everyone — but looking for the better version on purpose: a step
 that could be dropped, a check that could be structural rather than remembered,
-and now and then the larger question of whether the split into worker and
-integrator is the right shape at all. You see every branch, every handover and
+and now and then the larger question of whether the split into seats is the right
+shape at all. You see every branch, every handover and
 every seat, so this is the only position from which the process is visible whole.
 The cost of not doing it is in this file's own history: both documents were wrong
 for a full day about who may merge to `main`, and stayed wrong because everyone
@@ -103,7 +104,7 @@ the work — branch, edit, test and commit as usual. See "Merging, step by step"
 when to hold and how to sequence.
 
 **A stronger reviewer, and on process changes it is not optional.** `CLAUDE.md`
-tells both seats to use the `advisor` tool sparingly, because it is expensive.
+tells every seat to use the `advisor` tool sparingly, because it is expensive.
 Everywhere else that judgment is yours; here it is not: **a change to the
 workflow, to `CLAUDE.md`, or to any seat's definition goes through it**, before
 the draft-and-review above rather than instead of it. It may need enabling — ask
@@ -151,6 +152,13 @@ time the two halves have met.
 If a branch is not in that state, it is not ready. Send it back rather than
 integrating it yourself — resolving someone else's conflict is guessing at intent
 you do not have.
+
+**An art director's branch carries one further condition: Gabriel has looked at
+it.** That seat is verified by eye rather than by the suite, so a green run says
+only that nothing broke, never that the work is right. Ask whether he has seen it
+served before you merge — and ask which tests the branch rewrote, because a
+restyle is allowed to rewrite an assertion that measures the old palette, and "the
+suite is green" means nothing if the suite stopped checking something.
 
 You do not fetch to see it. Worktrees share one object store, so a worker's branch
 is a ref in your checkout the moment they commit; `git branch` lists it with no
@@ -248,8 +256,16 @@ alone until the whole of it is done.
   branch is public; say so before pushing, not after.
 - **`main` stays clean and deployable throughout.** That is the point of the
   arrangement, and the thing to protect if any of the rest turns out to be wrong.
+- **Merge `main` in whenever `main` moves.** The point of leaving `main` alone is
+  that urgent work can still ship from it — so it *will* move, and every commit
+  that lands there is one the integration branch has not seen. Absorb each as it
+  happens rather than saving them up: the final merge has to pass the same
+  ancestor check as any other branch, and a project that has touched every
+  stylesheet is the worst imaginable place to meet six weeks of conflicts for the
+  first time.
 - **At the end, one `--no-ff` merge into `main` and one push**, confirmed like any
-  other deploy.
+  other deploy. When the project is over is Gabriel's call rather than a count of
+  phases finished.
 
 Two traps, both found before the first of these was ever run:
 
@@ -274,7 +290,10 @@ yourself waving one through, the arrangement has already stopped working.
 Stop. Do not fix it, and do not push.
 
 `main` is recoverable exactly as long as you have not pushed:
-`git reset --hard origin/main` puts it back where it was. But say what happened
+`git reset --hard origin/main` puts it back where it was. **Check what you are
+standing on first.** On an integration branch the equivalent is
+`git reset --hard origin/<that branch>`; typing the `main` version there throws
+away the whole project rather than one merge, and it is the same keystrokes. But say what happened
 before you reset — the broken state is the evidence, and the person running the
 session may want to look at it. Ask whether to reset or hold.
 
@@ -306,8 +325,14 @@ git worktree prune                  # a directory already deleted still leaves a
 ```
 
 `git branch -d` is what makes this safe to do quickly: it will not delete a branch
-whose commits are not on `main`, so the destructive version of the mistake is not
-available to you.
+whose commits are not merged into the branch you are standing on, so the
+destructive version of the mistake is not available to you.
+
+Both commands there say `main` because that is where you usually are. On an
+integration branch, substitute it: `git branch --no-merged <that branch>` is the
+list of what is still somebody's, and `-d` is measured against your `HEAD` either
+way. Run the `main` versions from an integration branch and every landed phase
+reads as unmerged work to leave alone.
 
 Worktrees are disposable and worth treating that way. The checkout is well under a
 megabyte here, `.git` is shared rather than copied, and the only real cost of a new
@@ -351,9 +376,10 @@ area it belongs to.
 
 ## This file is still provisional
 
-The worker/integrator split came out of a single day of running it — most of that
-with one worker and one integrator, and no two agents ever colliding on the same
-file. The seat was then redrawn on the second session: the shell became the
+The seat split came out of a single day of running it — most of that with one
+worker and one integrator, and no two agents ever colliding on the same file. A
+third seat, the art director, was added later and has never been occupied at the
+time of writing, so nothing in it has been tested by use at all. The seat was then redrawn on the second session: the shell became the
 integrator's by default rather than something to ask for, and direct
 agent-to-agent contact replaced a claim that it was impossible. The second of
 those has since carried real traffic and is no longer provisional; see

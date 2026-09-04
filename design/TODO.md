@@ -11,9 +11,11 @@ as they land** rather than marked done — git history is the record of what
 happened, and `tests/docs-check.js` fails an entry that has a merge commit behind
 it.
 
-**If you are a worker, this is not your backlog.** A game's own visual gaps
-belong here rather than in `games/<name>/TODO.md`, because the look is one system
-and fixing it a game at a time is what produced the look being replaced.
+**If you are a worker, this is not your backlog — but it is where you file.** A
+game's visual gaps belong here rather than in `games/<name>/TODO.md`, because the
+look is one system and fixing it a game at a time is what produced the look being
+replaced. Appending an entry is allowed and wanted, the same way a new game
+appends a card to the hub; taking one is not.
 
 ## Where the work happens
 
@@ -23,7 +25,16 @@ may not do. When it does, it runs on an **integration branch** rather than on
 and every session after the first would branch from a base nobody has seen whole.
 `INTEGRATOR.md` describes how that works.
 
-So an entry here names the branch it is cut from. Do not assume `main`.
+So an entry here names the branch it is cut from. Do not assume `main`:
+
+```markdown
+### <slug> — <one line saying what changes>
+
+**Branch from:** <base branch>
+
+What it covers, what it must not break, and anything already ruled out. Long
+enough to start on without rediscovering the constraints.
+```
 
 ---
 

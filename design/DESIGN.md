@@ -5,10 +5,11 @@ The counterpart of `games/pong/DESIGN.md` and its siblings, one level up: those
 describe how a game plays and what a reader must not break in it, this describes
 the look every page shares.
 
-It belongs to the art director — see `ART-DIRECTOR.md`. Read it before changing
-anything visual, whichever seat you are in, and read it *first* if you are the art
-director starting a session, because it is the only thing that carries a decision
-from one session to the next.
+It belongs to the art director — see `ART-DIRECTOR.md`, which also says who owns
+what while that seat is empty. Read this file before changing anything visual,
+whichever seat you are in, and read it *first* if you are the art director
+starting a session: it is the only thing that carries a decision from one session
+to the next.
 
 ## How this file is written
 
