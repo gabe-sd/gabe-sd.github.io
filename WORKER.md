@@ -1,12 +1,13 @@
 # The worker
 
 Read this if you are a worker. If you hold `main` and do the merging you are the
-integrator, and `INTEGRATOR.md` is your file, not this one. If nobody has told you
-which you are, **ask before you touch anything** — see "Which seat are you" in
-`CLAUDE.md`.
+integrator, and `INTEGRATOR.md` is your file, not this one. If you own the site's
+look rather than an area you are the art director, and `ART-DIRECTOR.md` is yours.
+If nobody has told you which you are, **ask before you touch anything** — see
+"Which seat are you" in `CLAUDE.md`.
 
 Everything in `CLAUDE.md` still applies to you — the page contract, how the games
-work, how verification is done here, and the hygiene that binds both seats. This
+work, how verification is done here, and the hygiene that binds every seat. This
 file is only the part that is different because you do **not** hold `main`.
 
 Spawning one of these is one line:
@@ -22,8 +23,9 @@ build in a worktree of your own, and you hand the finished branch to the
 integrator, who is the only seat that merges to `main`.
 
 The shell is the integrator's by default, so a worker gets it only when it is
-handed to them deliberately — substantial visitor-facing work, a landing-page
-redesign. Ask rather than assume.
+handed to them deliberately. Ask rather than assume. Work on how the site *looks*
+is a third seat's rather than yours — see `ART-DIRECTOR.md`; a restyle crosses
+every area at once, which is the one thing the rule below forbids.
 
 ## Take a worktree before your first edit
 
@@ -31,8 +33,16 @@ This is the first step of the work, not preparation for it. It comes before the
 branch, because the branch is created by it.
 
 ```bash
-git worktree add .claude/worktrees/<slug> -b <slug>      # then work in there
+git worktree add .claude/worktrees/<slug> -b <slug> main   # then work in there
 ```
+
+**The base is spelled out on purpose.** Left off, `git worktree add` branches from
+whatever the shared checkout has out at that moment, and that is not always
+`main` — a project that crosses every area runs on an integration branch, and the
+integrator's checkout sits on it for the duration (see `INTEGRATOR.md`). Cut a
+game branch from one of those by accident and you hand over work built on somebody
+else's half-finished change. `EnterWorktree` has the same default, so check what
+it gave you.
 
 If your session has an `EnterWorktree` tool it will do this and move you into the
 tree, but check where it put things. It names the branch `worktree-<slug>`, which
@@ -143,6 +153,17 @@ edit, `git worktree list` and `git branch --no-merged main` say what else is in
 flight; if something already owns your area, do something else rather than starting
 beside it. Two branches touching one file diverge silently, and the conflict
 surfaces later as a puzzle instead of at the moment it was created.
+
+**A restyle in flight splits a game folder between two seats.** The art director's
+branch touches every game's `style.css` at once, which would otherwise trip the
+rule above and stop all other work while that seat is occupied. So when both are
+live: `style.css`, the markup and class names in `index.html`, what a canvas
+draws, and the look half of `DESIGN.md` are theirs; `script.js` apart from its
+drawing, `TODO.md`, and everything about how the game plays are yours. The overlap
+that is left — one file changed by both of you at once — is settled the usual way,
+by saying so first and letting one go first. And a visual problem you spot is
+**filed in `design/TODO.md`, not fixed**: appending an entry there is allowed and
+expected, in the same way a new game appends a card to the hub.
 
 **Inside your area, edit freely. Crossing out of it, append.** The root
 `index.html` card list is the one file new work routinely touches from outside —

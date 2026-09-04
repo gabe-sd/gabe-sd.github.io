@@ -37,8 +37,9 @@ so it serves from the domain root rather than a subpath.
 ## Working on it
 
 `CLAUDE.md` has the conventions every game shares, and how several people work on
-this at once without colliding — start there. Which of the two seats you are in
+this at once without colliding — start there. Which of the three seats you are in
 decides what else you read: `WORKER.md` builds one area in a worktree of its own,
-`INTEGRATOR.md` holds `main` and does the merging, and they are different jobs. Everything specific to one game lives with that game: `games/<name>/DESIGN.md` for how it works and what must not be broken,
+`INTEGRATOR.md` holds `main` and does the merging, `ART-DIRECTOR.md` owns how the
+site looks across all of it, and they are different jobs. Everything specific to one game lives with that game: `games/<name>/DESIGN.md` for how it works and what must not be broken,
 `games/<name>/TODO.md` for what is not done yet, in priority order. The root
 `TODO.md` keeps what belongs to no single game.

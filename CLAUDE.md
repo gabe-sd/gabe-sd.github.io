@@ -39,16 +39,20 @@ A concrete answer justifies the complexity. No answer means take it out.
 
 ## Which seat are you?
 
-There are two, and which one you are is settled before you start. A **worker**
+There are three, and which one you are is settled before you start. A **worker**
 owns one area — a game folder, or the shell — builds it in a worktree of its own,
 and hands the finished branch over. The **integrator** owns `main` and is the only
-seat that merges to it.
+seat that merges to it. The **art director** owns the site's look — colour,
+typeface, spacing, motion, across every game at once — and is a standing seat that
+is usually unoccupied, taken when the look itself is the work.
 
 - Worker → read **`WORKER.md`**, and take a worktree before your first edit.
 - Integrator → read **`INTEGRATOR.md`**.
+- Art director → read **`ART-DIRECTOR.md`**, and take a worktree before your
+  first edit.
 
-This file is the ground both stand on: the page contract, how the games work, how
-verification is done here, and the shared rules below. Your seat's file is only
+This file is the ground all three stand on: the page contract, how the games work,
+how verification is done here, and the shared rules below. Your seat's file is only
 what differs.
 
 **If nobody has told you which seat you are, ask — before branching, editing or
@@ -63,7 +67,7 @@ looks like before it has taken a worktree, which is the mistake this rule exists
 to stop. Being in a worktree is not evidence either. The seat is assigned, not
 deduced. Ask.
 
-## Shared ground: what both seats obey
+## Shared ground: what every seat obeys
 
 This site is one repo holding several small, nearly independent projects: a game
 lives entirely in `games/<name>/`, and adding one means creating that folder and a
@@ -188,6 +192,23 @@ repo is the only thing that does not. So when you catch yourself explaining
 something to whoever comes next, stop and put it where they will actually look:
 this file, `WORKER.md`, `INTEGRATOR.md`, the game's `DESIGN.md`, or its `TODO.md`.
 
+**Visitor-facing prose is Gabriel's.** `README.md` is the front page of a public
+repo, and any page written to be read by somebody visiting the site is the same
+kind of thing. Style them, lay them out, link them, restyle them entirely — but do
+not write or rewrite their *words* unless you have been asked to. What a visitor
+should get from them is his call, and an agent filling one in with plausible copy
+is how a site ends up describing itself in a voice nobody chose. The root
+`TODO.md` has said this of `README.md` since it was written, in
+`site-readme-for-humans`.
+
+One narrow exception, because without it the rule is a trap: **a statement of fact
+about this repo that has become false may be corrected.** `README.md` describes how
+the work here is split, and that description goes stale every time the split
+changes — it did the day this rule was written, when a third seat appeared and left
+the README saying there were two. Correcting that is not writing prose for him;
+adding a paragraph about what the site is *for* would be. If you cannot tell which
+you are doing, you are doing the second one.
+
 **The `advisor` tool is expensive — use it sparingly.** It forwards the whole
 session to a stronger model and returns a critique, and every call costs real
 money. It is not a second opinion to collect out of caution, and it is not a
@@ -201,9 +222,10 @@ if you can name what you would do next without it, do that instead.
 
 ### This convention is not settled
 
-The split into two seats — this section, `WORKER.md` and `INTEGRATOR.md` — came
-out of one experiment with two agents, not out of long practice, and the parts of
-it that are wrong have not been found yet. It is written down so there is
+The split into seats — this section, `WORKER.md`, `INTEGRATOR.md` and
+`ART-DIRECTOR.md` — came out of one experiment with two agents, not out of long
+practice, and the parts of it that are wrong have not been found yet. The third
+seat is newer still and has never been occupied. It is written down so there is
 something concrete to disagree with.
 
 So: if you hit friction with it — a rule that cost more than it saved, a collision

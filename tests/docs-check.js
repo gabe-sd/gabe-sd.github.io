@@ -155,11 +155,19 @@ const landed = slugs.filter((entry) => {
 });
 check("no TODO entry has already been merged", landed, "landed");
 
-// 6. A game with no TODO.md is fine - it means nothing is open. A TODO.md for a
-//    folder that is not a game is not: it is a backlog nobody will find.
+// 6. A game with no TODO.md is fine - it means nothing is open. A TODO.md in a
+//    folder that owns no backlog is not: it is a list nobody will find. The
+//    folders that own one are the games, plus design/, which is the art
+//    director's - the visual layer belongs to every game and therefore to none of
+//    them, so its backlog cannot live in a game folder.
+const TODO_OWNERS = ["design"];
 const strayTodos = todos
   .filter((f) => f !== "TODO.md")
-  .filter((f) => !games.includes(f.split("/")[1] || ""));
+  .filter((f) => {
+    const [dir, sub] = f.split("/");
+    if (dir === "games") return !games.includes(sub || "");
+    return !TODO_OWNERS.includes(dir);
+  });
 check("every per-game TODO.md sits in a game folder", strayTodos, "stray");
 
 // 7. The seat router. The first thing an agent does here is read its own seat's
@@ -182,7 +190,7 @@ const router =
     ? ""
     : claude.slice(routerStart).split(/\n## /)[0];
 const brokenRouter = (routerStart === -1 ? [ROUTER_HEADING] : []).concat(
-  ["WORKER.md", "INTEGRATOR.md"].filter(
+  ["WORKER.md", "INTEGRATOR.md", "ART-DIRECTOR.md"].filter(
     (f) => !files.includes(f) || !router.includes(`\`${f}\``)
   )
 );

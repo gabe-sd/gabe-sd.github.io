@@ -36,7 +36,9 @@ still describes what it names in both places.
 
 Work on how the repo is run rather than on the site takes a `workflow-` prefix and
 belongs in the `## Workflow` section at the end of this file, which says who acts
-on it.
+on it. Work on how the site looks belongs in `design/TODO.md` rather than here,
+for the same reason a game's own work belongs in its folder: it has an owner and a
+seat of its own.
 
 ## New games
 
@@ -47,6 +49,10 @@ on it.
 See the Human Benchmark version for the shape of it.
 
 ## Site-wide
+
+Work on how the site **looks** is not here. It belongs to the art director, and
+its backlog is `design/TODO.md`, beside the design itself in `design/DESIGN.md`.
+See `ART-DIRECTOR.md` for the seat.
 
 ### site-readme-for-humans — The README is written for agents, not visitors
 
@@ -64,8 +70,6 @@ thing that reads as unfinished on a live site.
 One file at the repo root is enough; browsers find `/favicon.ico` without a link
 tag, which also keeps it out of every game page's `<head>`. An SVG referenced
 from `shared.css`'s owning pages would need markup in all six instead.
-
-### site-visual-design — Improve the site's design and visual appeal
 
 ### highscore-backend — A backend for stored values
 
