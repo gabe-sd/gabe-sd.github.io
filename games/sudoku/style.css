@@ -1,3 +1,13 @@
+.game-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.game-controls .full-width {
+  width: 100%;
+}
+
 #board {
   display: grid;
   grid-template-columns: repeat(9, minmax(30px, 42px));
@@ -51,16 +61,19 @@
 
 #number-pad {
   display: grid;
-  grid-template-columns: repeat(3, 42px);
-  gap: 4px;
+  grid-template-columns: repeat(3, 60px);
+  gap: 6px;
 }
 
 .num-btn {
-  padding: 0.5rem 0;
-  font-size: 1rem;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
   font-weight: 600;
   border: 2px solid var(--cell-border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--cell-bg);
   color: var(--fg);
   cursor: pointer;
@@ -72,6 +85,8 @@
 
 .num-btn.erase {
   grid-column: 1 / -1;
+  aspect-ratio: unset;
+  padding: 0.6rem 0;
   color: var(--muted);
 }
 
