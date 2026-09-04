@@ -34,11 +34,18 @@ branch, because the branch is created by it.
 git worktree add .claude/worktrees/<slug> -b <slug>      # then work in there
 ```
 
-If your session has an `EnterWorktree` tool, use that instead — it puts the tree
-in the same place and moves you into it. It does not name the branch the same way:
-it creates `worktree-<slug>`, which needs the rename described below. Worktrees
-live in `.claude/worktrees/`, which is gitignored and which `tests/docs-check.js`
-deliberately refuses to walk into.
+If your session has an `EnterWorktree` tool it will do this and move you into the
+tree, but check where it put things: the harness has used `.claude/worktrees/`
+before (`tests/README.md`) and names the branch `worktree-<slug>`, which needs the
+rename described below. Neither is guaranteed. **If the tree lands anywhere but
+under this project folder, stop and say so — open the line with WORKFLOW ISSUE:.**
+
+The location is not a preference. `.claude/worktrees/` is gitignored, and
+`tests/docs-check.js` deliberately refuses to walk into hidden directories,
+because a worktree is a full checkout whose `TODO.md` would otherwise be read as
+this branch's — which has already failed a run on `main`. A tree outside the
+project folder also puts an agent's files somewhere Gabriel has said they must not
+go; see `site-worktree-location` in the root `TODO.md`.
 
 **This holds even when you are the only agent working.** The reason is not
 politeness to a peer who might turn up; it is that **the shared checkout is the

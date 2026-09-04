@@ -61,6 +61,37 @@ One file at the repo root is enough; browsers find `/favicon.ico` without a link
 tag, which also keeps it out of every game page's `<head>`. An SVG referenced
 from `shared.css`'s owning pages would need markup in all six instead.
 
+### site-worktree-location — Worktrees must live inside the project folder
+
+Gabriel's decision, 2026-09-03: every Claude instance keeps its files under the
+project folder, for security. A worktree at `.claude/worktrees/<slug>` satisfies
+that — it is gitignored, and `tests/docs-check.js` deliberately refuses to walk
+into hidden directories so a worktree's `TODO.md` is never read as this branch's.
+A sibling directory outside the repo does not.
+
+It happened once, on `sudoku-puzzle-quality`. That worker had been spawned before
+`WORKER.md` existed, so its instructions never mentioned a worktree at all; when
+it was told mid-task to create one, it ran `git worktree add` by hand and put the
+tree at `/home/g/git/gabe-sd.github.io.worktrees/<slug>`. That is the ordinary git
+convention — most guides put worktrees outside the repo, because inside needs a
+gitignore entry — so it was a reasonable choice made in the absence of any
+instruction. Nothing in the repo said otherwise where a worker would look: the
+location was recorded only in `tests/README.md` and a comment in
+`tests/docs-check.js`, both harness files a game fix has no reason to open.
+
+Nothing is being changed for it. `WORKER.md` now gives the path in the command
+itself, which is the fix for exactly this case — an agent that was going to run
+the command by hand now has the path in front of it. This entry exists to record
+the decision and to set the trigger:
+
+**If a worker that has read `WORKER.md` still puts a tree outside the project
+folder, the doc is not enough and the answer is structural.** What that looks
+like is not decided — the cheapest candidate is a check that fails when
+`git worktree list` names a path outside the repo, which would catch it at the
+next `npm test` rather than whenever somebody notices. Do not build it before the
+second occurrence; one instance with a known cause is not evidence a rule needs
+machinery behind it.
+
 ### site-visual-design — Improve the site's design and visual appeal
 
 ### highscore-backend — A backend for stored values
