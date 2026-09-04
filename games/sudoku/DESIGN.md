@@ -112,11 +112,17 @@ must also clear these, checked in `tests/sudoku-puzzles.test.js`:
 - **No formula grid.** A `solution` where one row is a cyclic rotation of
   another lets a player read the whole grid off a single row with no
   deduction — that's the defect above, generalized past the exact rotation
-  offsets it used. A grid from genuine randomized backtracking (candidate
-  order shuffled at every cell, as the generator script does) hits this by
-  chance for a given row pair at roughly 9-in-362880 odds; across the 36 pairs
-  in a 9x9 grid that's near enough to never that a hit means reroll, not bad
-  luck. Checked by `tests/sudoku-puzzles.test.js`.
+  offsets it used. Do not assume randomized backtracking makes this rare: an
+  earlier draft of this section put it at roughly 9-in-362880 per row pair, on
+  the reasoning that a row is one of 9! permutations and 9 of those are
+  rotations of any given row. The generator's own output refutes that. Of the
+  20 puzzles it produced, one — the old puzzle 22 — had rows 0 and 1 as
+  rotations, which is 1 in 20 rather than 1 in ~1000. The estimate assumed
+  uniformly random permutations, and Sudoku rows are not: a cyclic rotation
+  never repeats a value in a column, so it satisfies the column constraint
+  automatically and is over-represented among legal grids rather than being a
+  1-in-9! coincidence. Reroll when the check fires; do not treat a hit as
+  surprising. Checked by `tests/sudoku-puzzles.test.js`.
 - **At least 24 givens** (the uniqueness floor is 17; this repo's bar is
   higher so a puzzle has room to start without immediately forcing a long
   forced-chain deduction). Checked by `tests/sudoku-puzzles.test.js`, which

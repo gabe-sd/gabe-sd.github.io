@@ -5,9 +5,9 @@ entries as they land. See the root `TODO.md` for the naming rules.
 
 ### sudoku-famous-puzzles-mode — A mode built on curated, named puzzles
 
-The 100-puzzle set (`sudoku-puzzle-quality`, once it lands) is procedurally
-generated and quality-checked against `DESIGN.md`'s "What makes a puzzle
-good" — deliberately, so there's no attribution or manual-verification
+The bundled set in `games/sudoku/script.js` — 23 puzzles as of writing — is
+procedurally generated and quality-checked against `DESIGN.md`'s "What makes a
+puzzle good" — deliberately, so there's no attribution or manual-verification
 burden. That rules out puzzles that are famous *because of who made them or
 what record they hold* — Arto Inkala's "AI Escargot" and world's-hardest
 puzzles, the "Everest" and "Golden Nugget" grids, and so on. Those only work
