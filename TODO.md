@@ -94,6 +94,26 @@ already in place, which is the path sitting inside the command in `WORKER.md`.
 One instance with a known cause is not evidence a rule needs machinery behind
 it.
 
+### site-cleared-worker-findings — "Report, never fix" assumes a live worker
+
+`INTEGRATOR.md` tells the integrator to report a finding in a game's area rather
+than fixing it, and to let it ride on that game's next branch. The reasoning holds
+— the context is alive in another session, and a fix on `main` collides with the
+branch that worker is holding.
+
+It has no answer for a worker that is being cleared. That happened on
+`sudoku-puzzle-quality`: the review turned up two wrong claims in Sudoku's docs,
+the branch merged, and the session was retired the same evening. There was no next
+branch and nobody holding context, so the findings existed only in one chat log
+that was about to be closed. Gabriel resolved it by authorising a direct edit in
+Sudoku's area, once, by name — which worked, and is not a rule.
+
+What to decide: what the integrator does by default when the owning session is
+gone. Filing an entry in that game's `TODO.md` is the obvious candidate and is
+cheap, but it is still an edit in somebody else's area, which is the thing the
+rule exists to prevent. Ask Gabriel rather than picking one — the boundary of that
+rule is his, and the answer belongs in `INTEGRATOR.md` once it is settled.
+
 ### site-visual-design — Improve the site's design and visual appeal
 
 ### highscore-backend — A backend for stored values
