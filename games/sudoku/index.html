@@ -28,6 +28,20 @@
     <div class="controls">
       <button id="restart" class="btn">Restart</button>
       <button id="new-puzzle" class="btn secondary">New puzzle</button>
+      <button id="help-toggle" class="btn secondary"
+              aria-expanded="false" aria-controls="instructions">How to play</button>
+    </div>
+    <div id="instructions" class="instructions" hidden>
+      <ul>
+        <li><b>Click a cell</b>, then type a digit <b>1-9</b> or use the number pad</li>
+        <li><b>Backspace</b>, <b>Delete</b>, or the <b>⌫</b> button — clear a cell</li>
+      </ul>
+      <p>
+        Fill every row, column, and 3x3 box with the digits 1-9, no repeats
+        anywhere in the same row, column, or box. A cell you fill turns red
+        right away if it conflicts with one already placed in the same row,
+        column, or box. Solve every cell with no conflicts left to win.
+      </p>
     </div>
   </main>
   <script src="script.js"></script>

@@ -565,6 +565,8 @@ const statusEl = document.getElementById("status");
 const restartBtn = document.getElementById("restart");
 const newPuzzleBtn = document.getElementById("new-puzzle");
 const numberPad = document.getElementById("number-pad");
+const helpToggle = document.getElementById("help-toggle");
+const instructionsEl = document.getElementById("instructions");
 
 let puzzleIndex = 0;
 let grid = [];
@@ -639,6 +641,13 @@ function buildBoard() {
 // first press. See CLAUDE.md's page contract and games/flappy-bird/script.js.
 function releaseFocus(e) {
   if (e.detail > 0) e.currentTarget.blur();
+}
+
+function toggleInstructions() {
+  const open = instructionsEl.hasAttribute("hidden");
+  instructionsEl.toggleAttribute("hidden", !open);
+  helpToggle.setAttribute("aria-expanded", String(open));
+  helpToggle.textContent = open ? "Hide instructions" : "How to play";
 }
 
 function selectCell(r, c) {
@@ -728,6 +737,8 @@ restartBtn.addEventListener("click", restart);
 restartBtn.addEventListener("click", releaseFocus);
 newPuzzleBtn.addEventListener("click", newPuzzle);
 newPuzzleBtn.addEventListener("click", releaseFocus);
+helpToggle.addEventListener("click", toggleInstructions);
+helpToggle.addEventListener("click", releaseFocus);
 numberPad.addEventListener("click", (e) => {
   const btn = e.target.closest(".num-btn");
   if (!btn) return;

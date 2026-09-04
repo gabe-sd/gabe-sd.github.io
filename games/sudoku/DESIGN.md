@@ -150,9 +150,10 @@ board *content*, orthogonal to how hard a legally-unique puzzle is to solve.
 ## Page ids
 
 On top of the shared `#board`, `#status` and `#restart` from `CLAUDE.md`'s page
-contract: `#number-pad` (digit buttons 1-9 plus an eraser), and `#new-puzzle`
+contract: `#number-pad` (digit buttons 1-9 plus an eraser), `#new-puzzle`
 (swaps to a different entry in `PUZZLES` — distinct from `#restart`, which
-re-blanks the current one).
+re-blanks the current one), and `#help-toggle`/`#instructions` (the standard
+collapsible how-to-play panel described in `CLAUDE.md`'s page contract).
 
 ## Stored data
 
