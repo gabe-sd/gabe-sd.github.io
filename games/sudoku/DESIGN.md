@@ -122,10 +122,13 @@ must also clear these, checked in `tests/sudoku-puzzles.test.js`:
   forced-chain deduction). Checked by `tests/sudoku-puzzles.test.js`, which
   also keeps the absolute 17-given floor as a structural sanity check
   independent of this repo's stricter bar.
-- **Every row and every column has at least one given.** A row with zero
-  clues is what "give enough clues to begin with so numbers can be placed"
-  (the same playtester feedback) is pointing at directly — nowhere in that
-  row to even start. Checked by `tests/sudoku-puzzles.test.js`.
+- **Every row, every column, and every 3x3 box has at least one given.**
+  A row with zero clues is what "give enough clues to begin with so numbers
+  can be placed" (the same playtester feedback) is pointing at directly —
+  nowhere in that row to even start. Box coverage was added after a deeper
+  audit past this same feedback found three shipped puzzles with an empty
+  box despite passing the row/column check — legal, unique, and still a
+  region with nothing to go on. Checked by `tests/sudoku-puzzles.test.js`.
 - **Exactly one solution**, already covered above.
 
 None of this is a difficulty tier — see "Not in v1" above. It's a floor on
