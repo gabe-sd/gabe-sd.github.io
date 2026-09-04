@@ -34,9 +34,11 @@ branch, because the branch is created by it.
 git worktree add .claude/worktrees/<slug> -b <slug>      # then work in there
 ```
 
-If your session has an `EnterWorktree` tool, use that instead — it does the same
-thing and moves you into the tree. Worktrees live in `.claude/worktrees/`, which is
-gitignored and which `tests/docs-check.js` deliberately refuses to walk into.
+If your session has an `EnterWorktree` tool, use that instead — it puts the tree
+in the same place and moves you into it. It does not name the branch the same way:
+it creates `worktree-<slug>`, which needs the rename described below. Worktrees
+live in `.claude/worktrees/`, which is gitignored and which `tests/docs-check.js`
+deliberately refuses to walk into.
 
 **This holds even when you are the only agent working.** The reason is not
 politeness to a peer who might turn up; it is that **the shared checkout is the

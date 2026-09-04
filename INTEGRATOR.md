@@ -18,9 +18,8 @@ The shell is yours as well — the root page, `shared.css`, the docs, the tests.
 own it the way a worker owns a game folder, and you do not ask first. Substantial
 visitor-facing work is the exception: a landing-page redesign gets a worker,
 spawned for it. When you build in the shell you wear both hats and the worker's
-rules in `WORKER.md` apply to you in full — take a worktree and branch before the
-first edit, absorb `main` and go
-green before merging, and go last when somebody else is ready too. What to guard
+rules in `WORKER.md` apply to you in full — branch before the first edit, absorb
+`main` and go green before merging, and go last when somebody else is ready too. What to guard
 against is the two blurring, because your own branch is the one nobody else
 reviews.
 

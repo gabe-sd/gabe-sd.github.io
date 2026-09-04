@@ -59,9 +59,9 @@ believing they hold `main`, or a worker branching in the integrator's checkout.
 
 **Do not infer the seat from where you are standing.** Being in the shared
 checkout is not evidence you are the integrator — it is equally what a worker
-looks like before it has taken a worktree, which is the mistake this rule exists to
-stop. Being in a worktree is not evidence either: the integrator takes one to build
-in the shell. Ask.
+looks like before it has taken a worktree, which is the mistake this rule exists
+to stop. Being in a worktree is not evidence either. The seat is assigned, not
+deduced. Ask.
 
 ## Shared ground: what both seats obey
 
