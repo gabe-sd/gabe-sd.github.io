@@ -188,6 +188,17 @@ repo is the only thing that does not. So when you catch yourself explaining
 something to whoever comes next, stop and put it where they will actually look:
 this file, `WORKER.md`, `INTEGRATOR.md`, the game's `DESIGN.md`, or its `TODO.md`.
 
+**The `advisor` tool is expensive — use it sparingly.** It forwards the whole
+session to a stronger model and returns a critique, and every call costs real
+money. It is not a second opinion to collect out of caution, and it is not a
+review step to run over work that is going fine: the tests say more about that,
+faster, and for nothing.
+
+Save it for a task that is genuinely difficult — an approach that has stopped
+converging, evidence that contradicts itself, a call where being wrong would be
+expensive and you cannot see which way is right. The test before reaching for it:
+if you can name what you would do next without it, do that instead.
+
 ### This convention is not settled
 
 The split into two seats — this section, `WORKER.md` and `INTEGRATOR.md` — came
@@ -271,10 +282,10 @@ Each game page follows a contract that `shared.css` depends on:
   game rather than in one shared list is also what keeps two games' agents out of
   the same file.
 - Treats `#status` as game state only — what just happened, or what to do next.
-  Standing instructions belong in a collapsible panel (Minesweeper, Pong and
-  Flappy Bird all use `#instructions`), not the status line. `shared.css` gives
-  `.status` a reserved min-height so its text can change without shifting the
-  board.
+  Standing instructions belong in a collapsible panel (Minesweeper, Sudoku, Pong
+  and Flappy Bird all use `#instructions`), not the status line. `shared.css`
+  gives `.status` a reserved min-height so its text can change without shifting
+  the board.
 - Links back to `../../index.html`.
 - **Hands the focus back after a pointer click on its own buttons**, in any game
   whose keys drive play. A clicked button keeps the focus, and a focused button
@@ -295,10 +306,10 @@ keyboard activation has to keep it. Which games exist and which are key-driven
 are both read from the folder and the script rather than from a list, so a new
 game is covered the day its folder exists.
 
-`shared.css` owns the theme as CSS custom properties (`--bg`, `--fg`, `--cell-bg`,
-`--cell-border`, `--accent`, `--win`, `--lose`, `--muted`) which flip under
-`prefers-color-scheme: dark`. Per-game stylesheets should consume these tokens
-rather than hardcoding colours, so a game restyles with the theme for free.
+`shared.css` owns the theme as CSS custom properties (`--bg`, `--fg`, `--card-bg`,
+`--cell-bg`, `--cell-border`, `--accent`, `--win`, `--lose`, `--muted`) which flip
+under `prefers-color-scheme: dark`. Per-game stylesheets should consume these
+tokens rather than hardcoding colours, so a game restyles with the theme for free.
 `hub.css` applies only to the root page.
 
 ### Scripts are classic, not modules
