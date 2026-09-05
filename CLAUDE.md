@@ -484,6 +484,17 @@ pointer while the button is held. Do not delete it.
 - **Screen capture of the X11 root is black** because Wayland does the
   compositing, so screenshots cannot be used to read state. Have the page report
   telemetry to a local HTTP server, or read state over CDP.
+- **A headless screenshot is a different path, and it works.** The bullet above
+  is about capturing the real desktop. A headless Chromium launched through the
+  repo's own `playwright-core` rasterises the page itself, never touches the
+  display, and writes a PNG an agent can open and look at — which is how the
+  redesign's eleven visual directions were built and checked. Reach for it for
+  anything visual: reasoning about CSS you cannot see is how a design goes
+  wrong quietly. Two constraints. Snap Chromium is confined and cannot read
+  files under `/home/g/.claude/`, so a page to be shot has to sit inside the
+  project directory. And a screenshot only proves what it shows — a hover, a
+  `data-` state or a motion frame has to be forced before the shot, or it is a
+  picture of the resting page. See `tests/README.md` for a working invocation.
 - CDP over websocket needs `--remote-allow-origins='*'`, or `suppress_origin=True`
   on `websocket.create_connection`.
 - Node here is v22, so nothing forces the `playwright-core` pin any more. It

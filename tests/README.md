@@ -210,3 +210,23 @@ none of them produce a blur, a visibilitychange, or even a `document.hasFocus()`
 flip, because it activates the CDP target without touching window-manager focus.
 Closing that gap properly needs XTEST against the real desktop; don't spend the
 time again on `bringToFront`.
+
+A headless screenshot is a different thing from the X11-root capture `CLAUDE.md`
+warns off — it never touches the real display, so it works on this machine and is
+how a visual change gets checked without a headed browser:
+
+```js
+const { chromium } = require('<repo>/node_modules/playwright-core');
+const b = await chromium.launch({ executablePath: '/snap/bin/chromium',
+                                  args: ['--no-sandbox'] });
+const p = await b.newPage({ viewport: { width: 1240, height: 900 },
+                            deviceScaleFactor: 2 });
+await p.goto(url, { waitUntil: 'networkidle' });
+await p.evaluate(() => document.fonts && document.fonts.ready);
+await p.screenshot({ path: out, fullPage: true });
+```
+
+Snap Chromium is confined and cannot read files under `/home/g/.claude/`, so the
+page being shot has to sit inside the project directory. And a screenshot only
+proves what it shows — force any hover, `data-` state or motion frame before the
+shot, or it is a picture of the resting page.
