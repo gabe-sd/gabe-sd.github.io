@@ -45,3 +45,16 @@ Note that the magenta diverges from whatever the hub tile's colour ends up being
 That was deliberate — magenta read better against the opponent's red than the
 alternatives — and whether an in-game accent should match its hub tile is
 unresolved.
+
+## What there is no mockup for
+
+Four of the six games have no reference composition here: Minesweeper, Sudoku,
+Chess and Tic Tac Toe. Chess is the one that matters — `design/TODO.md` calls its
+two square colours the hardest single visual question in the redesign, and there
+is nothing in this folder showing an answer.
+
+Whether those get a mockup before their phase, or are derived from the system the
+token phase lays down and shown to Gabriel as the real served page, is **not
+decided**. It was raised on 2026-09-04 and deliberately left until later: the
+token phase has to land before there is a system to derive from, and the answer
+may be obvious once it has.

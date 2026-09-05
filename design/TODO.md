@@ -49,8 +49,9 @@ mockups that are deliberately not being built.
 
 ## Settled before the first phase
 
-Gabriel decided these with the integrator on 2026-09-04. They are not open
-questions; a phase that wants to reopen one asks him rather than deciding.
+Gabriel decided these on 2026-09-04, with the integrator and then with the art
+director. They are not open questions; a phase that wants to reopen one asks him
+rather than deciding.
 
 - **Dark only.** One near-black phosphor palette. `prefers-color-scheme` comes out
   of `shared.css`, and the light half of every theme-aware branch in the games
@@ -80,6 +81,18 @@ questions; a phase that wants to reopen one asks him rather than deciding.
 - **Verification is Gabriel looking at a served page.** The suite is a regression
   net. Every phase ends with a preview he has seen before the branch is handed
   over.
+- **A preview comes before the build, not only after it.** Ending each phase with
+  a preview is not enough on its own: it puts a whole phase's work behind a single
+  look. He asked for a cheap served page as soon as there is anything to react to
+  — for the first phase, the palette and the type scale on a throwaway page —
+  then iteration on that, then his explicit approval before the real page is built
+  on top of it. The end-of-phase preview still happens; this is an earlier gate,
+  and it is where a value that reads wrong gets caught before five phases have
+  consumed it.
+- **The art director fetches the font.** The VT323 woff2 and the SIL Open Font
+  License text are downloaded and committed under `assets/fonts/` as part of the
+  first phase, which is also when that folder starts existing. Nothing is expected
+  from Gabriel.
 
 ## Phases
 
@@ -111,11 +124,23 @@ Constraints beyond the settled list:
 - **Hub cards stay `<a href="games/<name>/…">`.** `tests/contract.test.js` reads
   the game folder straight out of that path.
 - **The info panel moves each game's description into hover state, and touch has
-  no hover.** Decide what a phone gets — the first tile shown by default, or the
-  description kept in-tile under a width query — rather than discovering it on
-  Gabriel's phone later.
+  no hover.** Gabriel's leaning, said on 2026-09-04: one tap selects a tile and
+  fills the panel, a second tap plays it. It is provisional — he wants to confirm
+  it against a served preview — so build that variant first, so he is reacting to
+  the thing he described, and write the confirmed answer into `design/DESIGN.md`.
+  The alternatives raised were the first tile shown by default and the description
+  kept in-tile under a width query. Neither was rejected; they were simply not the
+  one he reached for.
 - **The dim accent variants are borderline for text.** Check contrast before using
   one for anything a reader has to read; borders are a different matter.
+- **How far the CRT texture reaches is open.** `pong-lightning-magenta.html`
+  carries a scanline overlay — 1px of white at 3.5% every 3px, blended `overlay` —
+  and a glow on nearly every element. Whether that belongs in `shared.css` for the
+  whole site, stays Pong's alone, or is dropped entirely is undecided, and since
+  the answer would live in `shared.css` it belongs to this phase. Put it in front
+  of Gabriel in the preview rather than choosing it quietly: it is the largest
+  difference between a phosphor palette and a costume, and legibility on the
+  puzzle games is what it costs.
 
 ### redesign-pong — Anime Pong
 
