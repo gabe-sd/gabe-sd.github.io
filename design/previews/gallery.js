@@ -159,10 +159,102 @@ function sampleHTML() {
   </section>`;
 }
 
+/* ------------------------------------------------------------------ intro */
+
+const INTRO = `
+<div class="intro">
+  <h1>Eleven directions for the site's look</h1>
+  <p class="intro-lede">Nothing here is built. These are complete hub compositions, one per
+  direction, so a whole visual world can be judged by looking at it rather than
+  described. Pick one — or two to cross — and the real <code>shared.css</code>,
+  <code>hub.css</code> and hub markup get built on it properly. Everything in this
+  gallery is thrown away.</p>
+
+  <div class="intro-cols">
+    <section>
+      <h2>How to look at it</h2>
+      <ul>
+        <li>The tabs across the top switch direction. <b>Left and right arrow keys</b> also work.</li>
+        <li><b>Hover a game tile</b> — the panel below the grid fills in. On a phone, <b>tap once
+        to select and again to play</b>. That two-tap behaviour is the thing you said you wanted
+        to try against a real page rather than decide from a description, so try it on your phone
+        and tell me whether it feels right.</li>
+        <li>On the CRT directions the caption bar has a <b>CRT texture</b> control: none / subtle /
+        as mocked / heavy. Switch it while looking at the boards at the bottom.</li>
+        <li>The tiles don't actually launch anything — this is a picture of the hub, not the hub.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Look at the bottom of every page</h2>
+      <p>Each direction carries a strip called <b>“How it reads in a game”</b>: a Sudoku fragment,
+      Minesweeper's eight numbers, and a Pong scorebar. That strip is the honest half of this
+      review. The hub flatters every palette — a board you have to read does not, and the site is
+      six boards behind one hub. If a direction looks glorious up top and falls apart down there,
+      that is the direction telling you something.</p>
+    </section>
+  </div>
+
+  <h2>What I need you to decide</h2>
+  <ol class="intro-q">
+    <li><b>Which direction</b> — or which two, if you want one crossed with another.</li>
+    <li><b>How much CRT texture</b>, if any. This is a real question with a measured answer below.</li>
+    <li><b>Does the two-tap info panel feel right on a phone?</b></li>
+    <li><b>Does colour-by-category survive?</b> Some directions use a different hue per category,
+    some deliberately don't. You can see both.</li>
+  </ol>
+
+  <h2>What's already settled, and what a pick would reopen</h2>
+  <p>Dark only, one palette, self-hosted VT323. Two directions here break that on purpose so you
+  can see the trade rather than take my word for it: <b>Arcade Flyer</b> is printed on light paper,
+  and <b>Handheld</b> is a pale olive LCD. Choosing either reopens dark-only, which means all six
+  game boards need a light treatment too. That is a big bill and you should know it is attached.</p>
+
+  <h2>What the previews measured</h2>
+  <ul class="intro-find">
+    <li><b>Heavy CRT texture is not viable behind a real board.</b> At the heavy setting the dark
+    line every 3.5px cuts two bands through every Minesweeper digit and the saturated ones break
+    into fragments. The only fix found was cells about 35% larger — which a 16×30 board cannot
+    afford. At <i>as mocked</i> and below the same digits are fine. So the texture is a question of
+    degree, and its ceiling is set by Minesweeper rather than by taste.</li>
+    <li><b>Eight distinguishable numbers do not exist inside one hue.</b> Five directions arrived at
+    this independently: a single-hue palette gets five or six steps and the rest need a second
+    <i>device</i> — an underline, an inverted cell, a dithered field, a border, a weight change —
+    rather than another colour.</li>
+    <li><b>VT323 carries less colour than the contrast maths predicts</b>, because its strokes are
+    one pixel wide. Colours that pass a numeric check still vanish when set in it.</li>
+    <li><b>The mockup's scanline was modelled backwards.</b> A scanline is the dark gap between
+    lines, not the line; a white stripe on a near-black page has nothing to lighten and is
+    invisible. The version here draws the gap.</li>
+  </ul>
+
+  <h2>What I'd pick, since you asked me to be the artist</h2>
+  <p class="intro-rec">The best-looking single page is <b>Amber Monitor</b>, and the best
+  <i>system</i> is <b>Cold Terminal</b>. They are not the same thing and the difference is worth a
+  minute of your time.</p>
+  <p>Amber is a single-hue world. That is exactly why it is calm, and it means the site has no
+  second colour left for an error, a warning, or "them versus you" — Pong's opponent can only be
+  the dimmer paddle. The redesign's own plan for Pong is a magenta player against a red opponent,
+  and amber cannot do that. Green keeps that budget intact.</p>
+  <p><b>So my recommendation is Cold Terminal as the base, with three things taken from the
+  others:</b> Amber's roominess and larger type — the reference grid is tighter than it needs to
+  be; Vector Neon's discipline of tuning the glow per element instead of setting one everywhere;
+  and the CRT texture kept at <i>as mocked</i>, never heavy, and dropped entirely behind the puzzle
+  boards. If you would rather have the warm one, Amber is buildable as it stands and the cost is
+  the paragraph above.</p>
+  <p class="intro-rec-alt">Two others deserve a mention rather than a vote. <b>Schematic</b> is the
+  most surprising thing here and has the most natural answer to the eight numbers. <b>Signal</b> is
+  the most confident page in the set and would make a good voice for the parts of the site that are
+  not games — an about page, a rules panel — even if it is too austere to be the arcade itself.</p>
+
+  <p class="intro-foot">Use the tabs, or press → to start.</p>
+</div>`;
+
 /* --------------------------------------------------------------- variants */
 
 /* Structure and copy live here; the look lives in variants/<id>.css. */
 const VARIANTS = [
+  { id: 'intro', group: '·', name: 'Start here', intro: true },
   {
     id: 'cold', group: 'A', name: 'Cold Terminal', icons: 'line', crt: 'mock',
     brand: 'GAME ARCADE', nav: ['GAMES', 'ABOUT'],
@@ -266,8 +358,17 @@ VARIANTS.forEach((v) => {
   const sec = document.createElement('section');
   sec.className = 'variant';
   sec.id = 'v-' + v.id;
-  sec.dataset.crt = v.crt;
   sec.hidden = true;
+
+  if (v.intro) {
+    sec.classList.add('is-intro');
+    sec.innerHTML = INTRO;
+    stage.appendChild(sec);
+    addTab(v);
+    return;
+  }
+
+  sec.dataset.crt = v.crt;
   sec.innerHTML = `
     <div class="deco" aria-hidden="true"></div>
     <div class="screen">
@@ -283,16 +384,18 @@ VARIANTS.forEach((v) => {
     </div>
     <div class="crt" aria-hidden="true"></div>`;
   stage.appendChild(sec);
+  addTab(v);
+  wireSelection(sec);
+});
 
+function addTab(v) {
   const tab = document.createElement('button');
   tab.className = 'chrome-tab';
   tab.dataset.id = v.id;
   tab.innerHTML = `<span class="tab-group">${v.group}</span>${v.name}`;
   tab.addEventListener('click', () => show(v.id));
   tabs.appendChild(tab);
-
-  wireSelection(sec);
-});
+}
 
 /* Hover and focus fill the info panel; on a touch screen the first tap selects
  * and the second would launch. That two-tap behaviour is the thing Gabriel
@@ -345,10 +448,16 @@ function show(id) {
 }
 
 function renderCaption(v) {
-  const n = VARIANTS.indexOf(v) + 1;
+  if (v.intro) {
+    caption.innerHTML = `<div class="cap-main"><span class="cap-name">Preview gallery</span>
+      <span class="cap-pitch">Eleven directions for the redesign. Read this page, then use the
+      tabs or the arrow keys.</span></div>`;
+    return;
+  }
+  const n = VARIANTS.indexOf(v);
   caption.innerHTML = `
     <div class="cap-main">
-      <span class="cap-n">${String(n).padStart(2, '0')}/${VARIANTS.length}</span>
+      <span class="cap-n">${String(n).padStart(2, '0')}/${VARIANTS.length - 1}</span>
       <span class="cap-name">${v.name}</span>
       <span class="cap-pitch">${v.pitch}</span>
     </div>
