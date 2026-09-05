@@ -81,14 +81,18 @@ rather than deciding.
 - **Verification is Gabriel looking at a served page.** The suite is a regression
   net. Every phase ends with a preview he has seen before the branch is handed
   over.
-- **A preview comes before the build, not only after it.** Ending each phase with
-  a preview is not enough on its own: it puts a whole phase's work behind a single
-  look. He asked for a cheap served page as soon as there is anything to react to
-  — for the first phase, the palette and the type scale on a throwaway page —
-  then iteration on that, then his explicit approval before the real page is built
-  on top of it. The end-of-phase preview still happens; this is an earlier gate,
-  and it is where a value that reads wrong gets caught before five phases have
-  consumed it.
+- **Ask him, before starting a phase, whether he wants a preview or wants it
+  built.** He answers per phase and there is no standing rule in either direction:
+  "art director should ask if i want a preview or if i want him to just build it
+  before beginning work on a task." If he wants one, serve something as soon as
+  there is anything to react to — for the first phase, the palette and the type
+  scale on a throwaway page — iterate, and get his approval before the real page
+  is built on it. If he wants it built, build it. An earlier version of this
+  bullet made the preview automatic; that was the art director's reading and he
+  corrected it the same day. The end-of-phase preview is a separate thing and is
+  unaffected. This restates a rule proposed for `ART-DIRECTOR.md` on the branch
+  `art-director-preview-gate`; when that lands and `redesign` absorbs `main`, cut
+  this down to a pointer so the two cannot drift.
 - **The art director fetches the font.** The VT323 woff2 and the SIL Open Font
   License text are downloaded and committed under `assets/fonts/` as part of the
   first phase, which is also when that folder starts existing. Nothing is expected
