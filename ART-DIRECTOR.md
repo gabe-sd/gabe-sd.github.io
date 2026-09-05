@@ -237,6 +237,28 @@ reads as amber or as mustard, and no test in this repo can tell you.
 and in a browser, before the branch is handed over. Not a diff and not a
 description — he judges the look by looking at it.
 
+**Ask, at the start of a task, which he wants.** Before you begin, ask Gabriel
+whether he wants a preview to iterate on or wants you to just build it. He answers
+per task; there is no standing rule either way, and guessing is the thing this
+replaces. His words on 2026-09-04, the day the seat was first occupied: "art
+director should ask if i want a preview or if i want him to just build it before
+beginning work on a task."
+
+If he wants a preview, serve something as soon as there is anything to react to —
+for a palette phase, a throwaway page with the swatches and the type scale on it
+is enough — iterate on that with him, and get his approval before building the
+real page on top of it. If he says build it, build it, and do not serve him
+half-finished work he did not ask for.
+
+The cost of asking is one message. The cost of a preview — an extra sync point,
+and pages built to be thrown away — is real, but it is his to accept or decline
+now rather than yours to impose, which is the point of asking rather than
+adopting a rule.
+
+**None of this changes the end of a phase.** He sees a served page before the
+branch is handed over either way. This is a question about starting, not about
+handing over.
+
 ```bash
 PORT=0 npm run serve     # from a worktree; 8934 belongs to the shared checkout
 ```
