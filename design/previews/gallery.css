@@ -157,6 +157,38 @@ html, body {
 .variant a { -webkit-tap-highlight-color: transparent; }
 .variant .ico { display: block; }
 
+/* On a phone, twelve wrapped tabs push the thing being judged 600px down the
+ * page, so the rail scrolls sideways instead of wrapping and the caption
+ * stacks. The design under review gets the screen; the chrome gets a strip. */
+@media (max-width: 760px) {
+  .chrome-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.45rem;
+    padding: 0.5rem 0.7rem 0.55rem;
+  }
+
+  .chrome-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    width: 100%;
+    padding-bottom: 0.15rem;
+  }
+
+  .chrome-tabs::-webkit-scrollbar { display: none; }
+
+  .chrome-caption {
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.5rem 0.7rem 0.55rem;
+    font-size: 0.74rem;
+  }
+
+  .cap-side { flex: 1 1 auto; }
+  .variant { min-height: 0; }
+}
+
 /* ------------------------------------------------------------ start here */
 
 .variant.is-intro { background: #17171a; color: #d8d8dd; }
