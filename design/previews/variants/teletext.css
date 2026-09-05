@@ -1,1 +1,648 @@
-/* teletext — not yet written */
+/* 09 — Teletext
+ *
+ * Broadcast teletext as specified in 1974: a fixed character grid, seven
+ * colours at full saturation on black, block mosaic graphics, double-height
+ * headings, and no shading of any kind. There is not one gradient here that
+ * interpolates, not one rgba(), not one rounded corner and not one shadow.
+ * Everything is a solid block of one of eight colours.
+ *
+ * Two rules carry the whole design:
+ *
+ *   1. Colour is applied per character cell, and an INVERTED cell — a solid
+ *      colour block with black text on it — is as ordinary as coloured text.
+ *      Inversion is the workhorse: it is how the selected tile, the CTA, the
+ *      category badges, the fastext bar and Minesweeper's 6/7/8 are made.
+ *
+ *   2. Blue (#0000ff) is a BACKGROUND-ONLY colour. On black it is 2.4:1 —
+ *      genuinely illegible, and real teletext never used it for text either.
+ *      So it does every structural job instead: grid rules, the Pong court
+ *      frame and centre line, unrevealed Minesweeper cells, the page-header
+ *      band, and the mosaic columns down the page edges. It is the one colour
+ *      here that can sit next to text without shouting over it, which is
+ *      exactly why the medium reserved it.
+ */
+
+#v-teletext {
+  /* The 1974 spec's seven, and nothing between them. */
+  --tt-white:   #ffffff;
+  --tt-yellow:  #ffff00;
+  --tt-cyan:    #00ffff;
+  --tt-green:   #00ff00;
+  --tt-magenta: #ff00ff;
+  --tt-red:     #ff0000;
+  --tt-blue:    #0000ff;   /* backgrounds and structure only — never text */
+  --tt-black:   #000000;
+
+  /* The character cell. Silkscreen is a proportional face — 'i' is 0.375em,
+   * 'm' is 0.875em — so a true character grid cannot come from its metrics.
+   * But its DIGITS are exactly 0.75em, so setting --cw to 0.75 × the base
+   * size gives an exact cell for every numeral, and every structural box on
+   * the page (tiles, mosaics, board cells, the fastext bar) is sized in whole
+   * multiples of it. Prose runs slightly narrow inside its cells; numbers,
+   * which are what a grid is actually judged on, land dead on. */
+  --fs: 24px;
+  --cw: 18px;              /* 0.75 × 24px — one character cell wide */
+  --ch: 24px;              /* one character cell tall; 1.33:1, spec is 1.2:1 */
+  --sub-w: 9px;            /* 2×3 mosaic sub-block: half a cell wide … */
+  --sub-h: 8px;            /* … and a third of a cell tall */
+
+  --icon-hole: #000000;    /* ground is black; the pixel icon set ignores this */
+
+  background: var(--tt-black);
+  color: var(--tt-white);
+  font-family: 'Silkscreen', 'Press Start 2P', ui-monospace, monospace;
+  font-size: var(--fs);
+  line-height: var(--ch);
+  -webkit-font-smoothing: none;   /* no antialiasing: the pixels are the point */
+  font-smooth: never;
+}
+
+/* Category accents. Three categories, six usable colours — so each category
+ * gets one, and the remaining three keep fixed jobs across the whole page:
+ * green = go (the CTA), red = alarm (the flag), white = neutral (body text).
+ * Nothing is ever coloured decoratively; every hue means one thing. */
+#v-teletext [data-cat="strategy"] { --cat: var(--tt-cyan); }
+#v-teletext [data-cat="puzzle"]   { --cat: var(--tt-yellow); }
+#v-teletext [data-cat="arcade"]   { --cat: var(--tt-magenta); }
+
+/* ------------------------------------------------------------------ deco
+ * A single character column of blue 2×3 mosaic down each edge of the page.
+ * repeating-conic-gradient with two hard stops is a checkerboard, not a
+ * gradient — nothing interpolates. At sub-block scale it is exactly what a
+ * mosaic fill character looks like. Blue keeps it decorative rather than
+ * competitive; in any other colour this would be unreadable wallpaper. */
+#v-teletext .deco {
+  background-color: var(--tt-black);
+  background-image:
+    repeating-conic-gradient(var(--tt-blue) 0 25%, var(--tt-black) 0 50%),
+    repeating-conic-gradient(var(--tt-blue) 0 25%, var(--tt-black) 0 50%);
+  background-size: var(--cw) calc(var(--sub-h) * 2);
+  background-position: left top, right top;
+  background-repeat: repeat-y, repeat-y;
+}
+
+#v-teletext .screen {
+  display: flex;
+  flex-direction: column;
+  max-width: calc(var(--cw) * 48);   /* 48 character columns */
+  margin: 0 auto;
+  padding: 0 calc(var(--cw) * 2) calc(var(--ch) * 2);
+}
+
+/* ------------------------------------------------- the page header row
+ * The strap's copy — "P100 GABE-SD ARCADE      SIX GAMES" — IS a teletext
+ * header line, spaced gap and all, so it is reordered above the wordmark
+ * where a header line belongs and given white-space:pre so the gap survives.
+ * White on a full-width blue band, with a clock field pushed right: that is
+ * how every teletext page in the world opens. */
+#v-teletext .strap {
+  order: -1;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--cw);
+  margin: 0 calc(var(--cw) * -2) calc(var(--ch) * 0.5);
+  padding: 0 calc(var(--cw) * 2);
+  height: var(--ch);
+  white-space: pre;
+  background: var(--tt-blue);
+  color: var(--tt-white);
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+
+/* The clock. Teletext headers carried the live time to the second and it
+ * ticked in front of you; a static field is the honest static version. */
+#v-teletext .strap::after {
+  content: "MON 04 SEP 21:47/32";
+  color: var(--tt-yellow);
+}
+
+/* ------------------------------------------------------------------- top */
+
+#v-teletext .top {
+  display: grid;
+  grid-template-columns: calc(var(--cw) * 3) auto 1fr auto;
+  align-items: center;
+  column-gap: var(--cw);
+  margin-bottom: calc(var(--ch) / 2);
+}
+
+/* Mosaic blocks flanking the heading, which is what teletext used instead of
+ * rules — it had no hairlines, only whole character cells. */
+#v-teletext .top::before,
+#v-teletext .top::after {
+  content: "";
+  height: calc(var(--ch) * 2);
+  background-repeat: repeat;
+  background-size: var(--cw) calc(var(--sub-h) * 2);
+}
+
+#v-teletext .top::before {
+  grid-column: 1;
+  grid-row: 1;
+  background-image: repeating-conic-gradient(var(--tt-red) 0 25%, var(--tt-yellow) 0 50%);
+}
+
+/* All four header items are placed explicitly, and they have to be. Grid
+ * auto-placement runs items with a definite row BEFORE the rest, so pinning
+ * only some of them reorders the others: with `grid-row: 1` on .brand but not
+ * on ::before, the wordmark was placed into column 1 and the mosaic band was
+ * drawn straight through the middle of it. Half-explicit placement is worse
+ * than none. */
+#v-teletext .top::after {
+  grid-column: 3;
+  grid-row: 1;
+  background-image: repeating-conic-gradient(var(--tt-magenta) 0 25%, var(--tt-blue) 0 50%);
+}
+
+/* Double height. The real control code doubles each pixel row of the glyph,
+ * so scaleY(2) on live text is not an imitation of the effect — it is the
+ * effect, and the glyph stays crisp because the outline is scaled, not the
+ * raster. Layout only reserves the untransformed box, so the margins put the
+ * other half back. */
+#v-teletext .brand {
+  grid-column: 2;
+  grid-row: 1;
+  display: inline-block;
+  font-size: calc(var(--fs) * 2.5);
+  line-height: 1;
+  margin: calc(var(--fs) * 1.25) 0;
+  transform: scaleY(2);
+  transform-origin: left center;
+  color: var(--tt-yellow);
+  letter-spacing: 0.08em;
+}
+
+#v-teletext .nav {
+  grid-column: 4;
+  grid-row: 1;
+  display: flex;
+  gap: var(--cw);
+  font-size: 18px;
+}
+
+#v-teletext .nav a {
+  padding: 0 calc(var(--cw) / 2);
+  height: var(--ch);
+  line-height: var(--ch);
+  color: var(--tt-cyan);
+  text-decoration: none;
+}
+
+/* Inverted cell: the medium's own way of saying "this one". */
+#v-teletext .nav a.active { background: var(--tt-white); color: var(--tt-black); }
+#v-teletext .nav a:hover,
+#v-teletext .nav a:focus-visible { background: var(--tt-cyan); color: var(--tt-black); outline: none; }
+
+/* ------------------------------------------------------------------ grid */
+
+#v-teletext .grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--cw);
+}
+
+#v-teletext .tile {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "num  cat"
+    "ico  ico"
+    "name name";
+  align-items: center;
+  row-gap: calc(var(--ch) / 3);
+  padding-bottom: calc(var(--ch) / 3);
+  color: var(--tt-white);
+  text-decoration: none;
+  /* The top strip is painted as one band across the whole tile rather than as
+   * backgrounds on .tnum and .tcat. Two abutting grid cells left a one-pixel
+   * sliver of the tile ground between them wherever the auto/1fr split landed
+   * on a fraction — visible as a notch in the middle of the strip. A single
+   * hard-stop band cannot have a seam. */
+  background-color: var(--tt-black);
+  background-image: linear-gradient(to bottom, var(--cat) 0 var(--ch), transparent var(--ch));
+}
+
+/* The tile's top strip is an inverted row in the category colour: black text
+ * on solid colour, spanning the full cell width. It is the whole frame — no
+ * border, because teletext could not draw one thinner than a character. */
+#v-teletext .tnum,
+#v-teletext .tcat {
+  display: block;
+  height: var(--ch);
+  line-height: var(--ch);
+  font-size: 16px;
+  color: var(--tt-black);
+}
+
+#v-teletext .tnum { grid-area: num; padding-left: calc(var(--cw) / 2); }
+#v-teletext .tcat {
+  grid-area: cat;
+  padding-right: calc(var(--cw) / 2);
+  text-align: right;
+  letter-spacing: 0.08em;
+}
+
+#v-teletext .tico {
+  grid-area: ico;
+  display: block;
+  justify-self: center;
+  color: var(--cat);
+}
+
+/* 48px over an 8×8 viewBox = exactly 6 device pixels per art pixel, so no
+ * pixel is ever half a pixel wide. Any size not a multiple of 8 would soften
+ * the edges, which is the one thing this direction cannot have. */
+#v-teletext .ico { width: 48px; height: 48px; }
+
+#v-teletext .tname {
+  grid-area: name;
+  padding: 0 calc(var(--cw) / 2);
+  text-align: center;
+  font-size: 20px;
+  text-transform: uppercase;
+}
+
+/* The description leaves the tile. A teletext index row is one line and the
+ * grid is measured in whole cells; a wrapping sentence breaks both. The info
+ * panel carries it instead. */
+#v-teletext .tdesc { display: none; }
+
+/* Selected / hover: the entire tile inverts. Ground goes to the category
+ * colour, every glyph and the icon go black, and the top strip flips the
+ * other way so it stays visible. That is a full luminance reversal, not a
+ * colour change — it survives being looked at in greyscale, and the white
+ * outline gives a second, shape-based cue on top. */
+#v-teletext .tile:hover,
+#v-teletext .tile:focus-visible,
+#v-teletext .tile.is-selected {
+  background-color: var(--cat);
+  background-image: linear-gradient(to bottom, var(--tt-black) 0 var(--ch), transparent var(--ch));
+  color: var(--tt-black);
+  outline: 3px solid var(--tt-white);
+  outline-offset: 0;
+}
+
+#v-teletext .tile:hover .tnum,
+#v-teletext .tile:hover .tcat,
+#v-teletext .tile:focus-visible .tnum,
+#v-teletext .tile:focus-visible .tcat,
+#v-teletext .tile.is-selected .tnum,
+#v-teletext .tile.is-selected .tcat {
+  color: var(--cat);
+}
+
+#v-teletext .tile:hover .tico,
+#v-teletext .tile:focus-visible .tico,
+#v-teletext .tile.is-selected .tico { color: var(--tt-black); }
+
+/* ------------------------------------------------------------ info panel */
+
+#v-teletext .info {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "label name"
+    "meta  meta"
+    "desc  desc"
+    "cta   cta";
+  align-items: center;
+  column-gap: var(--cw);
+  margin-top: var(--ch);
+  padding-top: calc(var(--ch) * 0.75);
+  background-image: repeating-conic-gradient(var(--tt-blue) 0 25%, var(--tt-black) 0 50%);
+  background-size: var(--cw) calc(var(--sub-h) * 2);
+  background-repeat: repeat-x;
+  background-position: left top;
+}
+
+#v-teletext .ilabel {
+  grid-area: label;
+  align-self: stretch;
+  padding: 0 calc(var(--cw) / 2);
+  height: var(--ch);
+  line-height: var(--ch);
+  align-self: center;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  background: var(--tt-white);
+  color: var(--tt-black);
+}
+
+#v-teletext .inm {
+  grid-area: name;
+  height: var(--ch);
+  line-height: var(--ch);
+  padding: 0 calc(var(--cw) / 2);
+  justify-self: start;
+  font-size: 22px;
+  text-transform: uppercase;
+  background: var(--cat);
+  color: var(--tt-black);
+}
+
+/* Magenta is the weakest text colour in the palette at 6.7:1 on black — still
+ * past AA, but it is the arcade category's accent and it lands here as running
+ * text, so this line runs a size larger than the other small caps. */
+#v-teletext .imeta {
+  grid-area: meta;
+  margin-top: calc(var(--ch) / 2);
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  color: var(--cat);
+}
+
+/* Full white on black, 21:1. There is no dim tier in this palette to fall
+ * into — every colour is at full brightness, which is the one unambiguous
+ * mercy of the 1974 spec. */
+#v-teletext .idesc {
+  grid-area: desc;
+  font-size: 18px;
+  color: var(--tt-white);
+}
+
+#v-teletext .icta {
+  grid-area: cta;
+  justify-self: start;
+  margin-top: calc(var(--ch) / 2);
+  padding: 0 var(--cw);
+  height: var(--ch);
+  line-height: var(--ch);
+  font-size: 18px;
+  letter-spacing: 0.1em;
+  background: var(--tt-green);
+  color: var(--tt-black);
+  animation: teletext-flash 1s steps(1) infinite;
+}
+
+/* The flash attribute was a real control code and one flashing cell per page
+ * was normal. Two would be a migraine, so this is the only one. */
+@keyframes teletext-flash {
+  0%, 74% { background: var(--tt-green); color: var(--tt-black); }
+  75%, 100% { background: var(--tt-black); color: var(--tt-green); }
+}
+
+#v-teletext .info.is-launching .icta { animation: teletext-launch 0.1s steps(1) 7; }
+@keyframes teletext-launch {
+  0%, 49% { background: var(--tt-white); color: var(--tt-black); }
+  50%, 100% { background: var(--tt-green); color: var(--tt-black); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #v-teletext .icta { animation: none; background: var(--tt-green); color: var(--tt-black); }
+  #v-teletext .info.is-launching .icta { animation: none; background: var(--tt-white); }
+}
+
+/* ---------------------------------------------------------- game samples */
+
+#v-teletext .sample { margin-top: calc(var(--ch) * 1.5); }
+
+#v-teletext .sample-h {
+  display: inline-block;
+  margin: 0 0 var(--ch);
+  padding: 0 var(--cw);
+  height: var(--ch);
+  line-height: var(--ch);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--tt-magenta);
+  color: var(--tt-black);
+}
+
+/* 32px board cells and a 1.5-cell gutter are what make all three fragments fit
+ * across 792px on one row: 112 + 364 + 252 + 2×27 = 782. At the 36px cells of
+ * the first pass the Pong box wrapped and left half a screen of black. */
+#v-teletext .sample-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: calc(var(--cw) * 1.5);
+}
+
+#v-teletext .sbox { flex: 0 0 auto; }
+
+#v-teletext .sbox-h {
+  display: block;
+  margin-bottom: calc(var(--ch) / 2);
+  padding: 0 calc(var(--cw) / 2);
+  height: var(--ch);
+  line-height: var(--ch);
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--tt-white);
+  color: var(--tt-black);
+}
+
+/* Board rules are blue blocks, not hairlines. 4px is a compromise — a real
+ * mosaic separator would be a whole 9px sub-block, which swamps a 3×3
+ * fragment. Blue is the only colour that can draw structure here without
+ * competing with the digits sitting inside it. */
+#v-teletext .sgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 32px);
+  gap: 4px;
+  padding: 4px;
+  background: var(--tt-blue);
+}
+
+#v-teletext .scell {
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: var(--tt-black);
+  font-size: 22px;
+}
+
+#v-teletext .scell.given   { color: var(--tt-white); }   /* the fixed clues */
+#v-teletext .scell.entered { color: var(--tt-cyan); }    /* what you typed */
+#v-teletext .scell.sel     { background: var(--tt-yellow); color: var(--tt-black); }
+
+#v-teletext .mgrid {
+  display: grid;
+  grid-template-columns: repeat(10, 32px);
+  gap: 4px;
+  padding: 4px;
+  background: var(--tt-blue);
+}
+
+#v-teletext .mcell {
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: var(--tt-black);
+  font-size: 22px;
+}
+
+/* Eight numbers out of seven colours, one of which is unusable as text.
+ *
+ * A brightness ramp is not available at all here — every colour is at full
+ * saturation and there is nothing between them, so six colours is genuinely
+ * all there is. The way out is the medium's own: 1–5 are coloured glyphs on
+ * black, 6–8 are INVERTED — black glyphs on a solid colour block. That makes
+ * the set separable on two axes at once, so 1 (cyan text) and 6 (cyan block)
+ * are never confusable even though they share a hue, and it happens to be
+ * semantically right: in Minesweeper the high numbers are the dangerous ones
+ * and here they are the ones that shout.
+ *
+ * Red is deliberately absent from the numbers. #ff0000 on black is 5.25:1 —
+ * fine as a big block, thin and muddy as 22px glyph strokes — so it is spent
+ * on the flag, where it means one thing and is drawn as a filled cell. */
+#v-teletext .n1 { color: var(--tt-cyan); }
+#v-teletext .n2 { color: var(--tt-green); }
+#v-teletext .n3 { color: var(--tt-yellow); }
+#v-teletext .n4 { color: var(--tt-white); }
+#v-teletext .n5 { color: var(--tt-magenta); }
+#v-teletext .n6 { background: var(--tt-cyan);    color: var(--tt-black); }
+#v-teletext .n7 { background: var(--tt-green);   color: var(--tt-black); }
+#v-teletext .n8 { background: var(--tt-yellow);  color: var(--tt-black); }
+
+#v-teletext .mcell.flag { background: var(--tt-red); color: var(--tt-black); }
+
+/* An unrevealed cell is blue, because blue's uselessness as text is exactly
+ * what makes it right here: it reads as "nothing yet" and cannot be mistaken
+ * for a number. Solid blue disappeared into the blue gutters, so it is filled
+ * with a black mosaic checker instead — which is also how a teletext page
+ * would have drawn a covered square in the first place. */
+#v-teletext .mcell.hidden-cell {
+  background-color: var(--tt-blue);
+  background-image: repeating-conic-gradient(var(--tt-black) 0 25%, transparent 0 50%);
+  background-size: var(--cw) calc(var(--sub-h) * 2);
+}
+
+#v-teletext .pbar {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--cw) / 2);
+  font-size: 20px;
+}
+
+#v-teletext .pscore {
+  padding: 0 calc(var(--cw) / 2);
+  height: var(--ch);
+  line-height: var(--ch);
+  background: var(--tt-white);
+  color: var(--tt-black);
+}
+
+/* YOU and CPU take the same colours as their paddles, so the scorebar and the
+ * court say the same thing without a legend. */
+#v-teletext .pbar > :nth-child(2) { color: var(--tt-cyan); }
+#v-teletext .pbar > :nth-child(4) { color: var(--tt-magenta); }
+#v-teletext .plabel { font-size: 16px; letter-spacing: 0.1em; }
+
+#v-teletext .pdiv {
+  flex: 0 0 var(--cw);
+  height: var(--ch);
+  background-color: var(--tt-blue);
+  background-image: repeating-conic-gradient(var(--tt-black) 0 25%, transparent 0 50%);
+  background-size: var(--cw) calc(var(--sub-h) * 2);
+}
+
+#v-teletext .pcourt {
+  position: relative;
+  width: calc(var(--cw) * 14);
+  height: calc(var(--ch) * 4);
+  margin-top: calc(var(--ch) / 2);
+  background: var(--tt-black);
+  border: 4px solid var(--tt-blue);
+}
+
+/* The centre line as a column of mosaic blocks, which is how teletext drew
+ * any vertical line at all. */
+#v-teletext .pcourt::before {
+  content: "";
+  position: absolute;
+  left: calc(50% - var(--sub-w) / 2);
+  top: 0;
+  bottom: 0;
+  width: var(--sub-w);
+  background: repeating-linear-gradient(to bottom,
+    var(--tt-blue) 0 var(--sub-h), var(--tt-black) var(--sub-h) calc(var(--sub-h) * 2));
+}
+
+#v-teletext .ppad { position: absolute; width: var(--sub-w); height: calc(var(--ch) * 1.5); }
+#v-teletext .ppad.l { left: var(--sub-w); top: calc(var(--ch) * 0.5); background: var(--tt-cyan); }
+#v-teletext .ppad.r { right: var(--sub-w); top: calc(var(--ch) * 2); background: var(--tt-magenta); }
+#v-teletext .pball {
+  position: absolute;
+  left: 62%;
+  top: calc(var(--ch) * 1.5);
+  width: var(--sub-w);
+  height: var(--sub-h);
+  background: var(--tt-white);
+}
+
+/* A mosaic separator instead of a rule, before the fastext bar. */
+#v-teletext .sample::after {
+  content: "";
+  display: block;
+  height: calc(var(--sub-h) * 2);
+  margin-top: var(--ch);
+  background-image: repeating-conic-gradient(var(--tt-cyan) 0 25%, var(--tt-black) 0 50%);
+  background-size: var(--cw) calc(var(--sub-h) * 2);
+}
+
+/* ------------------------------------------------------------- fastext bar
+ * The four coloured keys along the bottom of every teletext page, matching
+ * the four coloured buttons on the remote. The background is a linear-
+ * gradient only in syntax: every stop is doubled, so nothing interpolates and
+ * what renders is four solid stripes. Black on all four is legible — red is
+ * the weakest at 5.25:1 and is carrying two short words at 16px, which is
+ * what a big colour block can do that thin red strokes cannot. */
+#v-teletext .foot {
+  margin-top: var(--ch);
+  padding: calc(var(--ch) / 4) var(--cw);
+  min-height: calc(var(--ch) * 1.5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cw);
+  flex-wrap: wrap;
+  text-align: center;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  color: var(--tt-black);
+  background:
+    linear-gradient(to right,
+      var(--tt-red)    0 25%,
+      var(--tt-green)  25% 50%,
+      var(--tt-yellow) 50% 75%,
+      var(--tt-cyan)   75% 100%);
+}
+
+/* Three flex items — a page-back key, the copy, a page-forward key — spread by
+ * space-between so all four coloured quarters carry something. Without these
+ * the single text node bunched over green and yellow and left the red and cyan
+ * keys blank, which read as a printing error rather than a navigation bar.
+ * These two are page references, not prose: teletext chrome, the same class of
+ * thing as the P100 in the header. */
+#v-teletext .foot::before { content: "\25C0 P099"; }
+#v-teletext .foot::after  { content: "P101 \25B6"; }
+
+/* ------------------------------------------------------------- responsive */
+
+@media (max-width: 900px) {
+  #v-teletext .grid { grid-template-columns: repeat(2, 1fr); }
+  #v-teletext .mgrid { grid-template-columns: repeat(5, 32px); }
+}
+
+@media (max-width: 700px) {
+  #v-teletext { --fs: 20px; --cw: 15px; --ch: 22px; }
+  #v-teletext .deco { background-image: none; }
+  #v-teletext .strap::after { display: none; }
+  /* The wide layout pins all four header items to explicit columns, so the
+   * narrow one has to repin them or the wordmark lands on top of the nav —
+   * which it did. Both mosaic bands go: at this width they would eat the row. */
+  #v-teletext .top { grid-template-columns: 1fr auto; row-gap: 0; }
+  #v-teletext .top::before,
+  #v-teletext .top::after { display: none; }
+  #v-teletext .brand { grid-column: 1; grid-row: 1; font-size: calc(var(--fs) * 1.5); }
+  #v-teletext .nav { grid-column: 2; grid-row: 1; justify-self: end; }
+}
+
+@media (max-width: 520px) {
+  #v-teletext .grid { grid-template-columns: 1fr; }
+}
