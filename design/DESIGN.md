@@ -128,6 +128,46 @@ visible. That is what the preview gallery implements, at four strengths, so the
 question of how far the texture reaches can be answered by looking rather than
 by arguing.
 
+## What the preview phase measured
+
+Eleven directions were built as complete hub compositions, each carrying a
+sample of a Sudoku fragment, Minesweeper's eight numbers and a Pong scorebar,
+because the hub flatters any palette and a board you have to read does not.
+These are the findings that outlive whichever direction is chosen.
+
+**VT323 carries less colour than the contrast maths says.** Its strokes are one
+pixel at normal reading sizes, so a colour that clears 4.5:1 as a solid glyph
+can still vanish into the ground when set in this face. The usable bottom of any
+ramp is about two steps higher than the numbers suggest. Check a colour by
+looking at it *set in VT323 at its real size*, not by computing it.
+
+**Heavy CRT texture is not viable behind a dense board.** At the heavy setting
+the texture's dark line every 3.5px cuts two bands through every Minesweeper
+glyph, and saturated mid-tones break into fragments. The only fix found was
+cells about 35% larger with a double glow, so the bloom refills the gap the way
+a real phosphor does. That works on a ten-cell sample and cannot work on a
+16×30 board. **At "as mocked" and below the same digits are fine.** So the
+texture is a question of degree rather than of yes or no, and the ceiling is set
+by Minesweeper rather than by taste.
+
+**Eight distinguishable numbers do not exist inside one hue.** Five independent
+attempts converged on the same answer from different directions: a single-hue
+palette gets five or six steps, and the remaining two or three need a *second
+device* rather than another colour. The devices that worked were an underline
+under the glyph, an inverted cell, a dithered field, a border, and a weight
+change. Two of them also observed that splitting the eight into two visibly
+different halves — dark-on-light against light-on-dark — is worth more when
+actually reading a board than any single pair being maximally separated.
+
+That is a rule for `redesign-minesweeper` whichever palette wins: **do not spend
+the whole problem on hue.** A monochrome direction should plan on roughly six
+colours and two marks.
+
+**Chrome and other transparent-fill text takes `filter: drop-shadow`, never
+`text-shadow`.** With `-webkit-text-fill-color: transparent` a text shadow is
+drawn *through* the glyph rather than behind it, and a gradient fill turns to
+mud.
+
 ## Still open
 
 In `design/TODO.md`, with the phase that closes each: which palette the site
