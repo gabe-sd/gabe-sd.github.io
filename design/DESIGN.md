@@ -192,36 +192,22 @@ the one exception, and the site itself still self-hosts.
 Gabriel's eye is the oracle. This is the mechanical part underneath it.
 
 **An agent working on this repo can see the pages it builds.** A headless
-Chromium launched through the repo's own `playwright-core` rasterises the page
-and writes a PNG, which can then be read back and looked at:
+screenshot works here and is a different thing from the X11-root capture that
+does not — `CLAUDE.md`'s machine-specific section says why, and `tests/README.md`
+has the working invocation and the two ways it misleads you. Not repeated here:
+one copy of a fact is worth more than two that can disagree.
 
-```js
-const { chromium } = require('<repo>/node_modules/playwright-core');
-const b = await chromium.launch({ executablePath: '/snap/bin/chromium',
-                                  args: ['--no-sandbox'] });
-const p = await b.newPage({ viewport: { width: 1240, height: 900 },
-                            deviceScaleFactor: 2 });
-await p.goto(url, { waitUntil: 'networkidle' });
-await p.evaluate(() => document.fonts && document.fonts.ready);
-await p.screenshot({ path: out, fullPage: true });
-```
+What belongs in this file is what it means for design work. **Use it, and use it
+in a loop.** Every one of the eleven directions needed four or five
+write-look-fix rounds before it was any good, and the defects it caught were not
+subtle once seen: an icon that read as a fish rather than a bird, a mine that
+read as a sun, a 470px hole between a description and the button that acts on
+it, an eight-colour ramp with three colours that looked alike. Every one of them
+is invisible in a diff and obvious in one glance.
 
-This does **not** contradict `CLAUDE.md`'s "screen capture of the X11 root is
-black". That is about capturing the real Wayland-composited desktop and is still
-true. A headless browser never touches the display, so it is a different path
-with a different answer.
-
-Two constraints, both found the hard way. Snap Chromium is confined and cannot
-read files under `/home/g/.claude/`, so a page to be shot has to sit inside the
-project directory. And a screenshot only proves what it shows: an effect that
-depends on hover, on a `data-` attribute, or on motion has to have that state
-forced before the shot, or it is a picture of the resting page.
-
-Why this is in the design doc rather than only in the test docs: the alternative
-is reasoning about CSS you cannot see, and every one of the eleven directions
-needed four or five write-look-fix rounds. A wrong icon, a 470px hole in a
-column, an eight-colour ramp where three of the colours look alike — all obvious
-in one glance and nearly invisible in a diff.
+The corollary matters as much. A screenshot is not Gabriel looking at a served
+page, and it does not shorten that step — it only means he is not the first
+person to see an obvious mistake.
 
 ## Still open
 
