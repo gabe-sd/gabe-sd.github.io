@@ -168,6 +168,61 @@ colours and two marks.
 drawn *through* the glyph rather than behind it, and a gradient fill turns to
 mud.
 
+## Where the exploration is kept
+
+`design/archive/2026-09-04-retro-interface-directions.html` is the eleven
+directions built for the first phase, as **one self-contained file**: every
+stylesheet and the gallery inlined, so it opens in a browser from anywhere with
+no server and no repo around it. It starts on a reference sheet giving each
+direction's palette as hexes with the role of every value, its typefaces and
+scale, and its eight-number solution; the built compositions are a click away.
+
+`design/archive/` is deliberately separate from `design/previews/`. The previews
+are the working source and are throwaway — they get deleted once a direction is
+built. The archive does not, because a palette is reusable long after the project
+that produced it, and Gabriel asked for these kept for other work.
+
+That copy pulls its fonts from the font CDN, which is the price of being portable
+— a single file lifted out of the repo cannot resolve a relative font path. It is
+the one exception, and the site itself still self-hosts.
+
+## How the look gets checked
+
+`ART-DIRECTOR.md` has the rule that matters: the suite is a regression net and
+Gabriel's eye is the oracle. This is the mechanical part underneath it.
+
+**An agent working on this repo can see the pages it builds.** A headless
+Chromium launched through the repo's own `playwright-core` rasterises the page
+and writes a PNG, which can then be read back and looked at:
+
+```js
+const { chromium } = require('<repo>/node_modules/playwright-core');
+const b = await chromium.launch({ executablePath: '/snap/bin/chromium',
+                                  args: ['--no-sandbox'] });
+const p = await b.newPage({ viewport: { width: 1240, height: 900 },
+                            deviceScaleFactor: 2 });
+await p.goto(url, { waitUntil: 'networkidle' });
+await p.evaluate(() => document.fonts && document.fonts.ready);
+await p.screenshot({ path: out, fullPage: true });
+```
+
+This does **not** contradict `CLAUDE.md`'s "screen capture of the X11 root is
+black". That is about capturing the real Wayland-composited desktop and is still
+true. A headless browser never touches the display, so it is a different path
+with a different answer.
+
+Two constraints, both found the hard way. Snap Chromium is confined and cannot
+read files under `/home/g/.claude/`, so a page to be shot has to sit inside the
+project directory. And a screenshot only proves what it shows: an effect that
+depends on hover, on a `data-` attribute, or on motion has to have that state
+forced before the shot, or it is a picture of the resting page.
+
+Why this is in the design doc rather than only in the test docs: the alternative
+is reasoning about CSS you cannot see, and every one of the eleven directions
+needed four or five write-look-fix rounds. A wrong icon, a 470px hole in a
+column, an eight-colour ramp where three of the colours look alike — all obvious
+in one glance and nearly invisible in a diff.
+
 ## Still open
 
 In `design/TODO.md`, with the phase that closes each: which palette the site
