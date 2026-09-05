@@ -137,6 +137,12 @@ Constraints beyond the settled list:
   one he reached for.
 - **The dim accent variants are borderline for text.** Check contrast before using
   one for anything a reader has to read; borders are a different matter.
+- **The eleven directions built for this phase are in `design/previews/`**, with a
+  start page saying what has to be decided. They are throwaway and are not to be
+  ported — the chosen one gets rebuilt properly into `shared.css`, `hub.css` and
+  the hub's markup. What they measured is recorded in `design/DESIGN.md`; delete
+  the folder once a direction is chosen and built.
+
 - **How far the CRT texture reaches is open.** `pong-lightning-magenta.html`
   carries a scanline overlay — 1px of white at 3.5% every 3px, blended `overlay` —
   and a glow on nearly every element. Whether that belongs in `shared.css` for the
