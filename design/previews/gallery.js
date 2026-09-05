@@ -223,7 +223,10 @@ const VARIANTS = [
     id: 'blueprint', group: 'B', name: 'Schematic', icons: 'line', crt: 'off',
     brand: 'GAME ARCADE', nav: ['GAMES', 'ABOUT'],
     strap: 'SHEET 1 OF 1 — CABINET INDEX — SCALE 1:1',
-    foot: 'DRAWN BY HAND · REV. 2026.09 · NO ACCOUNTS · NO NETWORK',
+    /* The title block this variant draws already carries "drawn by", the scale,
+     * the sheet and the revision, so the footer must not say them a second
+     * time - on a real drawing sheet nothing is lettered twice. */
+    foot: 'NO ACCOUNTS · NO NETWORK · SCORES STAY ON THIS MACHINE',
     pitch: 'Drafting paper. Cyan on navy, a hairline grid under everything, dimension lines, and each game annotated like a part.',
     cost: 'The annotations are decoration pretending to be information. Charming once; possibly irritating on the fiftieth visit.',
   },
