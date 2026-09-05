@@ -111,7 +111,13 @@ A worker is told its area. Yours never changes, so you can start yourself:
 1. Read this file, then `design/DESIGN.md`, then `design/TODO.md`.
 2. Take the top entry of `design/TODO.md`, and note the branch it says to cut
    from.
-3. Take a worktree, naming that base branch explicitly:
+3. Check whether `main` has moved ahead of that base, and say so if it has:
+
+```bash
+git log --oneline <base>..main     # empty means the base has everything on main
+```
+
+4. Take a worktree, naming that base branch explicitly:
 
 ```bash
 git worktree add .claude/worktrees/<slug> -b <slug> <base>
@@ -121,6 +127,29 @@ The base is spelled out because `git worktree add` takes `HEAD` when you leave i
 off, and `HEAD` is whatever the shared checkout happened to have out at that
 moment. The entry says what to branch from; do not guess, and do not assume it is
 `main` — visual work often runs on an integration branch (see `INTEGRATOR.md`).
+
+That is also why `main` is worth checking. Your branch is cut from the project's
+integration branch rather than from `main`, so anything that lands on `main` is
+invisible in your worktree until the integrator absorbs it. That includes **this
+file**: a rule added to `ART-DIRECTOR.md` on `main` is not in the copy you read at
+step 1, and nothing about that copy looks old. It is the seat file most likely to
+be stale and the one you are least likely to think to re-check.
+
+If that command prints anything, ask the integrator to absorb `main` into the
+integration branch, and **then start again from step 1** — the point of waiting is
+to read the three files as they now are, not to carry on from what you read before
+the absorb. Do not merge `main` into your own branch to fix it yourself: that
+routes `main` into the project through a phase branch, and the integration branch
+is where that merge belongs — `INTEGRATOR.md`, "A project on an integration
+branch".
+
+Waiting costs one message and one re-read. The alternative costs a phase built
+against a rule you never saw, and the window is real rather than hypothetical: on
+2026-09-04 the "Ask, at the start of a task" rule under "Verification" landed on
+`main` and was not in `redesign` until the integrator absorbed it. No phase branch
+existed in that window. One cut inside it would have carried a copy of this file
+missing a rule about how to start a phase. If a project ever runs its whole length
+without `main` moving, this step is ceremony and should be deleted.
 
 **If `design/TODO.md` says nothing is open, you are the first session of a
 project and there is nothing to pick up.** That file on `main` deliberately holds
