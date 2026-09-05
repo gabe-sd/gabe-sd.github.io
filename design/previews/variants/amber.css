@@ -1,1 +1,641 @@
-/* amber — not yet written */
+/* 02 — Amber Monitor
+ *
+ * The same CRT idea as Cold Terminal on a P3 amber tube instead of P1 green,
+ * and deliberately the calm one. Three moves separate it from the reference:
+ * the ground is brown-black rather than blue-black, so the warmth is in the
+ * glass and not only in the text; the CRT quality comes from bloom — wide,
+ * low-opacity phosphor bleed — rather than from scanlines; and the grid is
+ * three by two with the description in the tile, so the page breathes.
+ *
+ * Everything is VT323. Copy is sentence case rather than the reference's
+ * relentless upper case; the wordmark is the one exception, because a
+ * wordmark is a mark, not a sentence.
+ */
+
+#v-amber {
+  /* The ground. Brown-black: red channel highest, blue channel almost gone.
+   * #0a0704 next to cold.css's #040604 is the whole point — an amber tube's
+   * dark is warm, and recolouring green text over a blue-black ground looks
+   * like a filter rather than a different monitor. */
+  --bg: #0a0704;
+  --panel: #150f07;
+  --panel-lit: #221709;   /* a tile under the cursor */
+
+  /* The phosphor ramp, brightest first. Six steps, one hue. */
+  --hot: #fff2da;         /* white-hot — the beam driven past amber */
+  --pale: #ffd694;
+  --amber: #ffb000;       /* the primary */
+  --soft: #f2bc62;        /* secondary text. Lifted from #e8ae4e after looking:
+                           * amber body copy an octave down from the primary
+                           * reads as brown, not as a dimmer amber */
+  --dim: #b8790a;         /* tertiary text and strong rules — the floor for words */
+  --deep: #7a5008;        /* rules on a panel. Never a word: ~2.9:1 */
+  --line: #3d2807;        /* hairlines. Never a word */
+
+  /* Bloom. Stacked shadows, each wider and fainter than the last, none of them
+   * tight: a 1–2px shadow reads as a drop shadow and kills the illusion. The
+   * outermost is 96px at 0.10 — barely visible alone, and the reason the text
+   * looks like it is emitting rather than painted. Bloom is reserved for hot
+   * text; on 22px body copy it turns to mud. */
+  --bloom: 0 0 8px rgba(255, 176, 0, 0.30), 0 0 26px rgba(255, 176, 0, 0.16);
+  --bloom-lg:
+    0 0 6px rgba(255, 176, 0, 0.42),
+    0 0 22px rgba(255, 176, 0, 0.34),
+    0 0 46px rgba(255, 176, 0, 0.20),
+    0 0 96px rgba(255, 176, 0, 0.10);
+
+  /* The mine icon punches its highlight with this; the ground is dark, so the
+   * default near-black is nearly right, but warm it to match. */
+  --icon-hole: #0a0704;
+
+  background: var(--bg);
+  color: var(--soft);
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 22px;        /* three steps up from the reference's 19px */
+  line-height: 1.35;
+}
+
+/* True sentence case out of upper-case DOM strings. `capitalize` cannot do
+ * this — it only touches first letters and leaves the rest shouting. */
+#v-amber .ilabel,
+#v-amber .imeta,
+#v-amber .icta,
+#v-amber .nav a,
+#v-amber .sample-h,
+#v-amber .sbox-h { text-transform: lowercase; }
+
+#v-amber .ilabel::first-letter,
+#v-amber .imeta::first-letter,
+#v-amber .icta::first-letter,
+#v-amber .nav a::first-letter,
+#v-amber .sample-h::first-letter,
+#v-amber .sbox-h::first-letter { text-transform: uppercase; }
+
+/* ------------------------------------------------------------------ deco */
+
+/* A warm wash where the beam is strongest, and a vignette for the curve of
+ * the glass. The wash is amber at 0.075 — any stronger and the ground stops
+ * being black and starts being brown. */
+#v-amber .deco {
+  background:
+    radial-gradient(78% 58% at 50% 2%, rgba(255, 176, 0, 0.075), transparent 72%),
+    radial-gradient(60% 45% at 50% 100%, rgba(255, 140, 0, 0.035), transparent 70%),
+    radial-gradient(125% 105% at 50% 45%, transparent 52%, rgba(0, 0, 0, 0.72));
+}
+
+#v-amber .screen {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2.6rem 1.8rem 3.6rem;
+}
+
+/* ------------------------------------------------------------------- top */
+
+#v-amber .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+
+/* The one thing left in caps. Amber at 3rem with the full bloom is where this
+ * palette is worth having, so the wordmark gets the largest type on the page
+ * and the widest glow. */
+#v-amber .brand {
+  font-size: 3.1rem;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  color: var(--hot);
+  text-shadow: var(--bloom-lg);
+}
+
+#v-amber .nav { display: flex; gap: 1.6rem; }
+
+#v-amber .nav a {
+  display: inline-block;       /* so ::first-letter applies */
+  color: var(--dim);
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid transparent;
+  transition: color 0.16s ease, border-color 0.16s ease;
+}
+
+#v-amber .nav a:hover,
+#v-amber .nav a:focus-visible { color: var(--pale); outline: none; }
+
+/* Active is marked by a rule as well as by colour — the selected and hover
+ * states on this page never lean on hue alone, and there is no second hue to
+ * lean on anyway. */
+#v-amber .nav a.active {
+  color: var(--amber);
+  border-bottom-color: var(--amber);
+  text-shadow: var(--bloom);
+}
+
+#v-amber .strap {
+  margin: 1.1rem 0 2rem;
+  font-size: 1.45rem;
+  letter-spacing: 0.02em;
+  color: var(--pale);     /* the greeting, so it is the second-brightest line */
+}
+
+/* A slow, wide cursor. The reference blinks at ~1s in hard steps; this one
+ * fades, because the whole variant is the calm reading of the same idea. */
+#v-amber .strap::after {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 0.95em;
+  margin-left: 0.45em;
+  background: var(--amber);
+  box-shadow: 0 0 12px rgba(255, 176, 0, 0.55);
+  vertical-align: -0.1em;
+  animation: amber-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes amber-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.12; } }
+
+@media (prefers-reduced-motion: reduce) {
+  #v-amber .strap::after { animation: none; opacity: 0.75; }
+}
+
+/* ------------------------------------------------------------------ grid */
+
+/* Three by two, not six across. The reference's density is its argument;
+ * roominess is this one's, and at 1080px three columns of ~330px leave enough
+ * width to carry the description in the tile. auto-fit rather than a fixed
+ * `repeat(3, …)` so it falls to two columns and then one on the way down to a
+ * phone without a breakpoint per step. */
+#v-amber .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(285px, 1fr));
+  gap: 1.1rem;
+}
+
+/* The description lives in the tile here, where the reference hides it in the
+ * info panel. Two reasons: with six tiles at this size there is room, and it
+ * stops the info panel being the only place the page explains itself — which
+ * matters on a touch screen, where nothing hovers and the panel only fills in
+ * after a tap. The cost is that the panel now largely repeats the tile. */
+#v-amber .tile {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "ico name"
+    "ico desc"
+    "ico cat";
+  /* The third row takes the slack, so the category tag sits on the floor of
+   * the tile. Grid rows are equal height across a row, and a one-line
+   * description next to a two-line one otherwise leaves the tag floating at a
+   * different height in every tile. */
+  grid-template-rows: auto auto 1fr;
+  column-gap: 1.05rem;
+  padding: 1.4rem 1.3rem 1.25rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--soft);
+  text-decoration: none;
+  transition: background 0.16s ease, border-color 0.16s ease,
+              box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+/* The selection bar: a solid amber edge that grows from nothing. A shape
+ * change, so hover and selection survive being read in greyscale. */
+#v-amber .tile::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: -1px;
+  bottom: -1px;
+  width: 4px;
+  background: var(--amber);
+  box-shadow: 0 0 14px rgba(255, 176, 0, 0.6);
+  transform: scaleY(0);
+  transform-origin: 50% 50%;
+  transition: transform 0.18s ease;
+}
+
+#v-amber .tico {
+  grid-area: ico;
+  align-self: start;
+  color: var(--dim);
+  transition: color 0.16s ease, filter 0.16s ease;
+}
+
+#v-amber .ico { width: 46px; height: 46px; }
+
+#v-amber .tname {
+  grid-area: name;
+  font-size: 1.75rem;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  color: var(--pale);
+  transition: color 0.16s ease, text-shadow 0.16s ease;
+}
+
+#v-amber .tdesc {
+  grid-area: desc;
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1.08rem;
+  line-height: 1.28;
+  color: #d8a45a;         /* one step under --soft. An opacity here instead
+                           * greys the amber toward the brown ground */
+}
+
+/* Lower case, not sentence case: this is a tag, not a phrase. */
+#v-amber .tcat {
+  grid-area: cat;
+  align-self: end;
+  margin-top: 0.7rem;
+  font-size: 0.92rem;
+  letter-spacing: 0.22em;
+  text-transform: lowercase;
+  color: var(--dim);
+}
+
+#v-amber .tnum {
+  display: block;
+  position: absolute;
+  top: 0.7rem;
+  right: 0.9rem;
+  font-size: 1.15rem;
+  letter-spacing: 0.05em;
+  color: var(--dim);      /* the floor for anything that is a word or a number */
+}
+
+#v-amber .tile:hover,
+#v-amber .tile:focus-visible,
+#v-amber .tile.is-selected {
+  background: var(--panel-lit);
+  border-color: var(--dim);
+  outline: none;
+  box-shadow: 0 0 34px rgba(255, 176, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+#v-amber .tile:hover::before,
+#v-amber .tile:focus-visible::before,
+#v-amber .tile.is-selected::before { transform: scaleY(1); }
+
+#v-amber .tile:hover .tname,
+#v-amber .tile:focus-visible .tname,
+#v-amber .tile.is-selected .tname {
+  color: var(--hot);
+  text-shadow: var(--bloom);
+}
+
+#v-amber .tile:hover .tico,
+#v-amber .tile:focus-visible .tico,
+#v-amber .tile.is-selected .tico {
+  color: var(--amber);
+  filter: drop-shadow(0 0 10px rgba(255, 176, 0, 0.5));
+}
+
+#v-amber .tile:hover .tnum,
+#v-amber .tile:focus-visible .tnum,
+#v-amber .tile.is-selected .tnum { color: var(--amber); }
+
+@media (prefers-reduced-motion: reduce) {
+  #v-amber .tile,
+  #v-amber .tile::before { transition: none; }
+  #v-amber .tile:hover,
+  #v-amber .tile:focus-visible,
+  #v-amber .tile.is-selected { transform: none; }
+}
+
+/* ------------------------------------------------------------ info panel */
+
+/* Three columns rather than the reference's two, with the key pushed to the
+ * far right. At 1080px a two-column info panel leaves half the width empty
+ * and the block reads as an accident; sending the call to action to the
+ * opposite edge makes the whitespace deliberate and gives the eye somewhere
+ * to land after the name. */
+#v-amber .info {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "label name cta"
+    "label meta cta"
+    "label desc cta";
+  column-gap: 1.6rem;
+  align-items: start;
+  margin-top: 2.2rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--line);
+}
+
+#v-amber .ilabel {
+  grid-area: label;
+  align-self: start;
+  padding-top: 0.7rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.2em;
+  color: var(--dim);
+}
+
+#v-amber .inm {
+  grid-area: name;
+  font-size: 2.6rem;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  color: var(--hot);
+  text-shadow: var(--bloom-lg);
+}
+
+#v-amber .imeta {
+  grid-area: meta;
+  margin-top: 0.15rem;
+  font-size: 1.05rem;
+  letter-spacing: 0.14em;
+  color: var(--dim);
+}
+
+#v-amber .idesc {
+  grid-area: desc;
+  margin-top: 0.35rem;
+  font-size: 1.25rem;
+  color: var(--soft);
+}
+
+/* An outlined key rather than a filled block. The reference fills its CTA
+ * solid green and inverts the text; solid amber at this size is a lamp, and
+ * this variant is the quiet one. */
+#v-amber .icta {
+  grid-area: cta;
+  justify-self: end;
+  align-self: center;
+  padding: 0.4rem 1.4rem 0.34rem;
+  font-size: 1.25rem;
+  letter-spacing: 0.12em;
+  color: var(--amber);
+  border: 1px solid var(--amber);
+  box-shadow: 0 0 20px rgba(255, 176, 0, 0.18), inset 0 0 18px rgba(255, 176, 0, 0.08);
+  text-shadow: var(--bloom);
+}
+
+/* The launch flash: the key fills, the way a monitor overdrives when the beam
+ * is held on one spot. Slow enough to read as a glow, not a strobe. */
+#v-amber .info.is-launching .icta { animation: amber-launch 0.35s ease-out 2; }
+
+@keyframes amber-launch {
+  0%, 100% { background: transparent; color: var(--amber); }
+  40% { background: var(--amber); color: var(--bg); text-shadow: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #v-amber .info.is-launching .icta { animation: none; background: rgba(255, 176, 0, 0.2); }
+}
+
+/* ---------------------------------------------------------- game samples */
+
+/* The same hairline as the header and the info panel. Without it the air
+ * between the call to action and the boards reads as a hole in the page
+ * rather than as a section break — the one place where "give it room" and
+ * "look deliberate" pull against each other. */
+#v-amber .sample {
+  margin-top: 2.6rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--line);
+}
+
+#v-amber .sample-h {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  color: var(--dim);
+}
+
+/* flex-start, not the default stretch: the Minesweeper box is twice the width
+ * of the other two and was being stretched to their height, leaving a hand's
+ * width of empty panel under the digits. */
+#v-amber .sample-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1.4rem; }
+
+#v-amber .sbox {
+  flex: 0 0 auto;
+  padding: 1rem 1.1rem 1.15rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+#v-amber .sbox-h {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.16em;
+  color: var(--dim);
+}
+
+/* --- Sudoku.
+ * One hue means given and entered cannot be told apart by colour, so they are
+ * told apart by *state of the phosphor*: a given is warm and settled, an
+ * entered digit is white-hot and blooming, the way freshly written text on a
+ * long-persistence tube is brighter than what has been sitting there. That is
+ * a real property of the display being imitated rather than a workaround. */
+#v-amber .sgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 40px);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--deep);
+}
+
+#v-amber .scell {
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: #100b06;
+  font-size: 1.5rem;
+  color: var(--dim);
+}
+
+#v-amber .scell.given { color: var(--soft); }
+
+#v-amber .scell.entered {
+  color: var(--hot);
+  text-shadow: var(--bloom);
+}
+
+#v-amber .scell.sel {
+  background: #2a1c09;
+  box-shadow: inset 0 0 0 2px var(--amber);
+}
+
+/* --- Minesweeper 1–8. The hard case, and the honest one.
+ *
+ * There is no second hue to spend, so the eight are separated on three axes
+ * that a single-phosphor monitor actually has:
+ *
+ *   luminance   white-hot → pale → amber → dim → deep ochre
+ *   saturation  saturated amber vs. desaturated tan at the same luminance
+ *   bloom       lit (glowing) vs. flat
+ *
+ * That yields six steps I am willing to defend at 40px. Seven and eight get
+ * the two brightest colours *again*, plus an underline. This is deliberate:
+ * 7 and 8 are vanishingly rare in real play, so they are the two that can
+ * afford to cost the player half a second of decoding, and 1–3 — the numbers
+ * you actually read at speed — keep the three cleanest, brightest steps.
+ *
+ * Rejected: drifting the hue toward orange (#ff8a3a) for n4. It works, and it
+ * is cheating — it answers a different question than the one this variant is
+ * here to answer. */
+#v-amber .mgrid {
+  display: flex;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--deep);
+}
+
+#v-amber .mcell {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: #16100a;
+  font-size: 1.5rem;
+}
+
+/* Read as a 3x2 table: three luminance bands, each in a saturated amber and a
+ * near-neutral bone. The neutral column is what makes this work — next to a
+ * saturated amber, a warm grey at the same brightness reads as a different
+ * *colour*, not as a dimmer one, and that is the only extra dimension a
+ * single-phosphor tube has to give.
+ *
+ * The first pass put the bottom band at #b8790a / #8f7a5c and both vanished
+ * into the cell at 33px; VT323's strokes are one pixel wide at this size and
+ * carry far less colour than a solid glyph would. The floor moved up two
+ * steps to #c98511 / #a89a8a — around 5:1 on the cell — and it is legible
+ * now. That is the finding: on a dark ground the usable bottom of an amber
+ * ramp is much higher than the contrast maths alone suggests. */
+#v-amber .n1 { color: #ffb000; text-shadow: 0 0 10px rgba(255, 176, 0, 0.5); }   /* amber, lit — the number you read most */
+#v-amber .n2 { color: #fff2da; text-shadow: 0 0 10px rgba(255, 226, 176, 0.45); }/* white-hot, lit */
+#v-amber .n3 { color: #ffd24d; }                                                 /* gold — high band, saturated, flat */
+#v-amber .n4 { color: #d3c0a2; }                                                 /* bone — high band, neutral. Dropped from
+                                                                                  * #ddd0bb: against the lit #fff2da of n2 it
+                                                                                  * needed the extra step to stop reading as
+                                                                                  * "the same white, further away" */
+#v-amber .n5 { color: #c98511; }                                                 /* ochre — low band, saturated */
+#v-amber .n6 { color: #a89a8a; }                                                 /* smoke — low band, neutral */
+#v-amber .n7 { color: #ffb000; }                                                 /* = n1, marked */
+#v-amber .n8 { color: #fff2da; }                                                 /* = n2, marked */
+
+/* The mark. A lit baseline under the glyph, in its own colour, so it reads as
+ * part of the digit rather than as a border on the cell. */
+#v-amber .n7::after,
+#v-amber .n8::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 8px;
+  width: 16px;
+  height: 2px;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* No red available for the flag, so the flag is the brightest thing on the
+ * board and sits in a lit well of its own. Brightness is the only alarm
+ * channel a monochrome monitor has. */
+#v-amber .mcell.flag {
+  color: var(--hot);
+  text-shadow: 0 0 12px rgba(255, 176, 0, 0.7);
+  background: #2a1c09;
+  box-shadow: inset 0 0 0 1px var(--deep);
+}
+
+#v-amber .mcell.hidden-cell {
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--line), inset 1px 1px 0 rgba(255, 176, 0, 0.07);
+}
+
+/* --- Pong. */
+#v-amber .pbar {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  font-size: 1.6rem;
+  letter-spacing: 0.08em;
+}
+
+#v-amber .pscore {
+  color: var(--hot);
+  text-shadow: var(--bloom);
+  font-variant-numeric: tabular-nums;
+}
+
+#v-amber .plabel {
+  font-size: 0.95rem;
+  letter-spacing: 0.18em;
+  color: var(--dim);
+}
+
+#v-amber .pdiv { flex: 0 0 32px; height: 1px; background: var(--deep); align-self: center; }
+
+#v-amber .pcourt {
+  position: relative;
+  height: 58px;
+  margin-top: 0.8rem;
+  background: #0d0905;
+  border: 1px solid var(--deep);
+}
+
+#v-amber .pcourt::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  bottom: 4px;
+  border-left: 1px dashed var(--deep);
+}
+
+/* Cold Terminal makes the opponent red. There is no red here, so the opponent
+ * is simply the dimmer paddle — which is the single-hue answer to every
+ * "them vs. you" problem on this site, and worth seeing early. */
+#v-amber .ppad { position: absolute; top: 12px; width: 4px; height: 26px; }
+#v-amber .ppad.l { left: 8px; background: var(--amber); box-shadow: 0 0 12px rgba(255, 176, 0, 0.6); }
+#v-amber .ppad.r { right: 8px; top: 20px; background: var(--dim); }
+
+#v-amber .pball {
+  position: absolute;
+  left: 60%;
+  top: 24px;
+  width: 6px;
+  height: 6px;
+  background: var(--hot);
+  box-shadow: 0 0 14px rgba(255, 226, 170, 0.8);
+}
+
+/* ------------------------------------------------------------------ foot */
+
+#v-amber .foot {
+  margin-top: 3.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  font-size: 1.02rem;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+}
+
+/* -------------------------------------------------------------- narrower */
+
+@media (max-width: 760px) {
+  #v-amber { font-size: 20px; }
+  #v-amber .screen { padding: 1.8rem 1.1rem 2.6rem; }
+  #v-amber .brand { font-size: 2.4rem; }
+  #v-amber .inm { font-size: 2.1rem; }
+  #v-amber .info { grid-template-columns: 1fr; grid-template-areas: "label" "name" "meta" "desc" "cta"; }
+  #v-amber .ilabel { padding-top: 0; margin-bottom: 0.3rem; }
+  /* Once the panel is one column the key belongs on the left edge with
+   * everything else; kept at justify-self:end it floats away from the text. */
+  #v-amber .icta { justify-self: start; align-self: start; margin-top: 1.1rem; }
+  #v-amber .sample-row { gap: 1rem; }
+}
