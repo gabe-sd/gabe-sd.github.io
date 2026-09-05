@@ -250,11 +250,179 @@ const INTRO = `
   <p class="intro-foot">Use the tabs, or press → to start.</p>
 </div>`;
 
+/* -------------------------------------------------------- reference sheet */
+
+/* The values behind each direction, so a later project can take a palette or a
+ * pairing without reading eleven stylesheets. Every hex here is one a variant
+ * actually uses; the contrast figures are against that variant's own ground. */
+const REFERENCE = [
+  {
+    id: 'cold', name: 'Cold Terminal',
+    ground: '#040604',
+    swatches: [['#040604', 'ground'], ['#070c07', 'panel'], ['#143a20', 'hairline'],
+      ['#14612d', 'dimmest'], ['#1f9e46', 'dim'], ['#33ff66', 'phosphor'],
+      ['#ffb000', 'amber'], ['#3fd4ff', 'cyan'], ['#ff4dd8', 'magenta']],
+    type: 'VT323 at 19px, upper case throughout, 0.05–0.18em tracking on labels.',
+    numbers: ['#3fd4ff', '#33ff66', '#ffb000', '#ff4dd8', '#ff5a4d', '#24d9a8', '#ffffff', '#9db3a4'],
+    note: 'One green plus the other real monitor phosphors, borrowed rather than invented. Keeps a full hue budget for a second accent, which the single-hue directions do not.',
+  },
+  {
+    id: 'amber', name: 'Amber Monitor',
+    ground: '#0a0704',
+    swatches: [['#0a0704', 'ground (brown-black)'], ['#150f07', 'panel'], ['#221709', 'lit panel'],
+      ['#3d2807', 'hairline'], ['#7a5008', 'rule'], ['#b8790a', 'dim — text floor'],
+      ['#f2bc62', 'secondary'], ['#ffb000', 'amber'], ['#ffd694', 'pale'], ['#fff2da', 'white-hot']],
+    type: 'VT323 at 22px, sentence case (lowercase + ::first-letter, since text-transform: capitalize cannot do it). Wordmark 3.1rem.',
+    numbers: ['#ffb000', '#fff2da', '#ffd24d', '#d3c0a2', '#c98511', '#a89a8a'],
+    note: 'Six colours plus an underline mark for 7 and 8 — three luminance bands crossed with saturated amber against near-neutral bone. Eight distinguishable ambers do not exist at board size. Bloom is stacked 6/22/46/96px shadows, none of them tight.',
+  },
+  {
+    id: 'vector', name: 'Vector Neon',
+    ground: '#000000',
+    swatches: [['#000000', 'ground (true black)'], ['#14556b', 'rest hairline'], ['#2a9dc4', 'working rule'],
+      ['#79b6cd', 'dim read'], ['#bfeaff', 'body read'], ['#3fd4ff', 'beam'],
+      ['#ff4dd8', 'second beam'], ['#ffffff', 'core']],
+    type: 'VT323 at 20px, 0.3–0.42em tracking. Orbitron 700 for the wordmark only — at 900 it stops reading as a beam.',
+    numbers: ['#3fd4ff', '#3fff9f', '#ff4dd8', '#ffb43f', '#ff5147', '#c79dff', '#ffffff', '#c8ff3f'],
+    note: 'The strongest eight in the set, structurally: a vector gun draws any colour, so hue never has to be rationed. Body copy takes no glow at all — glow is tuned per element or small text turns to mush.',
+  },
+  {
+    id: 'quiet', name: 'Quiet Phosphor',
+    ground: '#0b0d0b',
+    swatches: [['#0b0d0b', 'ground'], ['#10140f', 'raised'], ['#1e2620', 'hairline'],
+      ['#2e3a32', 'board divider'], ['#74877b', 'dimmest (4.7:1)'], ['#8fa697', 'secondary (6.8:1)'],
+      ['#cfe3d5', 'body (13.9:1)'], ['#eaf3ec', 'headings (16.9:1)'], ['#33ff66', 'accent — twice only']],
+    type: 'IBM Plex Mono for everything read; VT323 for the wordmark (54px) and numerals only. Scale 11/12/13/15/17/30/54 on a 4px grid, 24px text line.',
+    numbers: ['#9ecbdb', '#89d1a1', '#d9e9b9', '#4f89b0', '#e4ece9', '#2cbaba', '#869d80', '#aca75d'],
+    note: 'All inside a 56–204° hue band, separated on lightness and saturation, every pair ≥ ΔE 20 in CIE L*a*b*. The most restrained set here, and three of them still read alike at small size — that is the honest cost of one hue band.',
+  },
+  {
+    id: 'cabinet', name: 'Full Cabinet',
+    ground: '#050806',
+    swatches: [['#0b0a09', 'cabinet edge'], ['#241f1b', 'plastic, shadow'], ['#4a423a', 'plastic'],
+      ['#6a5e51', 'plastic, lit'], ['#050806', 'glass'], ['#0c130e', 'tile'],
+      ['#46ff7d', 'strategy'], ['#ffb52e', 'puzzle'], ['#6fdcff', 'arcade'], ['#fff6e2', 'marquee']],
+    type: 'VT323 at 20px for everything readable; Press Start 2P only where short and chunky — 23px wordmark, 11px chips, at line-height 1.75–2.',
+    numbers: ['#8ecdff', '#5cff94', '#ff6f62', '#cfa6ff', '#ffc850', '#4df0d8', '#ffffff', '#ff92e0'],
+    note: 'The marquee panel is the light and the letters are opaque ink — a dark panel with glowing letters just reads as another panel. Under heavy scanlines these digits needed cells 35% larger to survive, which is why heavy texture cannot go behind a real board.',
+  },
+  {
+    id: 'dmg', name: 'Handheld',
+    ground: '#9bbc0f',
+    swatches: [['#0f380f', 'ink'], ['#306230', 'mid'], ['#8bac0f', 'light'], ['#9bbc0f', 'LCD ground'],
+      ['#403d36', 'desk'], ['#6f6c63', 'recess'], ['#9f9c92', 'bevel'], ['#c8c4b8', 'shell'],
+      ['#dcd8cd', 'shell, lit'], ['#a8342c', 'power LED']],
+    type: 'Press Start 2P throughout on an 8 / 12 / 16 / 24px scale and nothing between, line-height 1.9.',
+    numbers: null,
+    note: 'Four tones, eight numbers, three axes: field (pale / dithered / dark), glyph, and a 4px inset ring. They split 4–4 into dark-on-light and light-on-dark, which is worth more when reading a board than any pair being maximally distinct. The dither is a 4px checker of two palette tones — literally how the hardware faked shades it did not have. Note that #8bac0f and #9bbc0f are a 6% luminance step: this is a three-tone palette pretending to be four.',
+  },
+  {
+    id: 'riso', name: 'Arcade Flyer',
+    ground: '#f6f1e6',
+    swatches: [['#f6f1e6', 'paper'], ['#ff4d6d', 'ink 1 — fluoro pink'], ['#2b41ff', 'ink 2 — blue'],
+      ['#2b146d', 'overprint (generated)']],
+    type: 'Archivo Black for display, clamp(2.6rem, 8.2vw, 5.4rem) at the top; Space Grotesk for anything read as a sentence.',
+    numbers: null,
+    note: 'The third colour is not chosen — mix-blend-mode: multiply on an offset second plate produces it, which is what a second ink plate physically does. The eight numbers are ink/ground pairs, four of them reversed out of a solid. Pink measures 2.6:1 against the paper, so it can never carry text: the workable palette is really blue plus overprint.',
+  },
+  {
+    id: 'blueprint', name: 'Schematic',
+    ground: '#0b1a2b',
+    swatches: [['#091622', 'recess'], ['#0b1a2b', 'paper'], ['#0e2133', 'part fill'],
+      ['#22506e', 'faintest'], ['#3d7fa6', 'construction'], ['#9dc4dd', 'annotation (9.4:1)'],
+      ['#7fd4ff', 'line work'], ['#dff0fb', 'chalk'], ['#ffc46b', 'selection only']],
+    type: 'IBM Plex Mono throughout, 15px base; annotations 8.5–10.5px at 0.18–0.24em. The monospacing is load-bearing — the title block aligns on literal spaces inside content strings.',
+    numbers: ['#7fd4ff', '#6ee7a8', '#ffc46b', '#b39bff', '#ff8a76', '#45d6cd', '#dff0fb', '#a3b8c8'],
+    note: 'Five hues well apart, then two neutrals split by lightness — a legend rather than a ramp, which is a schematic’s native idiom. Category chips reuse three of the same eight instead of starting a second coding system, and exclude amber so selection stays unambiguous.',
+  },
+  {
+    id: 'teletext', name: 'Teletext',
+    ground: '#000000',
+    swatches: [['#000000', 'ground'], ['#0000ff', 'blue — structure only'], ['#ff0000', 'red — alarm only'],
+      ['#ff00ff', 'magenta'], ['#00ff00', 'green — "go" only'], ['#00ffff', 'cyan'],
+      ['#ffff00', 'yellow'], ['#ffffff', 'white']],
+    type: 'Silkscreen. It is not monospaced (i is 0.375em, m is 0.875em) but its digits are exactly 0.75em, so the character cell is derived from the digit: 18px = 0.75 × the 24px base, and every structural box is a whole multiple of it.',
+    numbers: null,
+    note: 'Six usable colours, eight values, and no brightness ramp at all. 1–5 are coloured glyphs on black; 6–8 invert to black glyphs on solid blocks, separating the set on two axes so 1 and 6 can share a hue. Blue is 2.4:1 on black and never carries text — giving the unusable colour every structural job is what let every hairline be deleted.',
+  },
+  {
+    id: 'neon', name: 'Neon Cabinet',
+    ground: '#0d0618',
+    swatches: [['#0a0518', 'well'], ['#0d0618', 'ground'], ['#170e2b', 'glass'], ['#241541', 'lit glass'],
+      ['#b0a4cc', 'labels — floor'], ['#ece7f8', 'copy'], ['#00e5ff', 'cyan — leads'],
+      ['#ff2d95', 'magenta — the singled-out thing']],
+    type: 'Space Grotesk for words; Orbitron in four places only — wordmark, selected name, score, board cells. Never body copy.',
+    numbers: ['#00e5ff', '#4dff9e', '#ffd23f', '#8fb0e8', '#ff7a3d', '#ffffff', '#c9a0ff', '#ff3b5c'],
+    note: 'Two accents are resolved by rule rather than balance: at most one magenta object is on screen at a time, so magenta is always the answer to "which one?". Only 5–8 glow — with every shadow forced off all eight stayed distinguishable, proving hue carries the separation. Chrome text needs filter: drop-shadow; a text-shadow shows through a transparent fill and turns it to mud.',
+  },
+  {
+    id: 'brutal', name: 'Signal',
+    ground: '#0b0b0b',
+    swatches: [['#0b0b0b', 'ground'], ['#2a2a26', 'hairline'], ['#2e2e2a', 'inert solid'],
+      ['#45453f', 'box edge'], ['#8b8b85', 'dimmest (5.8:1)'], ['#b9b9b2', 'secondary (9.9:1)'],
+      ['#f5f5f0', 'text'], ['#ff3b00', 'accent — five uses']],
+    type: 'Space Mono 400/700, Archivo Black for the wordmark and the index numbers. Scale 99 / 67 / 48 / 24 / 18 / 16 / 13 / 11 — a 9:1 span, and the jumps are the composition.',
+    numbers: null,
+    note: 'One accent, so the eight numbers escalate by device instead: three greys, then weight, then a rule under the glyph, then a box, then inversion to a solid white block, then the accent spent on 8 — the only number that is genuinely dangerous.',
+  },
+];
+
+function referenceHTML() {
+  const block = (r) => `
+    <section class="ref-item">
+      <h3><a href="#${r.id}" class="ref-jump">${r.name}</a></h3>
+      <div class="ref-sw">${r.swatches.map(([hex, role]) => `
+        <span class="ref-chip">
+          <b style="background:${hex}"></b>
+          <code>${hex}</code>
+          <i>${role}</i>
+        </span>`).join('')}</div>
+      <p class="ref-type"><b>Type.</b> ${r.type}</p>
+      ${r.numbers ? `<p class="ref-nums"><b>Minesweeper 1–8.</b>
+        ${r.numbers.map((h, i) => `<span class="ref-num" style="color:${h}">${i + 1}</span>`).join('')}
+        <span class="ref-hexes">${r.numbers.join(' · ')}</span></p>` : ''}
+      <p class="ref-note">${r.note}</p>
+    </section>`;
+
+  return `
+  <div class="intro ref">
+    <h1>Retro interface reference</h1>
+    <p class="intro-lede">Eleven complete interface directions, with the values behind each one:
+    the palette as copyable hexes, the typefaces and the scale, and how each solved the hardest
+    problem in the set — eight Minesweeper numbers that have to stay apart from each other and
+    legible on the ground. Every hex here is one the direction actually uses. Click a name to see
+    it built.</p>
+
+    <h2>What generalises, whatever you are building</h2>
+    <ul class="intro-find">
+      <li><b>A pixel typeface carries less colour than the contrast maths predicts.</b> VT323's
+      strokes are one pixel wide, so a colour that clears 4.5:1 as a solid glyph can still vanish.
+      The usable bottom of a ramp sits about two steps above where the numbers say it does.</li>
+      <li><b>Eight distinguishable values do not exist inside one hue.</b> Five of these arrived at
+      that independently: you get five or six steps, and the rest need a second <i>device</i> — an
+      underline, an inverted cell, a dithered field, a border, a weight change.</li>
+      <li><b>A scanline is the dark gap between lines, not the line.</b> A white stripe over a
+      near-black page has nothing to lighten and is invisible. Draw the gap.</li>
+      <li><b>Scanline texture has a density ceiling.</b> A 1.5px dark line every 3.5px cuts two
+      bands through a glyph at normal board sizes and saturated mid-tones fragment. Light texture
+      is free; heavy texture costs about 35% more glyph size to stay readable.</li>
+      <li><b>Chrome and other gradient-filled text takes <code>filter: drop-shadow</code></b>, never
+      <code>text-shadow</code> — with a transparent fill the shadow draws through the glyph.</li>
+    </ul>
+
+    <h2>The eleven</h2>
+    ${REFERENCE.map(block).join('')}
+
+    <p class="intro-foot">Built as a design review for the arcade's redesign, September 2026.</p>
+  </div>`;
+}
+
 /* --------------------------------------------------------------- variants */
 
 /* Structure and copy live here; the look lives in variants/<id>.css. */
 const VARIANTS = [
   { id: 'intro', group: '·', name: 'Start here', intro: true },
+  { id: 'reference', group: '·', name: 'Reference', intro: true, reference: true },
   {
     id: 'cold', group: 'A', name: 'Cold Terminal', icons: 'line', crt: 'mock',
     brand: 'GAME ARCADE', nav: ['GAMES', 'ABOUT'],
@@ -362,9 +530,14 @@ VARIANTS.forEach((v) => {
 
   if (v.intro) {
     sec.classList.add('is-intro');
-    sec.innerHTML = INTRO;
+    sec.innerHTML = v.reference ? referenceHTML() : INTRO;
     stage.appendChild(sec);
     addTab(v);
+    if (v.reference) {
+      sec.querySelectorAll('.ref-jump').forEach((a) => {
+        a.addEventListener('click', (e) => { e.preventDefault(); show(a.getAttribute('href').slice(1)); });
+      });
+    }
     return;
   }
 
@@ -449,15 +622,19 @@ function show(id) {
 
 function renderCaption(v) {
   if (v.intro) {
-    caption.innerHTML = `<div class="cap-main"><span class="cap-name">Preview gallery</span>
-      <span class="cap-pitch">Eleven directions for the redesign. Read this page, then use the
-      tabs or the arrow keys.</span></div>`;
+    caption.innerHTML = v.reference
+      ? `<div class="cap-main"><span class="cap-name">Reference</span>
+         <span class="cap-pitch">The palettes, the type and the number solutions behind all
+         eleven, as values rather than pictures.</span></div>`
+      : `<div class="cap-main"><span class="cap-name">Preview gallery</span>
+         <span class="cap-pitch">Eleven directions for the redesign. Read this page, then use the
+         tabs or the arrow keys.</span></div>`;
     return;
   }
-  const n = VARIANTS.indexOf(v);
+  const n = VARIANTS.indexOf(v) - 1;
   caption.innerHTML = `
     <div class="cap-main">
-      <span class="cap-n">${String(n).padStart(2, '0')}/${VARIANTS.length - 1}</span>
+      <span class="cap-n">${String(n).padStart(2, '0')}/${VARIANTS.length - 2}</span>
       <span class="cap-name">${v.name}</span>
       <span class="cap-pitch">${v.pitch}</span>
     </div>
@@ -491,4 +668,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft') show(VARIANTS[(i - 1 + VARIANTS.length) % VARIANTS.length].id);
 });
 
-show(location.hash.slice(1) || VARIANTS[0].id);
+/* The published archive opens on the reference sheet; the review copy opens on
+ * the start page. The build injects __START__ for the former. */
+show(location.hash.slice(1) || window.__START__ || VARIANTS[0].id);

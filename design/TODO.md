@@ -138,10 +138,16 @@ Constraints beyond the settled list:
 - **The dim accent variants are borderline for text.** Check contrast before using
   one for anything a reader has to read; borders are a different matter.
 - **The eleven directions built for this phase are in `design/previews/`**, with a
-  start page saying what has to be decided. They are throwaway and are not to be
-  ported — the chosen one gets rebuilt properly into `shared.css`, `hub.css` and
-  the hub's markup. What they measured is recorded in `design/DESIGN.md`; delete
-  the folder once a direction is chosen and built.
+  start page saying what has to be decided and a reference sheet giving every
+  direction's palette, type and number solution as values. They are throwaway and
+  are not to be ported — the chosen one gets rebuilt properly into `shared.css`,
+  `hub.css` and the hub's markup. What they measured is recorded in
+  `design/DESIGN.md`.
+
+  The folder can go once a direction is chosen and built. Nothing is lost when it
+  does: the compositions stay in this branch's history, and Gabriel has them
+  published outside the repo as a standing reference for other projects — ask him
+  for the link rather than putting it in a public repo.
 
 - **How far the CRT texture reaches is open.** `pong-lightning-magenta.html`
   carries a scanline overlay — 1px of white at 3.5% every 3px, blended `overlay` —
