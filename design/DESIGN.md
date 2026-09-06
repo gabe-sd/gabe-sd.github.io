@@ -146,7 +146,14 @@ Consequences a later session will hit:
 
 - `tests/pong.test.js` case 13 asserts the canvas palette *changes* when the OS
   theme flips. That stops being true and the assertion has to be rewritten rather
-  than deleted — it is the only theme-flip check in the suite.
+  than deleted.
+- **It is not the only theme-flip check, and the second one is the dangerous
+  one.** Case 28 loops over both schemes with `emulateMedia` and checks the
+  bolt's core reads against the board in each. With one theme it runs the
+  identical check twice and **stays green while testing nothing** — case 13
+  announces itself by going red, this one does not announce itself at all.
+  `design/TODO.md` carries the detail; `colorScheme` appears nowhere else in the
+  suite, so those two are the whole of it.
 - `boltCore()` in `games/pong/script.js` picks the lightning bolt's core colour
   from the board's luminance, which existed only because the light theme's board
   was pure white. One branch of it is now dead.
@@ -247,12 +254,29 @@ figure is what proves the probe detects texture where texture exists.
 
 ## Where the exploration is kept
 
-`design/archive/2026-09-04-retro-interface-directions.html` is the eleven
+`design/archive/2026-09-04-retro-interface-directions.html` is the **thirteen**
 directions built for the first phase, as **one self-contained file**: every
 stylesheet and the gallery inlined, so it opens in a browser from anywhere with
 no server and no repo around it. It starts on a reference sheet giving each
 direction's palette as hexes with the role of every value, its typefaces and
 scale, and its eight-number solution; the built compositions are a click away.
+
+**The filename keeps the 2026-09-04 date even though two of the thirteen were
+built on the 6th.** The date names the round, not the last edit, and Gabriel was
+given that path to keep — renaming it breaks the one thing the file was made
+for. A genuinely new round of directions gets a new date and a new file.
+
+**It is generated from `design/previews/`, not maintained by hand.** Every byte
+of it — gallery, stylesheets, markup, script — is an inline of those sources in
+the order `index.html` links them, with the two `@font-face` `url()`s rewritten
+to the CDN and `window.__START__` set so it opens on the reference sheet. So a
+change to a preview does not reach the archive until it is rebuilt, and editing
+the archive directly puts the two permanently out of step. The generator was
+kept out of the repo deliberately: `design/previews/` is scheduled for deletion
+and would leave it with nothing to read. Rebuilding is mechanical enough to
+redo from this paragraph, and the check that it was done right is that
+regenerating from *unchanged* sources reproduces the existing file byte for
+byte.
 
 `design/archive/` is deliberately separate from `design/previews/`. The previews
 are the working source and are throwaway — they get deleted once a direction is
@@ -275,7 +299,7 @@ has the working invocation and the two ways it misleads you. Not repeated here:
 one copy of a fact is worth more than two that can disagree.
 
 What belongs in this file is what it means for design work. **Use it, and use it
-in a loop.** Every one of the eleven directions needed four or five
+in a loop.** Every one of the thirteen directions needed four or five
 write-look-fix rounds before it was any good, and the defects it caught were not
 subtle once seen: an icon that read as a fish rather than a bird, a mine that
 read as a sun, a 470px hole between a description and the button that acts on

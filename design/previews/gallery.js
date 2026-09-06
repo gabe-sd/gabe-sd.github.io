@@ -459,6 +459,18 @@ function referenceHTML() {
       is free; heavy texture costs about 35% more glyph size to stay readable.</li>
       <li><b>Chrome and other gradient-filled text takes <code>filter: drop-shadow</code></b>, never
       <code>text-shadow</code> — with a transparent fill the shadow draws through the glyph.</li>
+      <li><b>An accent borrowed from a palette with a different ground is a starting point, not a
+      value.</b> Amber Arcade took its guest hues from the two cold directions and not one survived
+      the move: <code>#3fd4ff</code> on a brown-black <code>#0a0704</code> reads as a hole punched
+      through to another page, because a 100%-blue cyan has nothing in common with a ground whose
+      blue channel is almost gone. Every one moved a few points of red and green and a step
+      lighter.</li>
+      <li><b>Separate the costume from the information.</b> Two directions here arrived at the same
+      split independently and it is the most portable thing in the set: the <i>chrome</i> is the
+      machine — frame, wordmark, rules, the panel a thing sits in — and the <i>screen</i> is the
+      content someone has to decode. Display effects (a single hue, scanline texture, bloom) belong
+      to the chrome and are kept off the screen. It is what lets a heavily styled shell sit around
+      genuinely legible content instead of fighting it.</li>
     </ul>
 
     <h2>The thirteen</h2>
@@ -584,6 +596,16 @@ const VARIANTS = [
   },
 ];
 
+/* Whether a direction HAS texture, captured once from the authored value.
+ *
+ * `crt` is the current setting and the caption buttons write to it, so it
+ * cannot also mean "this direction does texture at all" — gating the control
+ * on `v.crt !== 'off'` made choosing "none" delete the control that was the
+ * only way back to any other setting. A direction authored at `crt: 'off'`
+ * (Vector Neon, and every non-CRT direction) still gets no control, which is
+ * the distinction the original test was reaching for. */
+VARIANTS.forEach((v) => { if (!v.intro) v.hasCrt = v.crt !== 'off'; });
+
 /* ------------------------------------------------------------------ build */
 
 const stage = document.getElementById('stage');
@@ -708,7 +730,7 @@ function renderCaption(v) {
     </div>
     <div class="cap-side">
       <span class="cap-cost"><b>What it costs:</b> ${v.cost}</span>
-      ${v.crt !== 'off' ? crtControlHTML(v) : ''}
+      ${v.hasCrt ? crtControlHTML(v) : ''}
     </div>`;
   const ctl = caption.querySelector('.crt-ctl');
   if (ctl) {
