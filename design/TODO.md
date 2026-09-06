@@ -119,6 +119,43 @@ is the phase to go slowly on.
 - Fill in `design/DESIGN.md` — this phase is where the visual system stops being a
   conversation and becomes a document.
 
+**The direction is Amber Arcade**, chosen by Gabriel on 2026-09-06. The palette,
+the guest hues, the eight Minesweeper numbers and the proposed token mapping are
+all written out in `design/DESIGN.md`; read that before touching `shared.css`.
+
+**Three questions have to close before the build starts.** They were put to
+Gabriel on 2026-09-06 and he had not answered them when that session ended. Ask
+him — do not decide them alone, and do not build around them:
+
+1. **How much CRT texture, if any.** The preview runs at *subtle*. Amber's own
+   argument is that its CRT quality comes from bloom rather than scanlines, and
+   the chrome/screen rule keeps texture off the boards regardless. Live options:
+   none, subtle on the chrome, as-mocked on the chrome. It lands in `shared.css`,
+   so it belongs to this phase and cannot be deferred.
+2. **Whether the info panel keeps the description.** Amber puts the description
+   *in* the tile, so the panel adds only the player count and the key — the cost
+   `amber.css` documents. Options: leave it; drop the description from the panel;
+   or drop it from the tile and let the panel earn its place again. The art
+   director leaned toward the second. Bound up with the two-tap touch question
+   below, which Gabriel still owes a phone test.
+3. **Category colour at rest, or on hover only.** Amber Arcade tags all six tiles
+   at rest in rose/cyan/jade. It is the smallest dose defensible, but it does cut
+   against the calm that won Amber the vote. Amber-at-rest with the category hue
+   arriving only on the pointed-at tile is a one-line change.
+
+Two things Gabriel should not be surprised by, both stated to him already:
+
+- **This phase ends with the site looking half-done, and that is correct.** It
+  delivers the palette, the type and the hub. The six games get new token
+  *values* and keep their old shapes until their own phases.
+- **Chess is untouched by any of this.** Two square colours that read as a board
+  on brown-black without becoming a seventh accent is still the hardest single
+  question in the redesign.
+
+One question left open and worth asking with the three above: whether the
+`design/archive/` copy should be rebuilt again after the build lands, or frozen
+as the record of the exploration. It currently holds thirteen directions.
+
 Constraints beyond the settled list:
 
 - **`tests/pong.test.js` case 13 fails the moment `prefers-color-scheme` leaves

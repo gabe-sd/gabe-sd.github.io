@@ -39,26 +39,42 @@ not. The tokens in `shared.css` and what each one means.
 or found so far. The open questions, and which phase closes each, are in
 `design/TODO.md`.
 
-## Where the choice stands
+## The direction is Amber Arcade
 
-**Gabriel picked Amber Monitor on 2026-09-06**, from the eleven directions, and
-in the same breath asked for the one thing that direction was recorded as unable
-to do: the accent colour that Cold Terminal and Vector Neon put into the game
-boards. He also asked to see the art director's written recommendation built
-rather than argued.
+**Gabriel chose Amber Arcade on 2026-09-06.** That is settled; a later session
+that wants to reopen it asks him rather than deciding.
 
-So two more directions were built, and the choice is now between them and the
-plain Amber Monitor rather than across eleven:
+How it got there. He picked **Amber Monitor** from the first eleven, and in the
+same breath asked for the one thing that direction was recorded as unable to
+do — the accent colour Cold Terminal and Vector Neon put into the game boards.
+He also asked to see the art director's written recommendation *built* rather
+than argued. Two more directions were built:
 
-- **Amber Arcade** (`design/previews/variants/amberlit.css`) — Amber Monitor's
-  shell, type and spacing byte-for-byte, with six guest hues admitted to the
-  boards and one category accent per tile.
-- **Cold Terminal Mk II** (`design/previews/variants/coldmk2.css`) — the
-  recommendation as built: Cold Terminal plus Amber's roominess and larger type,
-  Vector's per-element glow, and the texture capped at *as mocked* and lifted
-  off the boards.
+- **Amber Arcade** (`design/previews/variants/amberlit.css`) — **chosen.** Amber
+  Monitor's shell, type and spacing unchanged, with six guest hues admitted to
+  the boards and one category accent per tile.
+- **Cold Terminal Mk II** (`design/previews/variants/coldmk2.css`) — not chosen.
+  The recommendation as built: Cold Terminal plus Amber's roominess and larger
+  type, Vector's per-element glow, and the texture capped at *as mocked* and
+  lifted off the boards. Kept in the archive; its reading-tint and glow-scale
+  ideas are worth stealing even though the direction was not taken.
 
-Nothing is committed to `shared.css` yet. Neither of these is the site.
+**Nothing has reached `shared.css` yet.** The preview is not the site, and three
+questions listed in `design/TODO.md` have to close before the build starts.
+
+### What choosing it commits us to
+
+- **The monochrome fiction is given up, deliberately.** A P3 amber tube cannot
+  show a magenta paddle. The site is an amber-panelled machine with a colour
+  display in it, not an amber monitor. Everything below follows from that.
+- **Amber is the home hue and is never a category colour.** It is the wordmark,
+  the cursor, the selected and active state everywhere, and Minesweeper's n1. A
+  category owning it would make "selected" ambiguous.
+- **Six guest hues, for the screen only**, listed with their values under "The
+  guest hues" below.
+- **Colour by category is in**, which pre-answers most of the
+  `redesign-category-accents` entry in `design/TODO.md`. Close that entry when
+  the games are done rather than treating it as still open.
 
 ### The rule that came out of it: chrome against screen
 
@@ -82,6 +98,80 @@ gallery failed at.
 The consequence to carry into the game phases: **a game's board is not decorated
 like the hub.** Whatever `shared.css` ends up doing to a page, the board inside
 it is exempt.
+
+## The palette
+
+Every value the chosen direction uses, so the build does not have to be read out
+of a throwaway stylesheet. Source of truth until `shared.css` exists;
+`design/previews/variants/amberlit.css` carries the same numbers with the
+reasoning attached, and is deleted once the build lands.
+
+### The amber ramp — the chrome
+
+| Value | Role | Notes |
+| --- | --- | --- |
+| `#0a0704` | ground | Brown-black: red channel highest, blue nearly gone |
+| `#150f07` | panel | |
+| `#221709` | panel, lit | a tile under the cursor |
+| `#3d2807` | hairline | **never a word** |
+| `#7a5008` | rule on a panel | **never a word**, ~2.9:1 |
+| `#b8790a` | dim | the floor for text |
+| `#f2bc62` | secondary text | |
+| `#ffb000` | **amber — the home hue** | primary, selection, active |
+| `#ffd694` | pale | |
+| `#fff2da` | white-hot | the beam driven past amber |
+
+Board grounds, which are not the panel: `#100b06` a Sudoku cell, `#16100a` a
+Minesweeper cell, `#2a1c09` a selected cell or lit well, `#0d0905` the Pong
+court. Tile description text is `#d8a45a` — one step under the secondary; an
+`opacity` there instead greys the amber toward the brown ground.
+
+### The guest hues — the screen
+
+Six, admitted to boards and category accents only. **Never to the chrome.**
+
+| Value | Name | Hue | Used for |
+| --- | --- | --- | --- |
+| `#6fdcf2` | cyan | 192° | puzzle; an entered Sudoku digit; n2 |
+| `#5fd9a0` | jade | 157° | strategy; `--win`; n4 |
+| `#d4e85c` | lime | 75° | n6 — **the risk value**, see below |
+| `#ff6a56` | coral | 6° | `--lose`; the mine flag; Pong's opponent; n3 |
+| `#ff7fcb` | rose | 328° | arcade; Pong's player; n5 |
+| `#b9a2ff` | violet | 258° | n7 |
+
+Every one is **warmed and lightened** off the value it came from in Cold
+Terminal or Vector Neon. Do not substitute the originals back: `#3fd4ff` on this
+ground reads as a hole punched to another site.
+
+Minesweeper's eight: **n1 amber, n2 cyan, n3 coral, n4 jade, n5 rose, n6 lime,
+n7 violet, n8 `#fff2da`.** No underline, no second device — eight hues is what
+buys that. 1–3 take the three most legible and most separated because they are
+what gets read at speed; 7 and 8 are almost never seen.
+
+**The risk: lime against amber, 34° apart**, the closest pair in the set,
+separated on lightness alone. It holds at preview size. If it fails on a real
+16×30 board, **lime is the value to move, not amber.**
+
+### The token mapping
+
+Proposed, not yet built — names unchanged, values new, palette layer
+underneath, per "How the tokens are layered" below:
+
+| Token | Value | |
+| --- | --- | --- |
+| `--bg` | `#0a0704` | |
+| `--fg` | `#f2bc62` | |
+| `--card-bg` | `#150f07` | |
+| `--cell-bg` | `#100b06` | |
+| `--cell-border` | `#3d2807` | |
+| `--accent` | `#ffb000` | amber |
+| `--win` | `#5fd9a0` | jade |
+| `--lose` | `#ff6a56` | coral |
+| `--muted` | `#b8790a` | |
+
+The moment those land, all six games change colour with no other work. **That is
+the check that the token layer works** — and the reason the five games a phase
+has not reached keep rendering correctly.
 
 ## The typeface
 
