@@ -124,7 +124,29 @@ Constraints beyond the settled list:
 - **`tests/pong.test.js` case 13 fails the moment `prefers-color-scheme` leaves
   `shared.css`.** It asserts the canvas palette *changes* when the OS theme flips,
   which is exactly what stops being true. Rewriting it is part of this phase, not
-  a surprise for the next one. It is the only theme-flip assertion in the suite.
+  a surprise for the next one.
+
+- **It is not the only theme-flip assertion, and the other one is the dangerous
+  one.** `tests/pong.test.js` case 28, "the squeeze attack, and blink lasting as
+  long as the ball", loops `for (const scheme of ["light", "dark"])`, opens a page
+  per scheme with `emulateMedia`, and checks that the bolt's core reads against
+  the board in each. Its own comment says why: the board is pure white in the
+  light theme and near-black in the dark one, and a fixed white core is invisible
+  on a white board.
+
+  Once `prefers-color-scheme` leaves `shared.css`, `emulateMedia` has nothing to
+  switch. Both iterations render the same dark board, the loop runs the identical
+  check twice, and **it stays green while having stopped testing the thing it was
+  written for.** Case 13 announces itself by going red; this one does not announce
+  itself at all, which makes it the exact failure `CLAUDE.md` describes — a test
+  that passes for the wrong reason is indistinguishable from one that passes for
+  the right reason, in a diff and in a test run alike.
+
+  Whoever writes `shared.css` owns both. Rewrite the measurement and keep the
+  guard: the claim worth protecting is that the bolt's core stays visible against
+  whatever the board now is, which is still true and still worth a test — it is
+  only the *two themes* half that dies. `colorScheme` appears nowhere outside
+  `tests/pong.test.js`, so those two are the whole of it.
 - **Hub cards stay `<a href="games/<name>/…">`.** `tests/contract.test.js` reads
   the game folder straight out of that path.
 - **The info panel moves each game's description into hover state, and touch has
