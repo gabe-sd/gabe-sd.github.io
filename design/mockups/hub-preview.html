@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hub preview — Amber Arcade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+<style>
+/*
+ * Preview build: Amber Arcade's chrome (design/previews/variants/amberlit.css)
+ * married to the approved tile interaction (design/mockups/hub-select-overlay.html:
+ * whole tile is the button, tap arms it with a pulsing glow, second tap on the
+ * armed tile plays). Not the real site — design/mockups/ is reference only.
+ *
+ * CRT texture: "subtle" per Gabriel's answer this session, using the exact
+ * "soft" scanline recipe from design/previews/gallery.css (a dark line, not a
+ * white one — a real scanline is the gap between lines). It sits on the chrome
+ * only: the grid is lifted above the texture layer with an opaque background,
+ * per design/DESIGN.md's "chrome against screen" rule and its worked example
+ * ("a region can be lifted out from under the CRT texture... only if the
+ * screen gives up its stacking context").
+ */
+:root{
+  --bg: #0a0704;
+  --panel: #150f07;
+  --panel-lit: #221709;
+  --line: #3d2807;
+  --deep: #7a5008;
+  --dim: #b8790a;
+  --soft: #f2bc62;
+  --pale: #ffd694;
+  --amber: #ffb000;
+  --hot: #fff2da;
+  --desc: #d8a45a;
+  --jade: #5fd9a0;
+  --cyan: #6fdcf2;
+  --rose: #ff7fcb;
+  --bloom: 0 0 8px rgba(255,176,0,0.30), 0 0 26px rgba(255,176,0,0.16);
+  --bloom-lg: 0 0 6px rgba(255,176,0,0.42), 0 0 22px rgba(255,176,0,0.34),
+              0 0 46px rgba(255,176,0,0.20), 0 0 96px rgba(255,176,0,0.10);
+}
+*{ box-sizing: border-box; }
+body{
+  margin: 0;
+  background: var(--bg);
+  color: var(--soft);
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+.page{ position: relative; }
+
+/* The texture layer. Absolutely positioned over the whole page, painted after
+   everything with z-index:auto (i.e. the chrome), so it visibly sits on top
+   of the wordmark and nav — that is the point. */
+.crt{
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom,
+    rgba(0,0,0,0.16) 0 1px, transparent 1px 3px);
+}
+
+.screen{ max-width: 1080px; margin: 0 auto; padding: 2.6rem 1.8rem 3.6rem; position: relative; }
+
+.top{
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+.brand{
+  font-size: 3.1rem;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  color: var(--hot);
+  text-shadow: var(--bloom-lg);
+}
+.nav{ display: flex; gap: 1.6rem; }
+.nav a{
+  color: var(--dim);
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid transparent;
+}
+.nav a:hover, .nav a:focus-visible{ color: var(--pale); outline: none; }
+.nav a.active{ color: var(--amber); border-bottom-color: var(--amber); text-shadow: var(--bloom); }
+
+.status{
+  margin: 1.1rem 0 2rem;
+  font-size: 1.3rem;
+  color: var(--pale);
+}
+
+/* The grid gives up nothing to the texture: position + z-index above the
+   crt layer's 6, plus an opaque background so the texture cannot show through
+   the gaps between tiles either. This is the whole mechanism — every tile
+   inside inherits legibility for free. */
+.grid{
+  position: relative;
+  z-index: 7;
+  background: var(--bg);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(285px, 1fr));
+  gap: 1.1rem;
+}
+
+.tile{
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "ico name"
+    "ico desc"
+    "ico cat";
+  grid-template-rows: auto auto 1fr;
+  column-gap: 1.05rem;
+  padding: 1.4rem 1.3rem 1.25rem;
+  padding-left: 1.5rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--cat-accent);
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.15s ease;
+}
+.tile:hover, .tile:focus-visible{ background: var(--panel-lit); outline: none; }
+
+.tile[data-cat="strategy"]{ --cat-accent: var(--jade); }
+.tile[data-cat="puzzle"]{ --cat-accent: var(--cyan); }
+.tile[data-cat="arcade"]{ --cat-accent: var(--rose); }
+
+.tico{ grid-area: ico; align-self: start; font-size: 2rem; line-height: 1; }
+.tname{ grid-area: name; font-size: 1.75rem; line-height: 1.05; color: var(--pale); }
+.tdesc{ grid-area: desc; margin-top: 0.35rem; font-size: 1.08rem; line-height: 1.28; color: var(--desc); }
+.tcat{
+  grid-area: cat;
+  align-self: end;
+  margin-top: 0.7rem;
+  font-size: 0.92rem;
+  letter-spacing: 0.22em;
+  text-transform: lowercase;
+  color: var(--cat-accent);
+}
+
+/* --- The approved interaction, ported verbatim from
+   design/mockups/hub-select-overlay.html: whole tile is the control, no
+   button, no revealed text, no size change. Tap 1 arms it (pulsing glow);
+   tap 2 on the armed tile plays. */
+.tile.selected{
+  background: var(--panel-lit);
+  border-color: var(--cat-accent);
+  animation: armed-pulse 2.3s ease-in-out infinite;
+}
+@keyframes armed-pulse{
+  0%, 100%{ box-shadow: 0 0 0 2px var(--cat-accent), 0 0 18px 3px color-mix(in srgb, var(--cat-accent) 55%, transparent); }
+  50%{ box-shadow: 0 0 0 2px var(--cat-accent), 0 0 29px 8px color-mix(in srgb, var(--cat-accent) 72%, transparent); }
+}
+@media (prefers-reduced-motion: reduce){
+  .tile.selected{
+    animation: none;
+    box-shadow: 0 0 0 2px var(--cat-accent), 0 0 26px 6px color-mix(in srgb, var(--cat-accent) 70%, transparent);
+  }
+}
+
+.foot{
+  margin-top: 3.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  font-size: 1.02rem;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+}
+
+@media (max-width: 760px){
+  body{ font-size: 20px; }
+  .screen{ padding: 1.8rem 1.1rem 2.6rem; }
+  .brand{ font-size: 2.4rem; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="crt"></div>
+  <div class="screen">
+    <div class="top">
+      <div class="brand">GABE-SD ARCADE</div>
+      <nav class="nav">
+        <a href="index.html" class="active">Home</a>
+        <a href="about.html">About</a>
+        <a href="https://github.com/gabe-sd/gabe-sd.github.io">GitHub &#8599;</a>
+      </nav>
+    </div>
+    <p class="status">Pick a game to play</p>
+
+    <div class="grid">
+      <div class="tile" data-cat="strategy" data-href="games/tic-tac-toe/index.html" tabindex="0" role="button" aria-pressed="false">
+        <span class="tico">⭕</span>
+        <span class="tname">Tic Tac Toe</span>
+        <span class="tdesc">Classic 3x3, two players</span>
+        <span class="tcat">strategy</span>
+      </div>
+      <div class="tile" data-cat="arcade" data-href="games/pong/index.html" tabindex="0" role="button" aria-pressed="false">
+        <span class="tico">🏓</span>
+        <span class="tname">Anime Pong</span>
+        <span class="tdesc">You vs. the AI paddle</span>
+        <span class="tcat">arcade</span>
+      </div>
+      <div class="tile" data-cat="puzzle" data-href="games/minesweeper/index.html" tabindex="0" role="button" aria-pressed="false">
+        <span class="tico">💣</span>
+        <span class="tname">Minesweeper</span>
+        <span class="tdesc">Clear the board, avoid the mines</span>
+        <span class="tcat">puzzle</span>
+      </div>
+      <div class="tile" data-cat="strategy" data-href="games/chess/index.html" tabindex="0" role="button" aria-pressed="false">
+        <span class="tico">♟️</span>
+        <span class="tname">Chess</span>
+        <span class="tdesc">Full rules, two players, local pass-and-play</span>
+        <span class="tcat">strategy</span>
+      </div>
+      <div class="tile" data-cat="arcade" data-href="games/flappy-bird/index.html" tabindex="0" role="button" aria-pressed="false">
+        <span class="tico">🐦</span>
+        <span class="tname">Flappy Bird</span>
+        <span class="tdesc">Flap through the pipes, one tap at a time</span>
+        <span class="tcat">arcade</span>
+      </div>
+      <div class="tile" data-cat="puzzle" data-href="games/sudoku/index.html" tabindex="0" role="button" aria-pressed="false">
+        <span class="tico">🔢</span>
+        <span class="tname">Sudoku</span>
+        <span class="tdesc">Fill the grid, no repeats in any row, column, or box</span>
+        <span class="tcat">puzzle</span>
+      </div>
+    </div>
+
+    <div class="foot">gabe-sd/gabe-sd.github.io</div>
+  </div>
+</div>
+
+<script>
+  function deselect(tile){
+    tile.classList.remove('selected');
+    tile.setAttribute('aria-pressed', 'false');
+  }
+  function activate(tile){
+    if(tile.classList.contains('selected')){
+      window.location.href = tile.dataset.href;
+      return;
+    }
+    document.querySelectorAll('.tile.selected').forEach(deselect);
+    tile.classList.add('selected');
+    tile.setAttribute('aria-pressed', 'true');
+  }
+  document.querySelectorAll('.tile').forEach(function(tile){
+    tile.addEventListener('click', function(){ activate(tile); });
+    tile.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar'){
+        e.preventDefault();
+        activate(tile);
+      }
+    });
+  });
+</script>
+</body>
+</html>

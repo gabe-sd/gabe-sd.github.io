@@ -200,6 +200,119 @@ The Vietnamese subset Google serves is deliberately not committed. It is another
 like the stylesheet. The rule in `CLAUDE.md` is that the site must need no build
 and no install to render, and this does not.
 
+## The hub
+
+Settled 2026-09-06, after several rounds against a served preview
+(`design/mockups/hub-preview.html`, built on the interaction proved out in
+`design/mockups/hub-select-overlay.html`). This closes the three questions the
+previous session left open, and answers them differently than any of the options
+originally listed for two of the three.
+
+### Tile selection: the whole tile is the control
+
+No separate Play button anywhere, no separate info panel anywhere on the page, no
+text that shows or hides on selection. **Tap 1 arms a tile; tap 2 on that same
+armed tile plays it; tapping a different tile re-arms there instead and
+disarms the first.** This drops the "selected-game info panel" from the original
+mockup brief entirely — not deferred, not one of the surviving options, gone.
+
+Why: the info panel sat in the page after the whole grid, so on a phone tall
+enough to need scrolling, tap 2 required scrolling to reach it first — the exact
+bug Gabriel hit and reported. Putting both taps on the tile itself makes that
+impossible by construction: there is nowhere else for the second tap to be.
+
+Visual feedback on arming — exact values, tuned live against Gabriel's reaction
+over several rounds:
+
+```css
+.tile.selected {
+  border-color: var(--cat-accent);
+  animation: armed-pulse 2.3s ease-in-out infinite;
+}
+@keyframes armed-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--cat-accent),
+                          0 0 18px 3px color-mix(in srgb, var(--cat-accent) 55%, transparent); }
+  50%      { box-shadow: 0 0 0 2px var(--cat-accent),
+                          0 0 29px 8px color-mix(in srgb, var(--cat-accent) 72%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tile.selected {
+    animation: none;
+    box-shadow: 0 0 0 2px var(--cat-accent),
+                0 0 26px 6px color-mix(in srgb, var(--cat-accent) 70%, transparent);
+  }
+}
+```
+
+The glow is the tile's own category colour, not a fixed amber — Gabriel's
+correction after an earlier round used amber for every tile regardless of
+category. The low end of the pulse never drops near invisible and the high end
+is a real jump, not a shimmer, then pulled back about 15% once the first "more
+intense" pass read as gaudy; the cycle runs a little slower than first built
+(2.3s, up from 1.8s) for the same reason. **The tile's footprint never changes
+size between resting and armed — nothing in the grid reflows.**
+
+The description stays in the tile permanently, at rest and armed alike; it was
+never conditional on selection. This is what closes "whether the info panel
+keeps the description" — there is no panel left to ask the question of.
+
+### Category colour: at rest, all the time
+
+The open question from the previous session is closed: **at rest**, not hover-only.
+All six tiles carry their category's guest hue as a 4px left border plus a
+lowercase category label under the description, visible before any interaction.
+Dropping it for a plainer tile was tried live in the preview and Gabriel reversed
+it immediately — "bring back the green pink and blue game colors" — it read as
+losing what made the direction distinct, not as winning calm.
+
+Category → hue, matching the guest hues table above: strategy → jade `#5fd9a0`
+(Tic Tac Toe, Chess), puzzle → cyan `#6fdcf2` (Minesweeper, Sudoku), arcade →
+rose `#ff7fcb` (Anime Pong, Flappy Bird). The category label text itself is
+tinted with the same hue, not left dim — an intentional bit more colour than the
+original preview used for that label.
+
+**A per-tile "new" or "staff pick" badge, using a similar accent treatment, was
+floated as a future idea — not decided, not this phase.** Six live games don't
+need a badge system yet; if it's wanted later it is new work, not an extension of
+category colour.
+
+### The CRT texture, applied
+
+Settled at **subtle on the chrome**, the option the preview already ran at.
+Recipe, taken directly from `design/previews/gallery.css`'s own "soft" setting
+rather than reinvented:
+
+```css
+.crt {
+  position: absolute; inset: 0; z-index: 6; pointer-events: none;
+  background: repeating-linear-gradient(to bottom,
+    rgba(0,0,0,0.16) 0 1px, transparent 1px 3px);
+}
+```
+
+A dark line, never a white one — see "Rejected, with the reason" above for why.
+The game grid is lifted out from under it exactly the way "What the preview phase
+measured" already describes doing for a board: `.grid { position: relative;
+z-index: 7; background: var(--bg); }`, which both rises above the texture layer
+and stops it showing through the gaps between tiles.
+
+### Chrome, as built
+
+Wordmark "GABE-SD ARCADE", a top nav (Home / About / GitHub — About is a stub per
+the settled list above), and a status line ("Pick a game to play"). Sizes, as the
+type scale this phase carries into `shared.css`:
+
+| Element | Size | Notes |
+| --- | --- | --- |
+| Body | 22px (20px under 760px) | base VT323 size |
+| Wordmark | 3.1rem (2.4rem under 760px) | `--hot`, heavy bloom |
+| Nav link | 1.15rem | `--dim` at rest, `--pale` on hover, `--amber` + bloom when active |
+| Status line | 1.3rem | `--pale` |
+| Tile name | 1.75rem | `--pale` |
+| Tile description | 1.08rem | `--desc` |
+| Category label | 0.92rem, letter-spacing 0.22em, lowercase | tinted `var(--cat-accent)` |
+| Footer | 1.02rem | `--dim` |
+
 ## How the tokens are layered
 
 `shared.css` already owns nine token names — `--bg`, `--fg`, `--card-bg`,
@@ -428,6 +541,6 @@ person to see an obvious mistake.
 
 ## Still open
 
-In `design/TODO.md`, with the phase that closes each: which palette the site
-takes, how far the CRT texture reaches, whether colour by category stays, and
-whether the hub's info panel confirms the tap-to-select behaviour on touch.
+In `design/TODO.md`, with the phase that closes each: whether
+`design/archive/2026-09-04-retro-interface-directions.html` is rebuilt again once
+the redesign finishes, or frozen as the record of the exploration.

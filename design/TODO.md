@@ -114,8 +114,10 @@ is the phase to go slowly on.
   names mapped onto it. Names unchanged, values new, `prefers-color-scheme`
   removed.
 - The self-hosted font, and the type scale built on it.
-- `hub.css` and the hub's `index.html`: the grid, the accent treatment, the
-  selected-game info panel, the top nav, and an `about.html` stub.
+- `hub.css` and the hub's `index.html`: the grid, the tap-to-arm-then-play tile
+  interaction (build from `design/mockups/hub-preview.html`), the top nav, and an
+  `about.html` stub. There is no separate info panel — see `design/DESIGN.md`
+  under "The hub" for why and for the exact values.
 - Fill in `design/DESIGN.md` — this phase is where the visual system stops being a
   conversation and becomes a document.
 
@@ -123,25 +125,18 @@ is the phase to go slowly on.
 the guest hues, the eight Minesweeper numbers and the proposed token mapping are
 all written out in `design/DESIGN.md`; read that before touching `shared.css`.
 
-**Three questions have to close before the build starts.** They were put to
-Gabriel on 2026-09-06 and he had not answered them when that session ended. Ask
-him — do not decide them alone, and do not build around them:
+**The three questions a previous session left open are closed.** Answered
+2026-09-06 against a served preview, and written out in full in
+`design/DESIGN.md` under "The hub" — read that before building, not this
+summary:
 
-1. **How much CRT texture, if any.** The preview runs at *subtle*. Amber's own
-   argument is that its CRT quality comes from bloom rather than scanlines, and
-   the chrome/screen rule keeps texture off the boards regardless. Live options:
-   none, subtle on the chrome, as-mocked on the chrome. It lands in `shared.css`,
-   so it belongs to this phase and cannot be deferred.
-2. **Whether the info panel keeps the description.** Amber puts the description
-   *in* the tile, so the panel adds only the player count and the key — the cost
-   `amber.css` documents. Options: leave it; drop the description from the panel;
-   or drop it from the tile and let the panel earn its place again. The art
-   director leaned toward the second. Bound up with the two-tap touch question
-   below, which Gabriel still owes a phone test.
-3. **Category colour at rest, or on hover only.** Amber Arcade tags all six tiles
-   at rest in rose/cyan/jade. It is the smallest dose defensible, but it does cut
-   against the calm that won Amber the vote. Amber-at-rest with the category hue
-   arriving only on the pointed-at tile is a one-line change.
+1. **CRT texture: subtle on the chrome.** The exact recipe is in `design/DESIGN.md`.
+2. **The info panel: dropped entirely**, not merely trimmed. The whole tile is
+   now the select-and-play control (tap 1 arms it, tap 2 plays it), which needed
+   no panel to begin with. This was not one of the three options originally
+   listed for this question — the interaction changed underneath it.
+3. **Category colour: at rest, on all six tiles, all the time.** Tried
+   hover-only live in the preview and Gabriel reversed it immediately.
 
 Two things Gabriel should not be surprised by, both stated to him already:
 
@@ -186,14 +181,16 @@ Constraints beyond the settled list:
   `tests/pong.test.js`, so those two are the whole of it.
 - **Hub cards stay `<a href="games/<name>/…">`.** `tests/contract.test.js` reads
   the game folder straight out of that path.
-- **The info panel moves each game's description into hover state, and touch has
-  no hover.** Gabriel's leaning, said on 2026-09-04: one tap selects a tile and
-  fills the panel, a second tap plays it. It is provisional — he wants to confirm
-  it against a served preview — so build that variant first, so he is reacting to
-  the thing he described, and write the confirmed answer into `design/DESIGN.md`.
-  The alternatives raised were the first tile shown by default and the description
-  kept in-tile under a width query. Neither was rejected; they were simply not the
-  one he reached for.
+- **The two-tap touch behaviour is confirmed and built differently than
+  planned.** The original leaning (2026-09-04: a separate info panel, tap 1 fills
+  it, tap 2 plays from it) hit a real bug — on a phone tall enough to need
+  scrolling, the panel sat below the fold and tap 2 needed a scroll first. The
+  fix that shipped, after several rounds against `design/mockups/hub-preview.html`,
+  removes the panel rather than repositioning it: the whole tile is the control,
+  arms on tap 1 with a pulsing glow, plays on tap 2. Full detail and exact CSS in
+  `design/DESIGN.md` under "The hub". Build from that file and from
+  `design/mockups/hub-select-overlay.html`, not from `hub-full-color.html`, whose
+  info-panel structure this supersedes.
 - **The dim accent variants are borderline for text.** Check contrast before using
   one for anything a reader has to read; borders are a different matter.
 - **Nothing under `tests/` is touched by the preview stage of this phase**, and no
