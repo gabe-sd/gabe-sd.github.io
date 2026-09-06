@@ -167,12 +167,20 @@ Constraints beyond the settled list:
   the chosen direction reaches `shared.css` — `tests/pong.test.js` case 13 is the
   first assertion that has to be rewritten, and the constraint below says why.
 
-- **The eleven directions built for this phase are in `design/previews/`**, with a
+- **The directions built for this phase are in `design/previews/`**, with a
   start page saying what has to be decided and a reference sheet giving every
   direction's palette, type and number solution as values. They are throwaway and
   are not to be ported — the chosen one gets rebuilt properly into `shared.css`,
   `hub.css` and the hub's markup. What they measured is recorded in
   `design/DESIGN.md`.
+
+  Eleven went up first. Gabriel picked **Amber Monitor** on 2026-09-06 and asked
+  for two more: Amber with the board colour that Cold Terminal and Vector Neon
+  have, and the art director's written recommendation built rather than argued.
+  Those are **Amber Arcade** (`amberlit.css`) and **Cold Terminal Mk II**
+  (`coldmk2.css`), thirteen in total, and the live choice is between those two
+  and plain Amber Monitor. He has not picked between them yet, and until he does
+  nothing goes into `shared.css`.
 
   The folder can go once a direction is chosen and built. Nothing is lost when it
   does: the compositions stay in this branch's history, and Gabriel has them

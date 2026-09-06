@@ -35,9 +35,53 @@ not. The tokens in `shared.css` and what each one means.
 
 ---
 
-**The palette is not decided yet.** What is below is what has been settled or
-found so far. The open questions, and which phase closes each, are in
+**The palette is not finally decided.** What is below is what has been settled
+or found so far. The open questions, and which phase closes each, are in
 `design/TODO.md`.
+
+## Where the choice stands
+
+**Gabriel picked Amber Monitor on 2026-09-06**, from the eleven directions, and
+in the same breath asked for the one thing that direction was recorded as unable
+to do: the accent colour that Cold Terminal and Vector Neon put into the game
+boards. He also asked to see the art director's written recommendation built
+rather than argued.
+
+So two more directions were built, and the choice is now between them and the
+plain Amber Monitor rather than across eleven:
+
+- **Amber Arcade** (`design/previews/variants/amberlit.css`) — Amber Monitor's
+  shell, type and spacing byte-for-byte, with six guest hues admitted to the
+  boards and one category accent per tile.
+- **Cold Terminal Mk II** (`design/previews/variants/coldmk2.css`) — the
+  recommendation as built: Cold Terminal plus Amber's roominess and larger type,
+  Vector's per-element glow, and the texture capped at *as mocked* and lifted
+  off the boards.
+
+Nothing is committed to `shared.css` yet. Neither of these is the site.
+
+### The rule that came out of it: chrome against screen
+
+Amber Arcade needed a line to sit on, because a P3 amber tube is monochrome by
+physics and cannot show a magenta paddle. The line it found is worth keeping
+whichever direction wins, because Cold Terminal Mk II independently needed the
+same one for its texture:
+
+**The page has two halves. The chrome is the machine — wordmark, nav, strap,
+rules, footer, the panel a game sits in. The screen is the game — the board, the
+digits, the pieces, the score.** Effects that are *about the display* belong to
+the chrome: the single hue, the CRT texture, the bloom. Information the player
+has to decode belongs to the screen, and gets whatever colour it needs.
+
+Both directions obey it and neither was designed to. Amber Arcade keeps one hue
+on the chrome and spends six on the boards. Cold Terminal Mk II keeps the
+scanlines on the chrome and lifts them off the boards. The costume and the
+information stop competing, which is the thing every heavy direction in the
+gallery failed at.
+
+The consequence to carry into the game phases: **a game's board is not decorated
+like the hub.** Whatever `shared.css` ends up doing to a page, the board inside
+it is exempt.
 
 ## The typeface
 
@@ -167,6 +211,39 @@ colours and two marks.
 `text-shadow`.** With `-webkit-text-fill-color: transparent` a text shadow is
 drawn *through* the glyph rather than behind it, and a gradient fill turns to
 mud.
+
+**A guest hue has to be warmed toward the ground it lands on.** Amber Arcade
+took Cold Terminal's and Vector Neon's accents and none of them survived the
+move unchanged: `#3fd4ff` on the brown-black `#0a0704` reads as a hole punched
+through to a different site, because a 100%-blue cyan has nothing in common with
+a ground whose blue channel is almost gone. Every value moved a few points of
+red and green and a step lighter — `#6fdcf2`, `#5fd9a0`, `#ff7fcb`. The rule
+generalises past this palette: **an accent borrowed from a direction with a
+different ground is a starting point, not a value.**
+
+**Eight hues remove the need for a second device entirely.** The finding above
+says a single-hue palette gets five or six steps and the rest need an underline,
+an inverted cell or a border. The converse is worth stating because it is what
+the colour actually buys: with six guest hues plus the home hue plus one
+neutral, Amber Arcade's eight numbers need no mark at all, and the two rarest
+digits stop costing the player a decode. That is the clearest single difference
+between the coloured and monochrome readings of the same direction.
+
+**A region can be lifted out from under the CRT texture, but only if the screen
+gives up its stacking context.** `gallery.css` puts `.screen` at `z-index: 2`
+and the texture layer at `6`; while the screen is a stacking context, nothing
+inside it can rise above the texture, so no part of the page can be exempted.
+Setting `.screen { z-index: auto }` and giving the board strip `z-index: 7` plus
+an opaque background does it — the opaque background is not decoration, since
+the texture otherwise shows straight through the gaps between cells.
+
+Measured rather than eyeballed, because at *as mocked* the texture is too subtle
+to judge from a screenshot: a scanline makes a column of pixels oscillate row to
+row, so the mean absolute row-to-row difference down one column separates
+textured from flat. Cold Terminal reads 11.33 through a hub tile and 5.31
+through a board panel; Cold Terminal Mk II reads the identical 11.33 through the
+tile and **0** through the board panel. Cold is the control — its non-zero board
+figure is what proves the probe detects texture where texture exists.
 
 ## Where the exploration is kept
 

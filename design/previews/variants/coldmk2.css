@@ -1,0 +1,547 @@
+/* 04 — Cold Terminal Mk II
+ *
+ * The recommendation, built. Cold Terminal is the base, and three things are
+ * taken from elsewhere in the gallery — nothing else changes, so a diff of
+ * this against cold.css is exactly the size of the argument:
+ *
+ *   1. AMBER MONITOR'S ROOMINESS AND LARGER TYPE. The reference grid is
+ *      tighter than it needs to be. 19px → 22px, 940px → 1080px, and the
+ *      six-across matrix becomes three-by-two.
+ *   2. VECTOR NEON'S GLOW DISCIPLINE. Cold sets one flat green shadow wherever
+ *      something should look lit. Vector tunes it per element and gives body
+ *      copy none at all. That is a legibility rule, not a taste one.
+ *   3. CRT TEXTURE AT "AS MOCKED", NEVER HEAVY, AND NOT BEHIND THE BOARDS.
+ *      The gallery's own measurement says heavy texture costs about 35% more
+ *      glyph size to stay readable, which a 16×30 Minesweeper board cannot
+ *      afford. So heavy is not offered on this variant at all — the caption
+ *      control has three settings instead of four — and the boards are lifted
+ *      out from under the texture entirely.
+ *
+ * What is deliberately NOT taken: Amber's warm ground, its sentence case, its
+ * bloom, and its outlined CTA. This is still Cold Terminal — one phosphor
+ * green on near-black, everything upper case, nothing rounded, a filled key.
+ * The hairline matrix survives too; it is Cold's signature and the roominess
+ * is spent on bigger cells inside it rather than on turning it into six
+ * floating cards.
+ */
+
+#v-coldmk2 {
+  --bg: #040604;
+  --panel: #070c07;
+  --green: #33ff66;
+  --dim: #1f9e46;
+  --dimmer: #14612d;
+  --line: #143a20;
+
+  --amber: #ffb000;
+  --cyan: #3fd4ff;
+  --magenta: #ff4dd8;
+  --red: #ff3b3b;
+
+  /* --- Borrowed from Vector Neon: a reading tint.
+   *
+   * The temptation in a phosphor direction is to set body copy in the accent.
+   * On black that gives fully saturated green text, which vibrates and is
+   * genuinely tiring to read — Vector's file says so about its cyan and it is
+   * just as true of this green. This is --green desaturated toward white until
+   * it stops fighting the eye. Everything that is a sentence uses it; nothing
+   * that is a sentence uses --green.
+   *
+   * Cold sets .idesc to rgba(51, 255, 102, 0.78), which is the same colour
+   * made dimmer rather than calmer — it keeps every bit of the saturation and
+   * loses the contrast. This keeps the contrast and drops the saturation,
+   * which is the other way round and the right way round. */
+  --read: #c8f5d6;
+  --read-dim: #7fae90;
+
+  /* --- Borrowed from Vector Neon: glow as a scale, not a switch.
+   *
+   * Three levels and a rule for each, rather than one shadow reused wherever
+   * something should look lit. Every one is layered — a tight near-white inner
+   * plus a wide coloured outer — because a single flat shadow reads as a blur
+   * and two layers read as light.
+   *
+   *   --glow-max   the wordmark, and nothing else on the page
+   *   --glow-mid   the selected game's name, the key, the score
+   *   --glow-min   small lit accents: the active nav item, the cursor
+   *   (none)       anything that is a sentence, and every board digit
+   *
+   * The last line is the one that matters. Cold puts a glow on .inm and on
+   * .pscore at the same strength as the wordmark; at 22px the wordmark can
+   * carry it and a score cannot. */
+  --glow-max:
+    0 0 4px rgba(200, 255, 214, 0.55),
+    0 0 14px rgba(51, 255, 102, 0.45),
+    0 0 38px rgba(51, 255, 102, 0.22);
+  --glow-mid:
+    0 0 3px rgba(200, 255, 214, 0.4),
+    0 0 12px rgba(51, 255, 102, 0.28);
+  --glow-min: 0 0 8px rgba(51, 255, 102, 0.32);
+
+  background: var(--bg);
+  color: var(--read);
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 22px;          /* borrowed: Amber's size, three steps up from 19 */
+  line-height: 1.3;
+}
+
+#v-coldmk2 .deco {
+  background:
+    radial-gradient(90% 70% at 50% 0%, rgba(51, 255, 102, 0.055), transparent 70%),
+    radial-gradient(120% 100% at 50% 50%, transparent 60%, rgba(0, 0, 0, 0.6));
+}
+
+/* --- Borrowed from Amber Monitor: the room.
+ *
+ * z-index: auto rather than gallery.css's 2 is not a style change, it is what
+ * makes borrowing 3 possible. At z-index 2 the screen is a stacking context
+ * and nothing inside it can rise above the texture layer at 6, so no region of
+ * the page can be lifted out from under the scanlines. Dropping the index lets
+ * .sample do exactly that, further down. The screen still paints above .deco,
+ * which sits at 0 and comes first in the DOM. */
+#v-coldmk2 .screen {
+  position: relative;
+  z-index: auto;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2.4rem 1.8rem 3.4rem;
+}
+
+/* ------------------------------------------------------------------- top */
+
+#v-coldmk2 .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--line);
+}
+
+/* The only element on the page that gets --glow-max. A wordmark is the one
+ * thing large enough for a wide glow to read as emission rather than as
+ * softness. */
+#v-coldmk2 .brand {
+  font-size: 2.9rem;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--green);
+  text-shadow: var(--glow-max);
+}
+
+#v-coldmk2 .nav { display: flex; gap: 1.5rem; }
+
+#v-coldmk2 .nav a {
+  color: var(--dim);
+  letter-spacing: 0.12em;
+  font-size: 1.05rem;
+  text-decoration: none;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid transparent;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+
+#v-coldmk2 .nav a:hover { color: var(--read); outline: none; }
+
+/* Marked by a rule as well as by colour, so the active item survives being
+ * read in greyscale. */
+#v-coldmk2 .nav a.active {
+  color: var(--green);
+  border-bottom-color: var(--green);
+  text-shadow: var(--glow-min);
+}
+
+/* A sentence, so no glow — this is the borrowing doing its job. */
+#v-coldmk2 .strap {
+  margin: 1rem 0 1.9rem;
+  color: var(--read-dim);
+  letter-spacing: 0.1em;
+  font-size: 1.05rem;
+}
+
+/* The cursor is not a sentence, so it keeps its light. Cold's hard 1.06s step
+ * blink is kept exactly: this variant is the terminal, and a terminal cursor
+ * does not fade. */
+#v-coldmk2 .strap::after {
+  content: "";
+  display: inline-block;
+  width: 0.52em;
+  height: 1em;
+  margin-left: 0.35em;
+  background: var(--green);
+  box-shadow: var(--glow-min);
+  vertical-align: -0.14em;
+  animation: coldmk2-blink 1.06s steps(1) infinite;
+}
+
+@keyframes coldmk2-blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #v-coldmk2 .strap::after { animation: none; } }
+
+/* ------------------------------------------------------------------ grid */
+
+/* Three by two rather than six across, and the hairline matrix survives it:
+ * gap 1px over a --line background is still the whole grid drawn as one ruled
+ * table, which is Cold's signature and is not what was too tight. What was too
+ * tight was the cell. At 1080px three columns are ~358px, which is enough to
+ * carry the description — so the tile stops being an icon with a caption and
+ * starts being a row in a catalogue.
+ *
+ * Cold hides .tdesc and keeps the description for the info panel, and that is
+ * what buys its density. Once the cells are this size, hiding it leaves six
+ * large boxes with almost nothing in them, so it comes back. The cost is
+ * Amber's cost, stated in the same words: the info panel now largely repeats
+ * the tile. What the panel still adds is the player count and the key. */
+#v-coldmk2 .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+#v-coldmk2 .tile {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "ico name"
+    "ico desc"
+    "ico cat";
+  grid-template-rows: auto auto 1fr;
+  column-gap: 1rem;
+  padding: 1.3rem 1.2rem 1.1rem;
+  background: var(--panel);
+  color: var(--read-dim);
+  text-decoration: none;
+  transition: color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+
+#v-coldmk2 .tico {
+  grid-area: ico;
+  align-self: start;
+  display: block;
+  color: var(--dim);
+  transition: color 0.12s ease, filter 0.12s ease;
+}
+
+#v-coldmk2 .ico { width: 42px; height: 42px; }
+
+#v-coldmk2 .tname {
+  grid-area: name;
+  font-size: 1.55rem;
+  line-height: 1.05;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--read);
+  transition: color 0.12s ease, text-shadow 0.12s ease;
+}
+
+/* Shown, and given no glow whatsoever. */
+#v-coldmk2 .tdesc {
+  grid-area: desc;
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 1.02rem;
+  line-height: 1.3;
+  color: var(--read-dim);
+}
+
+#v-coldmk2 .tcat {
+  grid-area: cat;
+  align-self: end;
+  margin-top: 0.65rem;
+  font-size: 0.86rem;
+  letter-spacing: 0.18em;
+  color: var(--dimmer);
+}
+
+#v-coldmk2 .tnum {
+  display: block;
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  font-size: 0.86rem;
+  color: var(--dimmer);
+}
+
+/* The inset rule is Cold's selection mark and it stays — in a 1px matrix an
+ * outlined cell is the only selection that does not disturb the grid. The
+ * outer bloom is cut to a third of Cold's: at this cell size the original
+ * 16px at 0.16 spilled into the two neighbouring cells and made three tiles
+ * look half-selected. That is glow tuned per element rather than per page. */
+#v-coldmk2 .tile:hover,
+#v-coldmk2 .tile:focus-visible,
+#v-coldmk2 .tile.is-selected {
+  background: #0b160e;
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--green), 0 0 10px rgba(51, 255, 102, 0.06);
+}
+
+#v-coldmk2 .tile:hover .tname,
+#v-coldmk2 .tile:focus-visible .tname,
+#v-coldmk2 .tile.is-selected .tname { color: var(--green); text-shadow: var(--glow-min); }
+
+#v-coldmk2 .tile:hover .tico,
+#v-coldmk2 .tile:focus-visible .tico,
+#v-coldmk2 .tile.is-selected .tico {
+  color: var(--green);
+  filter: drop-shadow(0 0 8px rgba(51, 255, 102, 0.4));
+}
+
+#v-coldmk2 .tile:hover .tcat,
+#v-coldmk2 .tile:focus-visible .tcat,
+#v-coldmk2 .tile.is-selected .tcat,
+#v-coldmk2 .tile:hover .tnum,
+#v-coldmk2 .tile:focus-visible .tnum,
+#v-coldmk2 .tile.is-selected .tnum { color: var(--dim); }
+
+/* ------------------------------------------------------------ info panel */
+
+/* Three columns with the key on the far right, borrowed from Amber. At 1080px
+ * Cold's two-column panel leaves half the width empty and the block reads as
+ * an accident rather than as space. */
+#v-coldmk2 .info {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "label name cta"
+    "label meta cta"
+    "label desc cta";
+  column-gap: 1.5rem;
+  align-items: start;
+  margin-top: 2rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
+}
+
+#v-coldmk2 .ilabel {
+  grid-area: label;
+  align-self: start;
+  padding-top: 0.55rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.16em;
+  color: var(--dimmer);
+}
+
+/* --glow-mid, not --glow-max. Cold gives this the same shadow as the wordmark
+ * at two thirds the size, and it turns to fuzz. */
+#v-coldmk2 .inm {
+  grid-area: name;
+  font-size: 2.4rem;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--green);
+  text-shadow: var(--glow-mid);
+}
+
+#v-coldmk2 .imeta {
+  grid-area: meta;
+  margin-top: 0.15rem;
+  font-size: 1rem;
+  letter-spacing: 0.14em;
+  color: var(--dim);
+}
+
+#v-coldmk2 .idesc {
+  grid-area: desc;
+  margin-top: 0.3rem;
+  font-size: 1.2rem;
+  color: var(--read);
+}
+
+/* Filled and inverted, which is Cold's and stays Cold's — Amber's outlined key
+ * belongs to the quiet variant. Enlarged to match the type, and given the mid
+ * glow rather than none: it is the one thing on the page you are meant to
+ * press. */
+#v-coldmk2 .icta {
+  grid-area: cta;
+  justify-self: end;
+  align-self: center;
+  padding: 0.24rem 1.2rem 0.18rem;
+  font-size: 1.15rem;
+  letter-spacing: 0.16em;
+  color: var(--bg);
+  background: var(--green);
+  box-shadow: 0 0 18px rgba(51, 255, 102, 0.25);
+}
+
+#v-coldmk2 .info.is-launching .icta { animation: coldmk2-launch 0.14s steps(1) 5; }
+@keyframes coldmk2-launch { 50% { background: var(--dim); } }
+
+/* ---------------------------------------------------------- game samples */
+
+/* --- Borrowed, third: the boards come out from under the texture.
+ *
+ * z-index 7 clears the .crt layer at 6, which only works because .screen gave
+ * up its stacking context above. The opaque background is not decoration: the
+ * texture still paints underneath, so without it the scanlines show straight
+ * through the gaps between the cells and the exercise is pointless.
+ *
+ * The measured reason, from this gallery's own findings: a dark line every
+ * 3.5px cuts two bands through a glyph at board size and saturated mid-tones
+ * fragment, and the only fix found was cells about 35% larger — which a 16×30
+ * Minesweeper board cannot afford. Texture is a chrome effect here. It belongs
+ * on the parts of the page that are the machine, and not on the part that is
+ * the game.
+ *
+ * A hairline above the strip so the flat area reads as a section rather than
+ * as a hole where the texture stopped. */
+#v-coldmk2 .sample {
+  position: relative;
+  z-index: 7;
+  margin-top: 2.4rem;
+  padding-top: 1.3rem;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+
+#v-coldmk2 .sample-h {
+  margin: 0 0 0.9rem;
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  color: var(--dimmer);
+  text-transform: uppercase;
+}
+
+/* flex-start rather than the default stretch: the Minesweeper box is twice the
+ * width of the others and was being pulled to their height. */
+#v-coldmk2 .sample-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1.3rem; }
+
+#v-coldmk2 .sbox {
+  flex: 0 0 auto;
+  padding: 0.95rem 1.05rem 1.1rem;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+#v-coldmk2 .sbox-h {
+  display: block;
+  margin-bottom: 0.7rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.16em;
+  color: var(--dimmer);
+  text-transform: uppercase;
+}
+
+/* Cells grow with the type. Cold's 30px cell was sized for 19px text. */
+#v-coldmk2 .sgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 38px);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+#v-coldmk2 .scell {
+  height: 38px;
+  display: grid;
+  place-items: center;
+  background: var(--panel);
+  font-size: 1.45rem;
+  color: var(--dim);
+}
+
+#v-coldmk2 .scell.given { color: var(--green); }
+#v-coldmk2 .scell.entered { color: var(--cyan); }
+#v-coldmk2 .scell.sel { background: #10331c; box-shadow: inset 0 0 0 2px var(--green); }
+
+#v-coldmk2 .mgrid {
+  display: flex;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+#v-coldmk2 .mcell {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  background: #0d1a10;
+  font-size: 1.45rem;
+}
+
+/* Cold's eight, unchanged and not up for revision — they are the strongest
+ * argument the direction has. Real monitor phosphors borrowed rather than web
+ * colours invented, hue carrying all eight, and no second device needed.
+ *
+ * The glow discipline reaches them though, by saying nothing: not one of these
+ * has a text-shadow. Eight glowing digits side by side bleed into each other
+ * and the separation the hues bought is spent on blur. */
+#v-coldmk2 .n1 { color: var(--cyan); }
+#v-coldmk2 .n2 { color: var(--green); }
+#v-coldmk2 .n3 { color: var(--amber); }
+#v-coldmk2 .n4 { color: var(--magenta); }
+#v-coldmk2 .n5 { color: #ff5a4d; }
+#v-coldmk2 .n6 { color: #24d9a8; }
+#v-coldmk2 .n7 { color: #ffffff; }
+#v-coldmk2 .n8 { color: #9db3a4; }
+
+#v-coldmk2 .mcell.flag { color: var(--red); }
+#v-coldmk2 .mcell.hidden-cell { background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
+
+#v-coldmk2 .pbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.5rem;
+  letter-spacing: 0.1em;
+}
+
+/* No glow. A two-digit score at 1.5rem is small enough that a shadow costs it
+ * a stroke, and it is on a panel of its own where nothing competes with it. */
+#v-coldmk2 .pscore { color: var(--green); font-variant-numeric: tabular-nums; }
+#v-coldmk2 .plabel { color: var(--dimmer); font-size: 0.9rem; letter-spacing: 0.16em; }
+#v-coldmk2 .pdiv { flex: 0 0 30px; height: 1px; background: var(--line); }
+
+#v-coldmk2 .pcourt {
+  position: relative;
+  height: 52px;
+  margin-top: 0.6rem;
+  border: 1px solid var(--line);
+  background: #060b07;
+}
+
+#v-coldmk2 .pcourt::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 3px;
+  bottom: 3px;
+  border-left: 1px dashed var(--dimmer);
+}
+
+/* The paddles keep their light — they are the two objects on the page whose
+ * whole job is to be found instantly, and they are 3px wide, which is the case
+ * a glow is actually for. */
+#v-coldmk2 .ppad { position: absolute; top: 11px; width: 3px; height: 24px; background: var(--green); }
+#v-coldmk2 .ppad.l { left: 7px; box-shadow: var(--glow-min); }
+#v-coldmk2 .ppad.r { right: 7px; top: 19px; background: var(--red); box-shadow: 0 0 8px rgba(255, 59, 59, 0.35); }
+#v-coldmk2 .pball { position: absolute; left: 62%; top: 22px; width: 5px; height: 5px; background: #ffffff; box-shadow: var(--glow-min); }
+
+/* ----------------------------------------------------------------- foot */
+
+#v-coldmk2 .foot {
+  margin-top: 2.8rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.95rem;
+  letter-spacing: 0.13em;
+  color: var(--dimmer);
+}
+
+/* -------------------------------------------------------------- narrower */
+
+@media (max-width: 760px) {
+  #v-coldmk2 { font-size: 20px; }
+  #v-coldmk2 .screen { padding: 1.7rem 1.1rem 2.4rem; }
+  #v-coldmk2 .brand { font-size: 2.2rem; }
+  #v-coldmk2 .inm { font-size: 2rem; }
+  #v-coldmk2 .info { grid-template-columns: 1fr; grid-template-areas: "label" "name" "meta" "desc" "cta"; }
+  #v-coldmk2 .ilabel { padding-top: 0; margin-bottom: 0.3rem; }
+  #v-coldmk2 .icta { justify-self: start; align-self: start; margin-top: 1rem; }
+  #v-coldmk2 .sample-row { gap: 1rem; }
+}

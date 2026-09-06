@@ -163,12 +163,34 @@ function sampleHTML() {
 
 const INTRO = `
 <div class="intro">
-  <h1>Eleven directions for the site's look</h1>
+  <h1>Directions for the site's look</h1>
   <p class="intro-lede">Nothing here is built. These are complete hub compositions, one per
   direction, so a whole visual world can be judged by looking at it rather than
   described. Pick one — or two to cross — and the real <code>shared.css</code>,
   <code>hub.css</code> and hub markup get built on it properly. Everything in this
   gallery is thrown away.</p>
+
+  <div class="intro-new">
+    <h2>Start with these two</h2>
+    <p>Eleven directions went up first. You picked <b>Amber Monitor</b>, said you wanted the
+    colour that Cold Terminal and Vector Neon put into the boards, and asked to see the
+    recommendation built rather than described. Those are the two new tabs, both in group A,
+    and they are what needs your eye now:</p>
+    <ul>
+      <li><b>Amber Arcade</b> — Amber Monitor's shell, type and spacing, unchanged, with six
+      guest hues let into the game boards and one category accent per tile. Diff it against
+      Amber Monitor and the only things that moved are colours, and only inside the parts of
+      the page that represent a game. The Minesweeper strip is the thing to look at: eight
+      hues means no underline mark on 7 and 8 any more.</li>
+      <li><b>Cold Terminal Mk II</b> — the recommendation, built exactly as it was written:
+      Cold Terminal as the base, plus Amber's roominess and larger type, plus Vector's glow
+      tuned per element instead of set everywhere, plus the texture kept at <i>as mocked</i>,
+      never heavy, and dropped entirely behind the boards. Its texture control has three
+      settings rather than four, because ruling heavy out is part of what it is arguing.</li>
+    </ul>
+    <p>The nine other directions stay where they were. They are the reason these two exist and
+    the record of what was ruled out.</p>
+  </div>
 
   <div class="intro-cols">
     <section>
@@ -236,12 +258,19 @@ const INTRO = `
   second colour left for an error, a warning, or "them versus you" — Pong's opponent can only be
   the dimmer paddle. The redesign's own plan for Pong is a magenta player against a red opponent,
   and amber cannot do that. Green keeps that budget intact.</p>
-  <p><b>So my recommendation is Cold Terminal as the base, with three things taken from the
+  <p><b>So my recommendation was Cold Terminal as the base, with three things taken from the
   others:</b> Amber's roominess and larger type — the reference grid is tighter than it needs to
   be; Vector Neon's discipline of tuning the glow per element instead of setting one everywhere;
   and the CRT texture kept at <i>as mocked</i>, never heavy, and dropped entirely behind the puzzle
-  boards. If you would rather have the warm one, Amber is buildable as it stands and the cost is
-  the paragraph above.</p>
+  boards. <b>That is now built as Cold Terminal Mk II</b> rather than left as a paragraph, so it
+  can be judged the same way as everything else here.</p>
+  <p><b>And the objection to Amber is now answered too.</b> The whole case against it was the
+  missing hue budget, and <b>Amber Arcade</b> spends one without touching the shell — the boards
+  get eight hues, Pong gets its magenta player against a red opponent, and the flag finally gets
+  to be red instead of "brighter". What it costs is the fiction: an amber tube is monochrome by
+  physics, so that page is an amber-panelled machine with a colour display in it. If you do not
+  mind giving that up, the reason to prefer green over amber is gone and it comes down to which
+  one you would rather look at.</p>
   <p class="intro-rec-alt">Two others deserve a mention rather than a vote. <b>Schematic</b> is the
   most surprising thing here and has the most natural answer to the eight numbers. <b>Signal</b> is
   the most confident page in the set and would make a good voice for the parts of the site that are
@@ -275,6 +304,28 @@ const REFERENCE = [
     type: 'VT323 at 22px, sentence case (lowercase + ::first-letter, since text-transform: capitalize cannot do it). Wordmark 3.1rem.',
     numbers: ['#ffb000', '#fff2da', '#ffd24d', '#d3c0a2', '#c98511', '#a89a8a'],
     note: 'Six colours plus an underline mark for 7 and 8 — three luminance bands crossed with saturated amber against near-neutral bone. Eight distinguishable ambers do not exist at board size. Bloom is stacked 6/22/46/96px shadows, none of them tight.',
+  },
+  {
+    id: 'amberlit', name: 'Amber Arcade',
+    ground: '#0a0704',
+    swatches: [['#0a0704', 'ground (brown-black)'], ['#150f07', 'panel'], ['#3d2807', 'hairline'],
+      ['#b8790a', 'dim — text floor'], ['#ffb000', 'amber — home hue'], ['#fff2da', 'white-hot'],
+      ['#6fdcf2', 'cyan 192°'], ['#5fd9a0', 'jade 157°'], ['#d4e85c', 'lime 75°'],
+      ['#ff6a56', 'coral 6°'], ['#ff7fcb', 'rose 328°'], ['#b9a2ff', 'violet 258°']],
+    type: 'Amber Monitor unchanged — VT323 at 22px, sentence case, wordmark 3.1rem.',
+    numbers: ['#ffb000', '#6fdcf2', '#ff6a56', '#5fd9a0', '#ff7fcb', '#d4e85c', '#b9a2ff', '#fff2da'],
+    note: 'Amber Monitor’s shell with six guest hues let into the boards only. Every guest is warmed and lightened off the cold variants’ values, because a 100%-blue cyan on brown-black reads as a hole punched to another page. Amber keeps n1 — the digit read most — so the board still looks like this site. Eight hues means no underline mark is needed at all, which is the clearest thing the colour buys: the single-hue version spends a second device on 7 and 8. The risk pair is lime against amber at 34°, separated on lightness; lime is the value to move if it fails at board size.',
+  },
+  {
+    id: 'coldmk2', name: 'Cold Terminal Mk II',
+    ground: '#040604',
+    swatches: [['#040604', 'ground'], ['#070c07', 'panel'], ['#143a20', 'hairline'],
+      ['#14612d', 'dimmest'], ['#1f9e46', 'dim'], ['#33ff66', 'phosphor'],
+      ['#7fae90', 'read-dim — sentences'], ['#c8f5d6', 'read — sentences'],
+      ['#ffb000', 'amber'], ['#3fd4ff', 'cyan'], ['#ff4dd8', 'magenta']],
+    type: 'VT323 at 22px (Cold’s 19 plus Amber’s three steps), upper case throughout, 1080px measure, three-by-two grid inside the same 1px hairline matrix.',
+    numbers: ['#3fd4ff', '#33ff66', '#ffb000', '#ff4dd8', '#ff5a4d', '#24d9a8', '#ffffff', '#9db3a4'],
+    note: 'Cold Terminal plus three borrowings and nothing else. The reading tint is the one to steal: --read is the phosphor desaturated toward white rather than dimmed, because saturated green body copy on black vibrates — Cold’s rgba(51,255,102,0.78) keeps all the saturation and loses the contrast, which is backwards. Glow is a three-step scale with a rule per step and an explicit "none" for anything that is a sentence and for all eight digits. Texture is capped at "as mocked" and the board strip is lifted above the texture layer, which needs the screen to give up its stacking context.',
   },
   {
     id: 'vector', name: 'Vector Neon',
@@ -387,7 +438,7 @@ function referenceHTML() {
   return `
   <div class="intro ref">
     <h1>Retro interface reference</h1>
-    <p class="intro-lede">Eleven complete interface directions, with the values behind each one:
+    <p class="intro-lede">Thirteen complete interface directions, with the values behind each one:
     the palette as copyable hexes, the typefaces and the scale, and how each solved the hardest
     problem in the set — eight Minesweeper numbers that have to stay apart from each other and
     legible on the ground. Every hex here is one the direction actually uses. Click a name to see
@@ -410,7 +461,7 @@ function referenceHTML() {
       <code>text-shadow</code> — with a transparent fill the shadow draws through the glyph.</li>
     </ul>
 
-    <h2>The eleven</h2>
+    <h2>The thirteen</h2>
     ${REFERENCE.map(block).join('')}
 
     <p class="intro-foot">Built as a design review for the arcade's redesign, September 2026.</p>
@@ -438,6 +489,23 @@ const VARIANTS = [
     foot: 'No accounts. No network. Scores stay on this machine.',
     pitch: 'The same idea on P3 amber rather than P1 green: warmer, softer, no scanlines, and it breathes.',
     cost: 'Amber is a single-hue world — there is no second accent left for a warning or an error state.',
+  },
+  {
+    id: 'amberlit', group: 'A', name: 'Amber Arcade', icons: 'line', crt: 'soft',
+    brand: 'GAME ARCADE', nav: ['GAMES', 'ABOUT'],
+    strap: 'Six games. Pick one.',
+    foot: 'No accounts. No network. Scores stay on this machine.',
+    pitch: 'Amber Monitor with a colour screen. Identical shell, type and spacing — the hue budget goes to the boards, and to one category accent per tile.',
+    cost: 'It gives up the fiction. A real amber tube cannot show a magenta paddle, so this is an amber-panelled machine with a colour display in it rather than an amber monitor.',
+  },
+  {
+    id: 'coldmk2', group: 'A', name: 'Cold Terminal Mk II', icons: 'line',
+    crt: 'mock', crtLevels: ['off', 'soft', 'mock'],
+    brand: 'GAME ARCADE', nav: ['GAMES', 'ABOUT'],
+    strap: 'ARCADE OS 1.1 — 6 CABINETS ONLINE — SELECT A CABINET',
+    foot: 'NO ACCOUNTS · NO NETWORK · YOUR SCORES STAY ON THIS MACHINE',
+    pitch: 'The recommendation, built: Cold Terminal plus Amber’s roominess and larger type, Vector’s glow tuned per element, and the texture kept at "as mocked" and lifted off the boards entirely.',
+    cost: 'The roomier grid brings the description back into the tile, so the info panel now largely repeats it — the same bill Amber Monitor pays. Heavy texture is not on offer here; that is the point rather than an omission.',
   },
   {
     id: 'vector', group: 'A', name: 'Vector Neon', icons: 'line', crt: 'off',
@@ -627,7 +695,7 @@ function renderCaption(v) {
          <span class="cap-pitch">The palettes, the type and the number solutions behind all
          eleven, as values rather than pictures.</span></div>`
       : `<div class="cap-main"><span class="cap-name">Preview gallery</span>
-         <span class="cap-pitch">Eleven directions for the redesign. Read this page, then use the
+         <span class="cap-pitch">Thirteen directions for the redesign. Read this page, then use the
          tabs or the arrow keys.</span></div>`;
     return;
   }
@@ -654,8 +722,13 @@ function renderCaption(v) {
   }
 }
 
+/* Four strengths by default. A variant may narrow the list with `crtLevels`,
+ * which Cold Terminal Mk II does: dropping "heavy" is one of the three things
+ * that direction is arguing for, so offering the button would let the reader
+ * switch on the setting the variant exists to rule out. */
 function crtControlHTML(v) {
-  const levels = [['off', 'none'], ['soft', 'subtle'], ['mock', 'as mocked'], ['heavy', 'heavy']];
+  const ALL = [['off', 'none'], ['soft', 'subtle'], ['mock', 'as mocked'], ['heavy', 'heavy']];
+  const levels = v.crtLevels ? ALL.filter(([lv]) => v.crtLevels.includes(lv)) : ALL;
   return `<span class="crt-ctl">CRT texture:
     ${levels.map(([lv, label]) => `<button data-level="${lv}" class="${v.crt === lv ? 'on' : ''}">${label}</button>`).join('')}
   </span>`;

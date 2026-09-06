@@ -268,6 +268,23 @@ html, body {
 
 .intro-rec-alt { color: #a8a8b2; }
 
+/* The two directions built in answer to Gabriel's first pass over the gallery.
+ * Boxed and put above the fold because the other nine are now background: the
+ * decision has moved on from "which of eleven" to "which of these two". */
+.intro-new {
+  margin: 0 0 1.8rem;
+  padding: 1.1rem 1.3rem 1.2rem;
+  border: 1px solid #3c4a3c;
+  border-left: 3px solid #6ee08a;
+  background: #171d18;
+}
+
+.intro-new h2 { margin-top: 0; }
+.intro-new p { margin: 0 0 0.8rem; }
+.intro-new ul { margin-bottom: 0.8rem; }
+.intro-new li { margin-bottom: 0.6rem; }
+.intro-new > p:last-child { margin-bottom: 0; color: #a8a8b2; }
+
 /* -------------------------------------------------------- reference sheet */
 
 .ref-item {
