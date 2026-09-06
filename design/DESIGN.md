@@ -373,9 +373,35 @@ are the working source and are throwaway — they get deleted once a direction i
 built. The archive does not, because a palette is reusable long after the project
 that produced it, and Gabriel asked for these kept for other work.
 
-That copy pulls its fonts from the font CDN, which is the price of being portable
-— a single file lifted out of the repo cannot resolve a relative font path. It is
-the one exception, and the site itself still self-hosts.
+**It is fully standalone: every typeface is embedded as a base64 data URI.**
+Twenty-nine faces, latin and latin-ext only — the eight Google families the
+other directions use, plus the repo's own VT323, which is byte-identical to
+Google's copy. So the file makes no network request at all and needs nothing
+beside it: hand the single path to anyone, on any machine, offline, and they see
+what is described here. That is what it is for, and it is why it is 880K rather
+than 330K.
+
+Two things a rebuild must not lose:
+
+- **`<meta charset="utf-8">` on the first line, and it is load-bearing.** With
+  no charset the browser sniffs the first ~1KB. The earlier CDN build got UTF-8
+  by luck, because a comment full of em dashes sat up there; embedding the fonts
+  pushes every non-ASCII byte past the sniff window, the sniffer sees nothing but
+  base64 ASCII, falls back to windows-1252, and every `·` `—` `★` `▶` in the file
+  becomes mojibake. It showed up as Full Cabinet's wordmark rendering 15px wide
+  of `GABEÂ·SD ARCADE`, and as nothing else — one visible symptom for a fault
+  affecting the whole file.
+- **Parity is checked on text metrics, not on screenshots.** PNG bytes are not
+  pixels and several directions animate a cursor or a glare band, so image
+  equality is the wrong bar and will never hold. Measure the wordmark, a tile
+  name, the strap and the selected name in all thirteen: a swapped typeface moves
+  every one of those, a blinking cursor moves none. All thirteen match the CDN
+  build exactly.
+
+The site itself still self-hosts from `assets/fonts/` and embeds nothing — a
+data URI in `shared.css` would put 400K of base64 in front of first paint on
+every page. The embedding is the archive's alone, and it is the price of the
+file being portable.
 
 ## How the look gets checked
 
