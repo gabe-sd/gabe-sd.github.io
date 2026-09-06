@@ -219,10 +219,29 @@ Constraints beyond the settled list:
   and plain Amber Monitor. He has not picked between them yet, and until he does
   nothing goes into `shared.css`.
 
-  The folder can go once a direction is chosen and built. Nothing is lost when it
-  does: the compositions stay in this branch's history, and Gabriel has them
-  published outside the repo as a standing reference for other projects — ask him
-  for the link rather than putting it in a public repo.
+  **The folder stays until the redesign is finished, then is deleted.** Gabriel
+  delegated the call on 2026-09-06; this is the art director's, and the reasoning
+  matters more than the answer because a later session will want to reopen it.
+
+  It is kept *now* because it is in active use: it is what the phone preview
+  serves and what the build reads its values from. It goes *after*, because at
+  that point it is thirteen directions of a decision already made, in a repo
+  whose stated principle is to name what breaks if a thing were simpler. Nothing
+  does: `design/archive/` holds every one of them in a single file that is now
+  genuinely standalone — fonts embedded, no network, no sibling files — and git
+  history holds the source. That the archive was *not* standalone until the fonts
+  were embedded is exactly why deleting the folder would have been wrong before
+  and is right after.
+
+  What was recorded here previously called the folder "throwaway", which is the
+  word that caused the confusion worth avoiding: it reads as "this preview does
+  not matter", and Gabriel corrected it — the design preview does have to be part
+  of the repo permanently. It is, via the archive. Only the *editable working
+  source* is temporary, and only once nothing needs to edit it.
+
+  If a later round of directions is wanted, build a new gallery rather than
+  resurrecting this one, and let the archive take a new date. That is what the
+  dated filename is for.
 
 - **How far the CRT texture reaches is open.** `pong-lightning-magenta.html`
   carries a scanline overlay — 1px of white at 3.5% every 3px, blended `overlay` —
