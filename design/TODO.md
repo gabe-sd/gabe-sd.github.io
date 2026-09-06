@@ -137,6 +137,14 @@ Constraints beyond the settled list:
   one he reached for.
 - **The dim accent variants are borderline for text.** Check contrast before using
   one for anything a reader has to read; borders are a different matter.
+- **Nothing under `tests/` is touched by the preview stage of this phase**, and no
+  assertion has been rewritten. `ART-DIRECTOR.md` requires every rewritten test to
+  be named at handover with its break-and-restore proof, so record it here: the
+  answer so far is *none*. The branch changes `assets/fonts/` and `design/` only,
+  which is also why a green suite says so little about it. That changes the moment
+  the chosen direction reaches `shared.css` — `tests/pong.test.js` case 13 is the
+  first assertion that has to be rewritten, and the constraint below says why.
+
 - **The eleven directions built for this phase are in `design/previews/`**, with a
   start page saying what has to be decided and a reference sheet giving every
   direction's palette, type and number solution as values. They are throwaway and
