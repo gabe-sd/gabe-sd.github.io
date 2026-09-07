@@ -144,6 +144,15 @@
   animation: game-cursor 2.4s ease-in-out infinite;
 }
 
+/* A cursor is what a terminal shows *after* something. On its own, with the
+   strap's reserved height holding it out in the middle of the page, it reads as
+   a stray mark rather than as a prompt — which is what it did in Pong, whose
+   strap is deliberately empty during a rally and at the menu. The height stays
+   reserved either way, so nothing moves when the text comes back. */
+.game-strap:empty::after {
+  display: none;
+}
+
 @keyframes game-cursor {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.12; }

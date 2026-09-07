@@ -935,9 +935,17 @@ On top of the shared `#board`, `#status` and `#restart` from `CLAUDE.md`'s page
 contract: `#help-toggle` and `#instructions`, plus a `#menu` over the board
 holding `#menu-heading`, a `#difficulty` radiogroup labelled by
 `#difficulty-label`, a `#win-score-choice` radiogroup labelled by
-`#win-score-label`, and `#play`; a hidden `#score-reader`; and `#win-score`
-inside the instructions panel, which the script rewrites whenever the chosen win
-score changes.
+`#win-score-label`, and `#play`; `#score-you`, `#score-ai` and `#win-score-bar`
+in the scorebar on the bezel; and `#win-score` inside the instructions panel.
+The last two are the same number in two places — `applyWinScore` rewrites both
+whenever the chosen win score changes, and filling either in only at load left
+it confidently wrong the moment the choice could change.
+
+There was also a `#score-reader`, a clipped live region holding the score as
+text because `draw()` painted it on the canvas and canvas pixels reach no screen
+reader. The scorebar is real text with the live region on it, so one element now
+does both jobs and the hidden copy is gone. A second copy would have announced
+every point twice.
 
 ## Stored data
 

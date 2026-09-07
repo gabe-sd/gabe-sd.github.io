@@ -1,7 +1,121 @@
+/* Anime Pong wears the shared frame from game.css. What is here is the cabinet
+   the court sits in — see design/DESIGN.md, "Pong: the cabinet". */
+
+/* ---------- one column, as wide as the court ---------- */
+
+/* 600 court + 12px bezel padding either side + 1px border either side. Every
+   value in the column is derived from that, so a change to the court size
+   changes one number here and nothing else moves out of line. */
+.cabinet,
+.game-page .game-foot {
+  width: min(100%, 626px);
+  margin-inline: auto;
+}
+
+/* .game-stage is a flex row for a game with something standing beside its
+   board. Pong has nothing beside it, and a row would fight the centring. */
+.game-stage {
+  display: block;
+}
+
+.cabinet .game-strap {
+  margin: 0.2rem 0 0.9rem;
+}
+
+/* ---------- the bezel ---------- */
+
+/* The court reads as a screen set into a machine rather than a rectangle on
+   black. Square corners: nothing on this page has a radius. */
+.bezel {
+  position: relative;
+  padding: 12px;
+  background: linear-gradient(#160f08, #0d0905);
+  border: 1px solid var(--p-hairline);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8);
+}
+
+/* Corner brackets, two sides each, on opposite corners. Two are enough to say
+   "machined panel"; four reads as a border and a border is already there. */
+.bezel::before,
+.bezel::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--p-rule);
+}
+
+.bezel::before {
+  left: 4px;
+  top: 4px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.bezel::after {
+  right: 4px;
+  bottom: 4px;
+  border-left: 0;
+  border-top: 0;
+}
+
+/* ---------- the scorebar ---------- */
+
+/* Its ends are flush with the court's, which is the whole reason the column is
+   court-width: `you` sits over the player's paddle and `ai` over the ai's. */
+.scorebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 0 0.55rem;
+  color: var(--p-dim);
+  font-size: 0.9rem;
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+}
+
+.scorebar .target {
+  letter-spacing: 0.24em;
+}
+
+.scorebar .n {
+  margin-left: 0.5rem;
+  font-size: 2rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Each side's number carries that side's own hue and its own glow. This is the
+   only place on the page the two colours are named in words. */
+.scorebar .you .n {
+  color: var(--p-rose);
+  text-shadow: 0 0 10px rgba(255, 127, 203, 0.5);
+}
+
+.scorebar .ai .n {
+  color: var(--p-coral);
+  text-shadow: 0 0 10px rgba(255, 106, 86, 0.5);
+}
+
+/* ---------- the court ---------- */
+
 .board-wrap {
   position: relative;
   line-height: 0; /* no descender gap under the canvas for the menu to sit in */
 }
+
+#board {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #0d0905;
+  border: 1px solid var(--p-hairline);
+  border-radius: 0;
+  touch-action: none;
+}
+
+/* ---------- the menu, over the court ---------- */
 
 /* Scoped to :not([hidden]) or the display value would beat the hidden attribute
    and the menu would render over the board on load. */
@@ -12,119 +126,122 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  border-radius: 8px;
+  gap: 1.15rem;
   line-height: normal;
-  /* Opaque first as a fallback, then veiled where color-mix is supported, so the
-     final score stays readable behind it. */
-  background: var(--bg);
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  /* Opaque first as a fallback, then the veil, so the final score stays
+     readable behind it either way. */
+  background: var(--p-ground);
+  background: rgba(10, 7, 4, 0.86);
 }
 
 .menu-heading {
   margin: 0;
-  font-size: 1.4rem;
-  font-weight: bold;
-  color: var(--fg);
-}
-
-.menu-heading:empty {
-  display: none;
+  font-size: 1.6rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  color: var(--p-hot);
+  text-shadow: var(--bloom);
 }
 
 .menu-group {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .menu-label {
   margin: 0;
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
+  font-size: 0.88rem;
+  letter-spacing: 0.22em;
+  text-transform: lowercase;
+  color: var(--p-dim);
 }
 
 .difficulty {
   display: flex;
   justify-content: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   /* Three across is comfortably inside a 600px board, but the canvas is
-     max-width: 100% and the buttons are not, so a narrow window needs them to
-     fall onto a second line rather than out of the menu. Both rows use this
-     class - the difficulties and the win score - so it is three either way. */
+     width: 100% and the buttons are not, so a narrow window needs them to fall
+     onto a second line rather than out of the menu. Both rows use this class -
+     the difficulties and the win score - so it is three either way. */
   flex-wrap: wrap;
 }
 
+.menu .play {
+  padding: 0.4rem 2.2rem;
+  font-size: 1.2rem;
+}
+
+/* Selected is a filled block with brown-black text; unselected is a hairline
+   outline. shared.css already carries that pair as .btn / .btn.secondary, so
+   what is left here is only which hue each mode fills with. */
 .difficulty .btn[aria-checked="true"] {
   background: var(--accent);
   border-color: var(--accent);
-  color: white;
+  color: var(--p-ground);
+  box-shadow: 0 0 14px rgba(255, 176, 0, 0.35);
 }
 
-/* All three modes carry a colour, from the existing theme tokens so they follow
-   the theme like everything else. Normal takes --accent, which is also what a
-   selected button fills with - that was the reason it was held back at first, and
-   it works because selected is a *filled* button and unselected is an outline, so
-   the two never look alike while exactly one is always filled.
-   Placeholder styling until the game gets real art. */
+/* Assisted and Insane change the game, so they say so in colour. Normal is the
+   plain one and is left plain amber - which is also what a selected button
+   fills with, and that works because selected is *filled* and unselected is an
+   outline, so the two never look alike while exactly one is always filled. */
 .difficulty .btn[data-level="normal"] {
   border-color: var(--accent);
   color: var(--accent);
 }
 
-/* Needed even though the generic selected rule above already says white: this
-   block has the same specificity as that one and comes after it, so without an
-   explicit selected rule the mode colour wins and the label goes blue-on-blue.
-   Each mode carries its own for that reason - do not "simplify" them away. */
+/* Needed even though the generic selected rule above already says this: these
+   blocks have the same specificity and come after it, so without an explicit
+   selected rule for each mode the mode's outline colour wins and the label goes
+   hue-on-hue. Each mode carries its own for that reason - do not "simplify"
+   them away. */
 .difficulty .btn[data-level="normal"][aria-checked="true"] {
   background: var(--accent);
   border-color: var(--accent);
-  color: white;
+  color: var(--p-ground);
+  box-shadow: 0 0 14px rgba(255, 176, 0, 0.35);
 }
 
 .difficulty .btn[data-level="assisted"] {
-  border-color: var(--win);
-  color: var(--win);
+  border-color: color-mix(in srgb, var(--p-jade) 55%, var(--p-hairline));
+  color: var(--p-jade);
 }
 
 .difficulty .btn[data-level="assisted"][aria-checked="true"] {
-  background: var(--win);
-  border-color: var(--win);
-  color: white;
+  background: var(--p-jade);
+  border-color: var(--p-jade);
+  color: var(--p-ground);
+  box-shadow: 0 0 14px rgba(95, 217, 160, 0.35);
 }
 
 .difficulty .btn[data-level="insane"] {
-  border-color: var(--lose);
-  color: var(--lose);
+  border-color: color-mix(in srgb, var(--p-coral) 55%, var(--p-hairline));
+  color: var(--p-coral);
 }
 
 .difficulty .btn[data-level="insane"][aria-checked="true"] {
-  background: var(--lose);
-  border-color: var(--lose);
-  color: white;
+  background: var(--p-coral);
+  border-color: var(--p-coral);
+  color: var(--p-ground);
+  box-shadow: 0 0 14px rgba(255, 106, 86, 0.35);
 }
 
-#board {
-  background: var(--cell-bg);
-  border: 2px solid var(--cell-border);
-  border-radius: 8px;
-  max-width: 100%;
-  touch-action: none;
-}
+/* ---------- the ? panel ---------- */
 
 /* No display rule here on purpose: without one the `hidden` attribute alone
    closes the panel. Adding one would need scoping to :not([hidden]) or the panel
    renders open on load. */
 .instructions {
-  max-width: 420px;
+  margin-top: 1rem;
   padding: 0.85rem 1rem;
-  background: var(--card-bg);
-  border: 2px solid var(--cell-border);
-  border-radius: 10px;
-  font-size: 0.85rem;
+  background: var(--p-panel);
+  border: 1px solid var(--p-hairline);
+  border-radius: 0;
+  font-size: 1rem;
+  color: var(--p-desc);
 }
 
 .instructions ul {
@@ -136,21 +253,26 @@
   margin-bottom: 0.2rem;
 }
 
-.instructions p {
-  margin: 0;
-  color: var(--muted);
+.instructions b {
+  color: var(--p-pale);
+  font-weight: 400;
 }
 
-/* Present to assistive tech, absent for everyone else. Not `display: none`,
-   which would take it out of the accessibility tree as well. */
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  border: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+.instructions p {
+  margin: 0;
+  color: var(--p-dim);
+}
+
+/* ---------- narrow ---------- */
+
+@media (max-width: 620px) {
+  /* The bezel's padding is the one thing that cannot scale with the court:
+     12px of frame around a 300px screen is twice the frame it should be. */
+  .bezel {
+    padding: 7px;
+  }
+
+  .scorebar .n {
+    font-size: 1.6rem;
+  }
 }
