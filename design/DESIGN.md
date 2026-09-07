@@ -59,8 +59,10 @@ than argued. Two more directions were built:
   lifted off the boards. Kept in the archive; its reading-tint and glow-scale
   ideas are worth stealing even though the direction was not taken.
 
-**Nothing has reached `shared.css` yet.** The preview is not the site, and three
-questions listed in `design/TODO.md` have to close before the build starts.
+**Built.** The palette, the type scale and the hub are in `shared.css`, `hub.css`
+and `index.html` as of the `redesign-tokens-hub` phase. The three questions listed
+in `design/TODO.md` closed first, against the preview, before any of it landed —
+see "The hub" below for what they settled.
 
 ### What choosing it commits us to
 
@@ -154,8 +156,8 @@ separated on lightness alone. It holds at preview size. If it fails on a real
 
 ### The token mapping
 
-Proposed, not yet built — names unchanged, values new, palette layer
-underneath, per "How the tokens are layered" below:
+Built, in `shared.css` — names unchanged, values new, palette layer underneath,
+per "How the tokens are layered" below:
 
 | Token | Value | |
 | --- | --- | --- |
@@ -338,6 +340,22 @@ Change a name only by changing that script in the same commit, fallback included
 
 The layer underneath is what lets a phase restyle one game while the five it has
 not reached yet keep rendering correctly.
+
+**The raw names actually used, in `shared.css`:** `--p-ground`, `--p-panel`,
+`--p-panel-lit`, `--p-hairline`, `--p-rule`, `--p-dim`, `--p-soft`, `--p-amber`,
+`--p-pale`, `--p-hot`, `--p-desc` and `--p-cell` for the amber ramp; `--p-cyan`,
+`--p-jade`, `--p-lime`, `--p-coral`, `--p-rose` and `--p-violet` for the six guest
+hues — one name per row of "The palette" tables above, so a later phase can read
+a value this doc describes without re-deriving a name for it. `--bloom` and
+`--bloom-lg` sit alongside them as the two amber text-shadow recipes "Chrome, as
+built" uses for the wordmark and the active nav link.
+
+Only the nine contract names are read by a game's own script at runtime; the
+`--p-*` names and the two bloom shadows are free for any stylesheet to use
+directly; `hub.css` does, for everything in "The hub" that is not one of the
+nine (`--p-hairline` for rules, `--p-dim`/`--p-pale`/`--p-hot` for nav and
+wordmark states, `--p-desc` for tile descriptions, `--p-jade`/`--p-cyan`/
+`--p-rose` for the three category accents).
 
 ## Dark only
 

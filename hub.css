@@ -1,41 +1,206 @@
-.game-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
-  width: 100%;
-  max-width: 720px;
+/* The hub's chrome and its tile grid. design/DESIGN.md, "The hub" is the
+   source of truth for every value here — built from design/mockups/
+   hub-preview.html, not a port of it. */
+
+.hub {
+  position: relative;
 }
 
-.game-card {
+/* The CRT texture. Sits over the whole page (chrome included) so the top nav
+   and wordmark visibly carry it — that is the point. The grid gives itself
+   an opaque background and rises above this layer, per "chrome against
+   screen": the texture is a fact about the display, not about the games. */
+.crt {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.16) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+.screen {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2.6rem 1.8rem 3.6rem;
+  position: relative;
+}
+
+.top {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 1.5rem 1rem;
-  background: var(--card-bg);
-  border: 2px solid var(--cell-border);
-  border-radius: 12px;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--p-hairline);
+}
+
+.brand {
+  font-size: 3.1rem;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  color: var(--p-hot);
+  text-shadow: var(--bloom-lg);
+}
+
+.nav {
+  display: flex;
+  gap: 1.6rem;
+}
+
+.nav a {
+  color: var(--p-dim);
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
   text-decoration: none;
-  color: var(--fg);
-  transition: border-color 0.15s, transform 0.15s;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid transparent;
 }
 
-.game-card:hover {
-  border-color: var(--accent);
-  transform: translateY(-2px);
+.nav a:hover,
+.nav a:focus-visible {
+  color: var(--p-pale);
+  outline: none;
 }
 
-.game-icon {
-  font-size: 2.5rem;
+.nav a.active {
+  color: var(--p-amber);
+  border-bottom-color: var(--p-amber);
+  text-shadow: var(--bloom);
 }
 
-.game-name {
-  font-size: 1.1rem;
-  font-weight: 600;
+.hub .status {
+  margin: 1.1rem 0 2rem;
+  font-size: 1.3rem;
+  color: var(--p-pale);
+  text-align: left;
+  min-height: 0;
 }
 
-.game-desc {
-  font-size: 0.85rem;
-  color: var(--muted);
-  text-align: center;
+/* The grid gives up nothing to the texture: position + z-index above the
+   .crt layer's 6, plus an opaque background so the texture cannot show
+   through the gaps between tiles either. Every tile inherits legibility for
+   free from this one rule. */
+.grid {
+  position: relative;
+  z-index: 7;
+  background: var(--bg);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(285px, 1fr));
+  gap: 1.1rem;
+}
+
+.tile {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "ico name"
+    "ico desc"
+    "ico cat";
+  grid-template-rows: auto auto 1fr;
+  column-gap: 1.05rem;
+  padding: 1.4rem 1.3rem 1.25rem 1.5rem;
+  background: var(--card-bg);
+  border: 1px solid var(--p-hairline);
+  border-left: 4px solid var(--cat-accent);
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease,
+    box-shadow 0.15s ease;
+}
+
+.tile:hover,
+.tile:focus-visible {
+  background: var(--p-panel-lit);
+  outline: none;
+}
+
+.tile[data-cat="strategy"] {
+  --cat-accent: var(--p-jade);
+}
+.tile[data-cat="puzzle"] {
+  --cat-accent: var(--p-cyan);
+}
+.tile[data-cat="arcade"] {
+  --cat-accent: var(--p-rose);
+}
+
+.tico {
+  grid-area: ico;
+  align-self: start;
+  font-size: 2rem;
+  line-height: 1;
+}
+.tname {
+  grid-area: name;
+  font-size: 1.75rem;
+  line-height: 1.05;
+  color: var(--p-pale);
+}
+.tdesc {
+  grid-area: desc;
+  margin-top: 0.35rem;
+  font-size: 1.08rem;
+  line-height: 1.28;
+  color: var(--p-desc);
+}
+.tcat {
+  grid-area: cat;
+  align-self: end;
+  margin-top: 0.7rem;
+  font-size: 0.92rem;
+  letter-spacing: 0.22em;
+  text-transform: lowercase;
+  color: var(--cat-accent);
+}
+
+/* Tap 1 arms the tile (pulsing glow); tap 2 on the armed tile plays it —
+   the whole tile is the control, no separate button or panel. See
+   design/DESIGN.md, "Tile selection: the whole tile is the control". */
+.tile.selected {
+  background: var(--p-panel-lit);
+  border-color: var(--cat-accent);
+  animation: armed-pulse 2.3s ease-in-out infinite;
+}
+@keyframes armed-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px var(--cat-accent),
+      0 0 18px 3px color-mix(in srgb, var(--cat-accent) 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 2px var(--cat-accent),
+      0 0 29px 8px color-mix(in srgb, var(--cat-accent) 72%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tile.selected {
+    animation: none;
+    box-shadow: 0 0 0 2px var(--cat-accent),
+      0 0 26px 6px color-mix(in srgb, var(--cat-accent) 70%, transparent);
+  }
+}
+
+.foot {
+  margin-top: 3.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--p-hairline);
+  font-size: 1.02rem;
+  letter-spacing: 0.06em;
+  color: var(--p-dim);
+}
+
+@media (max-width: 760px) {
+  .screen {
+    padding: 1.8rem 1.1rem 2.6rem;
+  }
+  .brand {
+    font-size: 2.4rem;
+  }
 }

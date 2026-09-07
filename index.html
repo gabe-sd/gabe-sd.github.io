@@ -3,46 +3,66 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Game Arcade</title>
+<title>Gabe-SD Arcade</title>
 <link rel="stylesheet" href="shared.css">
 <link rel="stylesheet" href="hub.css">
 </head>
 <body>
-  <main class="page">
-    <h1>🎮 Game Arcade</h1>
-    <p class="status">Pick a game to play</p>
-    <div class="game-grid">
-      <a class="game-card" href="games/tic-tac-toe/index.html">
-        <span class="game-icon">⭕</span>
-        <span class="game-name">Tic Tac Toe</span>
-        <span class="game-desc">Classic 3x3, two players</span>
-      </a>
-      <a class="game-card" href="games/pong/index.html">
-        <span class="game-icon">🏓</span>
-        <span class="game-name">Anime Pong</span>
-        <span class="game-desc">You vs. the AI paddle</span>
-      </a>
-      <a class="game-card" href="games/minesweeper/index.html">
-        <span class="game-icon">💣</span>
-        <span class="game-name">Minesweeper</span>
-        <span class="game-desc">Clear the board, avoid the mines</span>
-      </a>
-      <a class="game-card" href="games/chess/index.html">
-        <span class="game-icon">♟️</span>
-        <span class="game-name">Chess</span>
-        <span class="game-desc">Full rules, two players, local pass-and-play</span>
-      </a>
-      <a class="game-card" href="games/flappy-bird/index.html">
-        <span class="game-icon">🐦</span>
-        <span class="game-name">Flappy Bird</span>
-        <span class="game-desc">Flap through the pipes, one tap at a time</span>
-      </a>
-      <a class="game-card" href="games/sudoku/index.html">
-        <span class="game-icon">🔢</span>
-        <span class="game-name">Sudoku</span>
-        <span class="game-desc">Fill the grid, no repeats in any row, column, or box</span>
-      </a>
+  <div class="hub">
+    <div class="crt"></div>
+    <div class="screen">
+      <header class="top">
+        <div class="brand">GABE-SD ARCADE</div>
+        <nav class="nav">
+          <a href="index.html" class="active">Home</a>
+          <a href="about.html">About</a>
+          <a href="https://github.com/gabe-sd/gabe-sd.github.io" target="_blank" rel="noopener">GitHub &#8599;</a>
+        </nav>
+      </header>
+      <p class="status">Pick a game to play</p>
+
+      <div class="grid">
+        <a class="tile" data-cat="strategy" href="games/tic-tac-toe/index.html">
+          <span class="tico">⭕</span>
+          <span class="tname">Tic Tac Toe</span>
+          <span class="tdesc">Classic 3x3, two players</span>
+          <span class="tcat">strategy</span>
+        </a>
+        <a class="tile" data-cat="arcade" href="games/pong/index.html">
+          <span class="tico">🏓</span>
+          <span class="tname">Anime Pong</span>
+          <span class="tdesc">You vs. the AI paddle</span>
+          <span class="tcat">arcade</span>
+        </a>
+        <a class="tile" data-cat="puzzle" href="games/minesweeper/index.html">
+          <span class="tico">💣</span>
+          <span class="tname">Minesweeper</span>
+          <span class="tdesc">Clear the board, avoid the mines</span>
+          <span class="tcat">puzzle</span>
+        </a>
+        <a class="tile" data-cat="strategy" href="games/chess/index.html">
+          <span class="tico">♟️</span>
+          <span class="tname">Chess</span>
+          <span class="tdesc">Full rules, two players, local pass-and-play</span>
+          <span class="tcat">strategy</span>
+        </a>
+        <a class="tile" data-cat="arcade" href="games/flappy-bird/index.html">
+          <span class="tico">🐦</span>
+          <span class="tname">Flappy Bird</span>
+          <span class="tdesc">Flap through the pipes, one tap at a time</span>
+          <span class="tcat">arcade</span>
+        </a>
+        <a class="tile" data-cat="puzzle" href="games/sudoku/index.html">
+          <span class="tico">🔢</span>
+          <span class="tname">Sudoku</span>
+          <span class="tdesc">Fill the grid, no repeats in any row, column, or box</span>
+          <span class="tcat">puzzle</span>
+        </a>
+      </div>
+
+      <footer class="foot">gabe-sd/gabe-sd.github.io</footer>
     </div>
-  </main>
+  </div>
+  <script src="hub.js"></script>
 </body>
 </html>
