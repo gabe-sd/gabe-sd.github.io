@@ -55,10 +55,21 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
 ## What they cover, and why
 
 - **contract.test.js** — the page contract, held against every game found by
-  reading `games/` rather than against a list: the three shared ids, `shared.css`
-  linked before the game's own, the link home, and a page that loads clean. Also
-  that the hub has a card for every game folder and no card for anything else,
-  since adding a game is two steps and nothing else checks that both happened.
+  reading `games/` rather than against a list: the three shared ids, the three
+  stylesheets in order (`shared.css`, then `game.css`, then the game's own), the
+  link home, and a page that loads clean. Also that the hub has a card for every
+  game folder and no card for anything else, since adding a game is two steps and
+  nothing else checks that both happened.
+
+  And the shared frame: that every game wears it, that the breadcrumb is the
+  link home, and — for a game whose `#board` is a canvas — that the rendered
+  content box equals the backing store exactly. That last one is not fussiness.
+  Pong shipped with a 600x400 surface rendered into 598 x 398.67, because
+  `shared.css` is `border-box` and the canvas had `width: 100%` plus a 1px
+  border. Every row was resampled, and on a near-black court a smeared 1px line
+  or 10px paddle is drawn across two pixels at half brightness. It does not read
+  as blurry, it reads as **absent** — the game was reported as broken, not as
+  soft.
   It is the one suite that asserts about games it does not own, which is why it
   only ever tests the contract and never how a game plays.
 
@@ -230,3 +241,24 @@ Snap Chromium is confined and cannot read files under `/home/g/.claude/`, so the
 page being shot has to sit inside the project directory. And a screenshot only
 proves what it shows — force any hover, `data-` state or motion frame before the
 shot, or it is a picture of the resting page.
+
+**`deviceScaleFactor: 2` is for reading detail, never for judging a game.** It
+doubles every dimension, so a 10px paddle arrives 20px wide and a resampled edge
+arrives smoothed across four pixels instead of two. Pong's redesign was checked
+entirely at 2x, on element crops of frames posed by hand with the loop stopped,
+and passed every look — while the real page rendered a 600x400 canvas into a
+598 x 398.67 box and smeared the paddles and the ball into the background. It
+was reported as the game being invisible.
+
+Three rules came out of that, and they are cheap:
+
+- **Judge at `deviceScaleFactor: 1`**, at a realistic window width, full page.
+  Shoot at 2x afterwards if you need to read something small.
+- **Let the real loop run.** Click the real buttons, press the real keys, wait,
+  then capture. A hand-posed frame with `running = false` proves that `draw()`
+  can draw; it proves nothing about what a player sees.
+- **Measure the thing you are claiming.** "Is the paddle visible" is a claim
+  about a rendered pixel, so read that pixel — with the effect on and off, at
+  every position the paddle can reach. Two of this session's fixes were sized
+  that way and one was abandoned because the numbers said it cost more than it
+  gave.

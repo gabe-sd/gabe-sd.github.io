@@ -70,6 +70,27 @@ It is the front page of a public repo, but it reads like the internal docs besid
 it. Review with Gabriel before rewriting — what a visitor should get from it is
 his call.
 
+### site-page-contract-stale — `CLAUDE.md`'s page contract describes the pre-frame page
+
+Two lines in "The page contract" stopped being true when all six games took the
+shared frame, and neither is an agent's to change — `CLAUDE.md` is Gabriel's, and
+`ART-DIRECTOR.md` says propose rather than touch. Recorded here so the correction
+is not lost with the session that found it.
+
+- It says a game "links `../../shared.css` **first**, then its own `style.css`".
+  There are three sheets now: `shared.css`, then `game.css`, then the game's own,
+  in that order. The order is load-bearing — the game's sheet loads last so it can
+  override the frame — and `tests/contract.test.js` asserts it. A worker adding a
+  game from the contract alone would not know `game.css` is allowed, let alone
+  required.
+- It lists `.back-link` among what `shared.css` styles for a game page. No game
+  uses it: the frame's breadcrumb is the contract's link home. The rule in
+  `shared.css` is dead but harmless, and deleting it before the contract is
+  corrected would leave the two disagreeing the other way round.
+
+Both are one-line edits. Neither is urgent; both mislead the next person to read
+the contract, which is the one document a new game is built from.
+
 ### site-favicon — The site has no favicon
 
 Every page 404s `/favicon.ico`, because browsers ask for it whether or not you
@@ -157,6 +178,53 @@ gone. Filing an entry in that game's `TODO.md` is the obvious candidate and is
 cheap, but it is still an edit in somebody else's area, which is the thing the
 rule exists to prevent. Ask Gabriel rather than picking one — the boundary of that
 rule is his, and the answer belongs in `INTEGRATOR.md` once it is settled.
+
+### workflow-worktree-relative-paths — A tool session's cwd can leave the worktree without saying so
+
+Twice on 2026-09-07, in one session, the shell's working directory silently
+returned from `.claude/worktrees/<name>` to the shared checkout between one
+command and the next. Everything written with a **relative** path after that
+landed in the shared checkout instead of the branch: the first time it was most
+of a phase's documentation, the second time a test file plus a full `npm test`
+run, which then reported a failure the branch had already fixed and cost a
+debugging cycle to explain.
+
+Nothing was lost either time — the two trees held disjoint edits and the work was
+moved across — but it is the same class of mistake "Shared ground" calls
+absolute: writing into a tree you are not in. There it is framed as a thing an
+agent does deliberately with `git -C` or a `cd`. This is the accidental version,
+and it is quieter, because a relative path that used to be right stays spelled
+the same way when it stops being right.
+
+The proposed rule is one line and costs nothing: **from a worktree, write with
+absolute paths.** Read freely with whatever is convenient; anything that
+*modifies* a file — an editor tool, a shell redirect, a script — names the tree
+it means. `git status` in both trees is the check that catches it after the
+fact, and it should be part of finishing a phase rather than something you
+happen to run.
+
+Where it goes is the open question. It is not art-director-specific, so
+`CLAUDE.md`'s "Shared ground" is the natural home, next to the existing rule it
+is a variant of — but `CLAUDE.md` belongs to Gabriel and both seat files that
+take a worktree would then repeat it. Decide with him.
+
+### workflow-npm-serve-background — `npm run serve` from a worktree binds the port and answers nothing
+
+On 2026-09-07, `PORT=0 npm run serve` and `PORT=8936 npm run serve` started as
+background tasks from a worktree both bound their port and then closed every
+connection without a response — `curl` reported an empty reply, and a browser
+`ERR_EMPTY_RESPONSE`. The same `python3 -u -m http.server <port>` run directly
+from the same directory, in the foreground *or* backgrounded, served normally,
+and `npm run serve` from the shared checkout was fine throughout.
+
+So it is the npm wrapper plus the background task runner, not the server and not
+the worktree. It was worked around by running `python3 -m http.server` directly
+and passing on that URL, which is exactly what the npm script does anyway.
+
+Unresolved: whether this reproduces outside the one harness it was seen in, and
+whether the `exec` in the `serve` script is involved. Worth ten minutes before
+`CLAUDE.md`'s "Port 8934 is the shared checkout's" paragraph tells the next agent
+to run a command that does not work where it tells them to run it.
 
 ### workflow-worktree-server-orphan — Removing a worktree leaves its server running
 
