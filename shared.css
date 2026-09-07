@@ -127,35 +127,62 @@ button {
   font-family: inherit;
 }
 
+/* A terminal key, not a pill. Square corners, a hairline edge, and a label in
+   letterspaced uppercase — the same language the hub uses for a selected tile,
+   so a button on a game page belongs to the same machine as the one that sent
+   you there. The rounded amber pill this replaces was the last thing on the
+   site still wearing the pre-redesign default stylesheet. */
 .btn {
-  padding: 0.5rem 1.25rem;
-  font-size: 1rem;
-  border: none;
-  border-radius: 8px;
+  padding: 0.32rem 0.95rem;
+  font-size: 1.05rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid var(--accent);
+  border-radius: 0;
   background: var(--accent);
   color: var(--p-ground);
   cursor: pointer;
+  box-shadow: 0 0 14px rgba(255, 176, 0, 0.35);
 }
 
 .btn:not(:disabled):hover {
-  opacity: 0.9;
+  background: var(--p-pale);
+  border-color: var(--p-pale);
+  box-shadow: 0 0 18px rgba(255, 214, 148, 0.45);
 }
 
 .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
+/* Unselected: outline only. The filled/outline pair is the whole "selected"
+   idiom here — it carries the difference on its own, with no second signal. */
 .btn.secondary {
   background: transparent;
-  border: 2px solid var(--cell-border);
-  color: var(--fg);
+  border: 1px solid var(--cell-border);
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.btn.secondary:not(:disabled):hover {
+  background: transparent;
+  border-color: var(--p-rule);
+  color: var(--p-pale);
+  box-shadow: none;
 }
 
 /* Square rather than a pill, for a button whose label is a single glyph. */
 .btn.icon {
-  padding: 0.5rem 0.7rem;
+  padding: 0.32rem 0.65rem;
   line-height: 1;
+  letter-spacing: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* A row of buttons under the board. */

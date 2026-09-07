@@ -1,0 +1,39 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:"VT323";font-style:normal;font-weight:400;font-display:swap;
+  src:url("../../assets/fonts/vt323-latin.woff2") format("woff2")}
+/* stand-in for shared.css's token layer */
+:root{--p-ground:#0a0704;--p-panel:#150f07;--p-panel-lit:#221709;--p-hairline:#3d2807;
+--p-rule:#7a5008;--p-dim:#b8790a;--p-soft:#f2bc62;--p-amber:#ffb000;--p-pale:#ffd694;
+--p-hot:#fff2da;--p-jade:#5fd9a0;--p-coral:#ff6a56;--p-cell:#100b06;
+--bloom:0 0 8px rgba(255,176,0,.3),0 0 26px rgba(255,176,0,.16)}
+body{margin:0;background:var(--p-ground);color:var(--p-soft);font-family:VT323,monospace;
+font-size:22px;padding:24px;display:flex;flex-direction:column;align-items:flex-start}
+</style>
+<link rel="stylesheet" href="chess-c.reference.css">
+</head><body>
+<div class="board-stack">
+<div id="taken-by-black" class="tray"></div>
+<div id="board" role="grid"></div>
+<div id="taken-by-white" class="tray"></div>
+</div>
+<script src="chess-pieces.reference.js"></script>
+<script>
+var POS=["r..q.rk.","pp..bppp","..n.....","...p....","..B.P...",".....N..","PPP..PP.","R.BQ.RK."];
+var SEL="4,2", MV=["3,1","2,0","5,1","5,3","6,4"], CAP=["3,3"], LAST=["1,3","3,3"], CHK="0,6";
+var b=document.getElementById("board"), html="";
+for(var r=0;r<8;r++)for(var c=0;c<8;c++){
+  var k=r+","+c, cls="square "+((r+c)%2===0?"light":"dark");
+  if(LAST.indexOf(k)>=0)cls+=" last";
+  if(SEL===k)cls+=" selected";
+  if(CHK===k)cls+=" check";
+  html+='<div class="'+cls+'">';
+  if(MV.indexOf(k)>=0)html+='<span class="dot"></span>';
+  if(CAP.indexOf(k)>=0)html+='<span class="ring"></span>';
+  var ch=POS[r][c];
+  if(ch!==".")html+=pieceSVG(ch);
+  html+="</div>";
+}
+b.innerHTML=html;
+renderTrays(["b","n","p","p"],["N","P","P"]);
+</script></body></html>

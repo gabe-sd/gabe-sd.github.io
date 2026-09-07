@@ -333,10 +333,25 @@ The hardest game and deliberately second: if the token layer survives Pong it
 survives everything. Pong paints itself in `games/pong/script.js`, so most of this
 phase is there rather than in `style.css`.
 
-- Magenta player against the red opponent, per
-  `design/mockups/pong-lightning-magenta.html`. Pong defines both locally; it
-  stops reading `--win` and `--lose` for hero and villain.
-- The scorebar, the menu, the instructions panel, the board chrome.
+**Superseded in part, 2026-09-07.** The colours are settled and the shape of the
+phase is now three named changes rather than a list — `design/DESIGN.md`, "Pong:
+chosen, not yet built", has them with values. The magenta `#ff4dd8` of
+`design/mockups/pong-lightning-magenta.html` is **out**: the player is the hub's
+rose `#ff7fcb` and the opponent is coral `#ff6a56`, which also answers whether an
+in-game accent matches its hub tile. The player half has landed already; the
+opponent's has not.
+
+**Gabriel wants adjustments to the three mocks that he has not specified yet
+(2026-09-07). Ask him before building this phase.**
+
+- Rose player against the coral opponent. Pong defines both locally; it stops
+  reading `--win` and `--lose` for hero and villain.
+- The scorebar, the menu, the instructions panel, the board chrome — and note
+  that the score is painted on the canvas today, so moving it onto a bezel is a
+  script change that also makes `#score-reader` redundant.
+- The serve prompt, the burn-in score, the ball trail and the court vignette.
+  Check the trail against Insane mode: on a fast ball a trail reads as three
+  balls.
 
 Constraints:
 
@@ -387,15 +402,43 @@ phosphor ground, which the current eight will not be.
 cell with `color-mix()` on `--accent`; both want checking against the new values
 rather than assuming they carry over.
 
-### redesign-chess — Chess
+### redesign-game-chrome — Give the other five games the frame chess has
 
 **Branch from:** `redesign`
 
-The most hardcoded stylesheet in the repo: light and dark squares, a second pair
-for dark mode, piece fills with text-shadow outlines, and move dots and rings at
-`rgba(0, 0, 0, 0.35)`. None of it goes through a token today. A phosphor chess
-board is also the hardest single visual question in the redesign — two square
-colours that read as a board without becoming a third accent.
+`game.css` was built on the chess phase because chess needed it, and chess is its
+only consumer. Minesweeper, Sudoku, Tic Tac Toe, Flappy Bird and Pong still sit
+on the bare `.page` — a back-link, an `h1`, a board and a button — which is what
+made the game pages read as a different site from the hub.
+
+Adopting it is three lines of markup plus the stylesheet link, per game:
+
+```html
+<link rel="stylesheet" href="../../game.css">   <!-- between shared and its own -->
+<main class="game-page">
+  <div class="game-deco" aria-hidden="true"></div>
+  <div class="game-crt" aria-hidden="true"></div>
+  <div class="game-in"> … </div>
+</main>
+```
+
+What it costs per game is not the markup, it is the three judgements the chess
+page had to make and that `game.css` deliberately does not make for you:
+
+- **What the breadcrumb and the title say.** Chess is `← ARCADE / CHESS` and
+  `CHESS`. A two-word game needs deciding, not defaulting.
+- **What moves out of `#status` into `.game-foot`.** The contract keeps the
+  status line for game state; standing instructions belong in the foot, and four
+  of the five have an `#instructions` panel that may want folding into it.
+- **Whether the board needs lifting.** `.game-stage` is z-index 7 with an opaque
+  ground so the scanlines stop at the board. A game that draws its own background
+  may need the same treatment on a different element.
+
+Gabriel was asked on 2026-09-07 whether the frame should go on all six at once
+and went to bed before answering, so chess shipped alone rather than five pages
+being restyled unasked. **Ask him before starting**: a framed page next to an
+unframed one reads as broken, which is an argument for doing all five together
+rather than one per phase.
 
 ### redesign-tic-tac-toe — Tic Tac Toe
 
@@ -412,9 +455,16 @@ Not work yet — a decision to take with Gabriel once the hub and every game hav
 been seen in the new palette.
 
 The broader palette is wanted; assigning a fixed colour per category is what is
-unsettled, along with whether categories exist as a visible idea at all and
-whether a game's in-game accent inherits from its hub tile. Filter chips and idea
-tiles were dropped for this project and can be reconsidered here.
+unsettled, along with whether categories exist as a visible idea at all. Filter
+chips and idea tiles were dropped for this project and can be reconsidered here.
+
+**One half of this is now answered by practice rather than by decision.** Whether
+a game's in-game accent inherits from its hub tile: both games designed since
+said yes independently — chess's black army is the strategy tile's jade, Pong's
+player is the arcade tile's rose. Neither was argued for on those grounds; each
+was chosen by eye and turned out to agree. That is worth noticing but is not the
+same as deciding it, and Flappy Bird is the next chance to find out whether it
+generalises or whether two games happened to land the same way.
 
 Close this entry by writing the answer into `design/DESIGN.md`, whichever way it
 goes.
