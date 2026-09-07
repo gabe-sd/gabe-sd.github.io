@@ -181,7 +181,9 @@
 
 /* Standing instructions live here rather than in #status: the contract keeps
    the status line for game state only, and a hint that never changes is not
-   state. Left is what to do, right is what the game quietly handles for you. */
+   state. One span sits left; a second, if a game has something worth saying,
+   sits right. Chess carries one — the rules it quietly handles for you were
+   there and Gabriel took them out. */
 .game-foot {
   position: relative;
   z-index: 7;
