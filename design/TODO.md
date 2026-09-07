@@ -329,6 +329,11 @@ Constraints beyond the settled list:
 
 **Branch from:** `redesign`
 
+**The frame has landed** — breadcrumb, title, strap, scanlines, footer and the
+shared `#instructions` panel are all in place and covered by
+`tests/contract.test.js`. What is left is the inside of the board, which is what
+this entry is for.
+
 The other canvas game, and much simpler than Pong. `readColors()` in
 `games/flappy-bird/script.js` maps `--win` to the pipes and `--lose` to the beak,
 which is decoration borrowing outcome colours — decide whether that survives the
@@ -337,6 +342,11 @@ new palette or whether Flappy takes its own.
 ### redesign-minesweeper — Minesweeper
 
 **Branch from:** `redesign`
+
+**The frame has landed** — breadcrumb, title, strap, scanlines, footer and the
+shared `#instructions` panel are all in place and covered by
+`tests/contract.test.js`. What is left is the inside of the board, which is what
+this entry is for.
 
 Mostly `style.css`. The one real piece of work is `.n1` through `.n8`, eight
 hardcoded number colours that are the only place in the site with a palette of
@@ -347,64 +357,23 @@ phosphor ground, which the current eight will not be.
 
 **Branch from:** `redesign`
 
+**The frame has landed** — breadcrumb, title, strap, scanlines, footer and the
+shared `#instructions` panel are all in place and covered by
+`tests/contract.test.js`. What is left is the inside of the board, which is what
+this entry is for.
+
 `style.css` only. The grid's box borders are drawn with `--fg` and the selected
 cell with `color-mix()` on `--accent`; both want checking against the new values
 rather than assuming they carry over.
 
-### redesign-game-chrome — Give the other five games the frame chess has
-
-**Branch from:** `redesign`
-
-`game.css` was built on the chess phase because chess needed it. Chess and Pong
-wear it; Minesweeper, Sudoku, Tic Tac Toe and Flappy Bird still sit on the bare
-`.page` — a back-link, an `h1`, a board and a button — which is what made the
-game pages read as a different site from the hub.
-
-Adopting it is three lines of markup plus the stylesheet link, per game:
-
-```html
-<link rel="stylesheet" href="../../game.css">   <!-- between shared and its own -->
-<main class="game-page">
-  <div class="game-deco" aria-hidden="true"></div>
-  <div class="game-crt" aria-hidden="true"></div>
-  <div class="game-in"> … </div>
-</main>
-```
-
-What it costs per game is not the markup, it is the three judgements the chess
-page had to make and that `game.css` deliberately does not make for you:
-
-- **What the breadcrumb and the title say.** Chess is `← ARCADE / CHESS` and
-  `CHESS`. A two-word game needs deciding, not defaulting.
-- **What moves out of `#status` into `.game-foot`.** The contract keeps the
-  status line for game state; standing instructions belong in the foot, and four
-  of the five have an `#instructions` panel that may want folding into it.
-- **Whether the board needs lifting.** `.game-stage` is z-index 7 with an opaque
-  ground so the scanlines stop at the board. A game that draws its own background
-  may need the same treatment on a different element.
-
-**Approved by Gabriel on 2026-09-07, for all four at once**, on the argument
-that a framed page next to an unframed one reads as broken. Scope is the frame
-only — breadcrumb, title, strap, scanlines, footer, terminal buttons. It is not
-a redesign of what is inside each game: chess got a new board and new pieces
-because there was a mockup for one, and there is no mockup for Minesweeper's
-grid or Flappy's canvas.
-
-Pong is the worked example and the one to read first. Two things it found that
-`game.css` does not warn you about:
-
-- **A game whose strap is empty needs the cursor hidden.** Pong's `#status` is
-  blank during a rally and at the menu, and the lone blinking block read as a
-  stray mark. `game.css` now hides it on `:empty`, which costs a game with a
-  never-empty strap nothing.
-- **A resting colour and a state colour cannot be the same colour.** Giving
-  Pong's paddles the hues its ability tells already used deleted one of the
-  tells outright. Before handing a game's furniture a hue, find out what that
-  hue was saying.
-
 ### redesign-tic-tac-toe — Tic Tac Toe
 
 **Branch from:** `redesign`
+
+**The frame has landed** — breadcrumb, title, strap, scanlines, footer and the
+shared `#instructions` panel are all in place and covered by
+`tests/contract.test.js`. What is left is the inside of the board, which is what
+this entry is for.
 
 The smallest stylesheet on the site, 32 lines, all tokens already. Last because it
 is nearly free once everything above has settled.

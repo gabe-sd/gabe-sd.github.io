@@ -474,11 +474,20 @@ Three rules under it:
 **The strap cursor respects `prefers-reduced-motion`** and settles at 0.75
 opacity rather than stopping mid-blink.
 
-**Chess is the only consumer today.** Five other games need the same frame and
-adopting one is three lines of markup plus the link — see the
-`redesign-game-chrome` entry in `design/TODO.md`. It was built on the chess phase
-rather than as its own because chess needed it and a frame with one consumer is
-cheaper to change than a frame with six.
+**All six games wear it.** It was built on the chess phase rather than as its
+own, because chess needed it and a frame with one consumer is cheaper to change
+than a frame with six; the other five adopted it once it had stopped moving.
+Adopting one is three lines of markup plus the link, and
+`tests/contract.test.js` now holds every game to it — the link, its position
+between the other two sheets, and the frame's own elements — so a seventh game
+cannot quietly ship on the bare page.
+
+Two things the frame does *not* decide, which is why each game still has a phase
+of its own: what is inside the board, and what colour it is. Minesweeper's eight
+number hues and its rounded cells, Sudoku's grid lines, Tic Tac Toe's marks and
+Flappy's canvas are all untouched by this, and all still carry pre-redesign
+values. A framed page with a pre-redesign interior is the expected halfway
+state, not an oversight.
 
 ### Buttons: a terminal key, not a pill
 
