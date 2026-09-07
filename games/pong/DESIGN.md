@@ -883,7 +883,7 @@ that belongs *on* the court has to be drawn by the game rather than laid over it
 | centre line | over it | `--p-rule`, 2px, dash `2 10`, round caps, 50% |
 | paddles | at rest | yours `--p-rose`, the opponent's `--p-coral` |
 | ball + trail | over play | `--accent`, three ghosts at 50 / 28 / 14% |
-| vignette | over play | elliptical, 60% at the corners |
+| vignette | over the texture, under play | elliptical, 60% at the corners |
 | charge meter | over the vignette | `charge` in `--muted`, then three 14x9 pips |
 | serve prompt | over the vignette | `--muted`, 26px, letterspaced, y 300 |
 
@@ -901,12 +901,37 @@ number anyone actually reads is on the bezel, in daylight, with the word for who
 it is beside it. `#2a1c09` is the court's own ground lifted a few steps — a burn
 tone, not a palette colour, and used nowhere else.
 
-**The vignette goes over play, not under it.** Under it, it is invisible:
-darkening a near-black court does nothing, and the paddles and ball are the only
-things on it bright enough for a vignette to bite on. It is weaker than the
-mockup's — the corners keep their 50%, but the inner stop is pushed out so the
-paddles, which live at the horizontal extremes, lose about 13% rather than 22%.
-The tube is chrome; the paddles are the game.
+**The vignette goes over the court's texture and under everything played with.**
+It shipped over play, the way the mockup draws it, and that was half of the bug
+Gabriel reported as the game being invisible. A vignette darkens the corners, and
+the corners of a Pong court are exactly where the paddles live — a paddle at the
+top or bottom of its travel lost a third of its brightness, on a 10px sliver
+against a near-black ground.
+
+Weakening it only made it cost less while still costing something, so it moved
+instead. Underneath, it costs nothing and still does its work: what it shades is
+the burned-in score and the centre line, not the court, and darkening a near-black
+ground does nothing — which is the very reason it was drawn on top to begin with.
+
+The general form: **chrome that dims is chrome that has to sit under the game.**
+
+### The canvas is drawn 1:1, and CSS has to be told twice
+
+`#board` is `box-sizing: content-box`, against the global `border-box` in
+`shared.css`, and its width is `--court` rather than `100%`. Both are load-bearing
+and neither is obvious.
+
+The canvas has a 600x400 backing store and a 1px border. Under `border-box` a
+width of 600 is the *border* box, so the content box — the surface the backing
+store is painted into — becomes 598 x 398.67. The browser resamples every row and
+column to fit, and on a near-black court a resampled 1px line or 10px paddle is
+smeared across two pixels at half brightness. It does not read as blurry. It reads
+as **not being there**, which is how it shipped and how it was reported.
+
+`tests/contract.test.js` now holds every canvas game to it: the rendered content
+box has to equal the backing store exactly. The cabinet's width is derived from
+`--court` for the same reason — court, plus the canvas's own border, plus the
+bezel's padding and border, so one number moves them all together.
 
 ### The ball trail is spaced by distance, not by ticks
 

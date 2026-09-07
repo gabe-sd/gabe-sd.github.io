@@ -489,6 +489,18 @@ Flappy's canvas are all untouched by this, and all still carry pre-redesign
 values. A framed page with a pre-redesign interior is the expected halfway
 state, not an oversight.
 
+### Centred, because the frame is wider than any board
+
+`.game-stage`, `.game-page .controls` and the `.instructions` panel all centre.
+Most boards are a few hundred pixels wide inside a 1120px frame, so left-aligned
+they sat in the corner of a very large empty page with the title floating off to
+the right. It looked like a mistake, and Gabriel called it one.
+
+Pong turns it off. Its cabinet is already a centred column exactly as wide as the
+court, and centring inside that column as well would centre twice — the strap and
+the buttons would drift off the court's left edge, which is the line they are
+supposed to hold.
+
 ### Buttons: a terminal key, not a pill
 
 `shared.css`'s `.btn` was the last thing on the site still wearing the
@@ -667,14 +679,19 @@ column. All three of the mockup's changes landed together.
 
 ### One column, as wide as the court
 
-The strap, scorebar, court, buttons and footer are `min(100%, 626px)` and centre:
-600 court + 12px of bezel padding either side + 1px of border either side. The
+The strap, scorebar, court, buttons and footer are `min(100%, calc(var(--court)
++ 28px))` and centre: the 600px court, plus the canvas's own 1px border, plus
+12px of bezel padding, plus the bezel's own 1px border, each doubled. The
 breadcrumb and title above them still span the page. Nothing resizes — the column
 simply stops where the court stops, which is what puts `you` and `ai` over the
 paddles they label instead of hundreds of pixels away on a wide monitor.
 
-Derive every width in that column from the court's, so changing the court size
-changes one number and nothing drifts out of line.
+Derive every width in that column from `--court`, so changing the court size
+changes one number and nothing drifts out of line. The first version wrote 626 by
+hand, forgot the canvas's border, and set `width: 100%` on a canvas under a
+global `box-sizing: border-box` — which made the drawing surface render at
+598 x 398.67 and resampled the whole game into invisibility. See
+`games/pong/DESIGN.md`, "The canvas is drawn 1:1".
 
 ### The bezel and the scorebar
 
@@ -710,10 +727,13 @@ than a positioned `<span>` like the mockup's: the canvas scales with the viewpor
 and an HTML overlay pinned at `left: 14px` drifts off the meter it labels the
 moment it does.
 
-**A vignette has to go over play to exist at all.** Under the paddles it is
-invisible, because darkening a near-black court does nothing. Pong's is weaker
-than the mockup's for that reason — the corners keep their 50%, the paddles lose
-about 13% instead of 22%.
+**Chrome that dims has to sit under the game.** Pong's vignette shipped over
+play, the way the mockup draws it, and cost a paddle at the top or bottom of its
+travel a third of its brightness — a 10px sliver on a near-black court. Moving it
+under the play layer costs nothing and loses nothing, because what a vignette on
+this court actually shades is the burned-in score and the centre line rather than
+the near-black ground. If an effect is only visible because it is dimming the
+game, it is not an effect, it is a tax.
 
 ### Rose against coral, all the way down
 
