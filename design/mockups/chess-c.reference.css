@@ -1,0 +1,199 @@
+/* Chess, direction C — the board, its marks and its capture trays.
+ *
+ * Reference, not a patch: these are the settled values written against the class
+ * names games/chess/index.html already uses, so the diff against the current
+ * games/chess/style.css is as small as the change actually is. Everything reads
+ * shared.css tokens; nothing here hardcodes a colour that has a token.
+ *
+ * The markup this expects, which is the current page plus two trays:
+ *
+ *   <div class="board-stack">                      <!-- new: owns --sq -->
+ *   <div id="taken-by-black" class="tray"></div>   <!-- new -->
+ *   <div id="board" role="grid">
+ *     <div class="square light">                    <!-- or .dark -->
+ *       <span class="dot"></span>                   <!-- legal move -->
+ *       <span class="ring"></span>                  <!-- capture -->
+ *       <svg class="piece-w" viewBox="0 0 48 48">…  <!-- or .piece-b -->
+ *     </div> … 64 of them
+ *   </div>
+ *   <div id="taken-by-white" class="tray"></div>   <!-- new -->
+ *   </div>
+ *
+ * Both tray ids are new and go into games/chess/DESIGN.md in the same commit, or
+ * tests/docs-check.js fails — which is the point of that check.
+ */
+
+/* ---------- the board ---------- */
+
+/* --sq lives on the wrapper, not on #board, because the trays are siblings of
+   the board and have to match its width. Put it on #board and a later change to
+   the square size silently leaves the trays at the old one. */
+.board-stack {
+  --sq: 54px;
+  --mark: var(--p-amber); /* flipped to --p-jade while Black is to move */
+  display: inline-flex;
+  flex-direction: column;
+}
+
+/* Drawn, not filled. The ground is a shade under --p-cell because the squares
+   themselves carry no fill and the hairline needs something to sit on. */
+#board {
+  display: grid;
+  grid-template-columns: repeat(8, var(--sq));
+  grid-template-rows: repeat(8, var(--sq));
+  background: #080503;
+  border: 1px solid var(--p-rule);
+  border-radius: 0; /* the direction has no rounded corners anywhere */
+}
+
+.square {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  /* The grid itself. Half a pixel, because a full one reads as a table. */
+  box-shadow: inset 0 0 0 0.5px rgba(255, 176, 0, 0.13);
+}
+
+/* A light square is *nothing*. The dark one is a 5% amber wash — the whole
+   two-square-colour question, answered by not answering it. */
+.square.light { background: transparent; }
+.square.dark  { background: rgba(255, 176, 0, 0.05); }
+
+/* ---------- the pieces ---------- */
+
+/* Stroke icons on the hub's own 48x48 grid at its own weight, coloured entirely
+   through currentColor so no piece needs a rule of its own. See
+   chess-pieces.reference.js for the six paths. */
+.square svg {
+  width: 78%;
+  height: 78%;
+  position: relative;
+  z-index: 2;
+}
+
+.piece-w { color: var(--p-pale); filter: drop-shadow(0 0 5px rgba(255, 214, 148, 0.5)); }
+.piece-b { color: var(--p-jade); filter: drop-shadow(0 0 5px rgba(95, 217, 160, 0.4)); }
+
+/* ---------- the marks ---------- */
+
+/* Selected: the lit-cell value from the palette, plus a hard amber inset. The
+   fill matters as much as the outline — an outline alone disappears against the
+   piece standing inside it. */
+.square.selected { background: var(--p-panel-lit); }
+.square.selected::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 2px var(--p-amber), 0 0 16px rgba(255, 176, 0, 0.35);
+}
+
+/* Legal move: a block, not a circle. A circle is what every other chess site
+   draws; a square pixel is what a display like this one draws. */
+.square .dot {
+  position: absolute;
+  width: 26%;
+  height: 26%;
+  border-radius: 0;
+  background: var(--mark);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--mark) 60%, transparent);
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Capture: four corner brackets, a targeting reticle. Drawn as eight background
+   gradients rather than four elements so it stays one span. */
+.square .ring {
+  position: absolute;
+  inset: 6%;
+  border: 0;
+  border-radius: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    linear-gradient(var(--mark) 0 0) 0 0 / 30% 2px no-repeat,
+    linear-gradient(var(--mark) 0 0) 0 0 / 2px 30% no-repeat,
+    linear-gradient(var(--mark) 0 0) 100% 0 / 30% 2px no-repeat,
+    linear-gradient(var(--mark) 0 0) 100% 0 / 2px 30% no-repeat,
+    linear-gradient(var(--mark) 0 0) 0 100% / 30% 2px no-repeat,
+    linear-gradient(var(--mark) 0 0) 0 100% / 2px 30% no-repeat,
+    linear-gradient(var(--mark) 0 0) 100% 100% / 30% 2px no-repeat,
+    linear-gradient(var(--mark) 0 0) 100% 100% / 2px 30% no-repeat;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--mark) 55%, transparent));
+}
+
+/* Last move, on both squares. Faint on purpose: it is history, not a prompt. */
+.square.last::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 176, 0, 0.10);
+  box-shadow: inset 0 0 0 1px rgba(255, 176, 0, 0.22);
+}
+
+/* Check is the one mark that is not amber, and the only place --lose's coral
+   appears on this board. It replaces the old rule that filled the whole square
+   with var(--lose), which buried the king it was pointing at. */
+.square.check::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 106, 86, 0.10);
+  box-shadow: inset 0 0 0 2px var(--p-coral), inset 0 0 18px rgba(255, 106, 86, 0.45);
+}
+
+/* ---------- the capture trays ---------- */
+
+/* One on each edge, width-matched to the board so they line up with the files.
+   The figure sits directly after the last captured piece rather than out at the
+   board edge: it belongs to that lineup, and a gap would read as a column. */
+.tray {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 34px;
+  padding: 0.1rem 0;
+  width: calc(var(--sq) * 8);
+}
+
+.tray .pcs {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  min-height: 26px;
+}
+
+.tray .pcs svg {
+  width: 26px;
+  height: 26px;
+  display: block;
+}
+
+/* A captured piece keeps its own side's hue, dimmed and unbloomed: it is spent,
+   not in play, and must not compete with the live board an inch away. These have
+   to beat .piece-w / .piece-b above, which colour the svg itself. */
+.tray .pcs svg.piece-w {
+  color: color-mix(in srgb, var(--p-pale) 42%, var(--p-hairline));
+  filter: none;
+}
+.tray .pcs svg.piece-b {
+  color: color-mix(in srgb, var(--p-jade) 42%, var(--p-hairline));
+  filter: none;
+}
+
+/* Only the side that is ahead shows anything, in that side's own hue. */
+.tray .adv {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+#taken-by-black .adv { color: var(--p-jade); text-shadow: 0 0 10px rgba(95, 217, 160, 0.4); }
+#taken-by-white .adv { color: var(--p-pale); text-shadow: var(--bloom); }
+
+/* ---------- what is not answered here ---------- */
+
+/* Eight 54px squares plus the coordinate gutters do not fit a 375px screen. The
+   coordinates are the first thing to drop, then --sq comes down; both need
+   deciding against a served page rather than in this file. */
