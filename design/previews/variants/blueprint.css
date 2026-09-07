@@ -1,0 +1,794 @@
+/* 08 — Schematic
+ *
+ * The arcade drawn as an engineering sheet of itself. Cyan line work on
+ * drafting navy, a two-scale grid under everything, every game a numbered part
+ * with a balloon and a leader line, and a title block in the corner.
+ *
+ * The rule this file holds itself to: a drawn annotation has to terminate on
+ * something real. The leader lines run from a part balloon to a fixed point on
+ * that part's icon box (both ends are computed, not eyeballed); the dimension
+ * lines measure the grid and the Pong court, which are things on the page. No
+ * arrows into empty space, no fake tolerances, no invented part numbers — the
+ * numbers are the ones gallery.js already prints.
+ */
+
+#v-blueprint {
+  /* Paper and ink. The navy is dark enough that hairlines read as ink rather
+   * than as glow, which is what keeps this flat. */
+  --paper: #0b1a2b;
+  --paper-2: #0e2133;   /* part fill: enough to lift a tile off the grid, not enough to hide it */
+  --paper-3: #091622;   /* recessed: cells, court */
+
+  --ink: #7fd4ff;       /* primary line work and figures */
+  --chalk: #dff0fb;     /* the few things lettered at full strength */
+  --note: #9dc4dd;      /* body-weight annotation — 9.4:1 on paper, safe at 11px */
+  --con: #3d7fa6;       /* construction lines and 1px rules */
+  --con-2: #22506e;     /* faintest rules: cell grids, part outlines */
+  --hi: #ffc46b;        /* the one warm ink. Selection and the ball. Nothing else. */
+
+  /* Legend colours, reused by the Minesweeper numbers and the category chips
+   * so the page has one coded palette rather than two. */
+  --leg-green: #6ee7a8;
+  --leg-violet: #b39bff;
+  --leg-teal: #45d6cd;
+  --leg-red: #ff8a76;
+
+  /* The mine icon punches its highlight with this; the default is near-black
+   * and would read as a hole rather than as paper. */
+  --icon-hole: #0b1a2b;
+
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------------ sheet
+ *
+ * The single most important element. Two scales: an 8px construction grid at
+ * 0.030 alpha and a 40px major grid at 0.075. Those two numbers were tuned
+ * against the sample boards, not the header — too strong and the fine grid
+ * shimmers under the Minesweeper cells and costs their legibility; too weak
+ * and the whole conceit disappears at arm's length.
+ */
+
+#v-blueprint .deco {
+  background-image:
+    linear-gradient(to right, rgba(127, 212, 255, 0.075) 0 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(127, 212, 255, 0.075) 0 1px, transparent 1px),
+    linear-gradient(to right, rgba(127, 212, 255, 0.030) 0 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(127, 212, 255, 0.030) 0 1px, transparent 1px);
+  background-size: 40px 40px, 40px 40px, 8px 8px, 8px 8px;
+}
+
+/* The sheet border. */
+#v-blueprint .deco::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border: 1px solid var(--con-2);
+}
+
+/* Corner registration marks, 8px outside the border on both axes: an L at each
+ * corner, drawn as eight 1px gradient layers. */
+#v-blueprint .deco::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(var(--con) 0 0), linear-gradient(var(--con) 0 0),
+    linear-gradient(var(--con) 0 0), linear-gradient(var(--con) 0 0),
+    linear-gradient(var(--con) 0 0), linear-gradient(var(--con) 0 0),
+    linear-gradient(var(--con) 0 0), linear-gradient(var(--con) 0 0);
+  background-size: 20px 1px, 20px 1px, 20px 1px, 20px 1px, 1px 20px, 1px 20px, 1px 20px, 1px 20px;
+  background-position:
+    left top, right top, left bottom, right bottom,
+    left top, right top, left bottom, right bottom;
+}
+
+#v-blueprint .screen {
+  max-width: 1020px;
+  margin: 0 auto;
+  padding: 46px 40px 40px;
+}
+
+/* -------------------------------------------------------------------- top */
+
+#v-blueprint .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--con);
+}
+
+#v-blueprint .brand {
+  font-size: 1.55rem;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  color: var(--chalk);
+  text-transform: uppercase;
+}
+
+#v-blueprint .nav { display: flex; gap: 1.6rem; padding-bottom: 3px; }
+
+#v-blueprint .nav a {
+  position: relative;
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  color: var(--note);
+  text-decoration: none;
+  padding-bottom: 6px;
+}
+
+#v-blueprint .nav a:hover { color: var(--chalk); }
+
+/* The active item is marked the way a drawing marks a chosen option: a rule
+ * under it with tick ends, not a colour change on its own. */
+#v-blueprint .nav a.active { color: var(--chalk); }
+
+#v-blueprint .nav a.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 5px;
+  border: 1px solid var(--ink);
+  border-top: 0;
+}
+
+#v-blueprint .strap {
+  margin: 12px 0 0;
+  font-size: 10.5px;
+  letter-spacing: 0.24em;
+  color: var(--note);
+  text-transform: uppercase;
+}
+
+/* -------------------------------------------------------------- part grid
+ *
+ * The grid carries the sheet's dimension lines: overall across the top, and
+ * down the right margin. Both have tick ends and both break around their
+ * figure, which is how a dimension is actually lettered.
+ */
+
+#v-blueprint .grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
+  gap: 26px 20px;
+  margin: 62px 34px 0 0;
+}
+
+#v-blueprint .grid::before {
+  content: "6 PARTS";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -30px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--con);
+  background-repeat: no-repeat;
+  background-image:
+    /* the line, broken for the figure */
+    linear-gradient(to right,
+      var(--con) 0 calc(50% - 38px),
+      transparent calc(50% - 38px) calc(50% + 38px),
+      var(--con) calc(50% + 38px) 100%),
+    /* tick ends */
+    linear-gradient(var(--con) 0 0),
+    linear-gradient(var(--con) 0 0);
+  background-size: 100% 1px, 1px 11px, 1px 11px;
+  background-position: left 50%, left 50%, right 50%;
+}
+
+#v-blueprint .grid::after {
+  content: "2 ROWS";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -30px;
+  width: 14px;
+  display: grid;
+  place-items: center;
+  writing-mode: vertical-rl;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--con);
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(to bottom,
+      var(--con) 0 calc(50% - 38px),
+      transparent calc(50% - 38px) calc(50% + 38px),
+      var(--con) calc(50% + 38px) 100%),
+    linear-gradient(var(--con) 0 0),
+    linear-gradient(var(--con) 0 0);
+  background-size: 1px 100%, 11px 1px, 11px 1px;
+  background-position: 50% top, 50% top, 50% bottom;
+}
+
+/* ------------------------------------------------------------------ parts */
+
+#v-blueprint .tile {
+  position: relative;
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  grid-template-areas:
+    "ico name"
+    "ico desc"
+    "cat cat";
+  column-gap: 12px;
+  padding: 16px 14px 12px;
+  border: 1px solid var(--con-2);
+  background: var(--paper-2);
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color 0.12s linear, background 0.12s linear, box-shadow 0.12s linear;
+}
+
+/* Corner ticks that appear on hover/selection. The state change is a change of
+ * drawn marks, not only of colour — the ticks arrive and the outline doubles. */
+#v-blueprint .tile::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  opacity: 0;
+  transition: opacity 0.12s linear;
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(var(--hi) 0 0), linear-gradient(var(--hi) 0 0),
+    linear-gradient(var(--hi) 0 0), linear-gradient(var(--hi) 0 0),
+    linear-gradient(var(--hi) 0 0), linear-gradient(var(--hi) 0 0),
+    linear-gradient(var(--hi) 0 0), linear-gradient(var(--hi) 0 0);
+  background-size: 10px 1px, 10px 1px, 10px 1px, 10px 1px, 1px 10px, 1px 10px, 1px 10px, 1px 10px;
+  background-position:
+    left top, right top, left bottom, right bottom,
+    left top, right top, left bottom, right bottom;
+}
+
+#v-blueprint .tico {
+  grid-area: ico;
+  align-self: start;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--con-2);
+  background: var(--paper-3);
+}
+
+#v-blueprint .ico { width: 30px; height: 30px; }
+
+#v-blueprint .tname {
+  grid-area: name;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--chalk);
+}
+
+/* Kept, and set sentence case: on a drawing the note under a part name is the
+ * one thing that is written rather than coded. It is also the only warm-blooded
+ * text on the page, which the schematic badly needs. */
+#v-blueprint .tdesc {
+  grid-area: desc;
+  margin-top: 3px;
+  font-size: 11.5px;
+  line-height: 1.42;
+  color: var(--note);
+}
+
+/* Category as a legend chip, coded with three of the legend colours. The warm
+ * ink is deliberately not one of them: it is reserved for selection. */
+#v-blueprint .tcat {
+  grid-area: cat;
+  justify-self: start;
+  margin-top: 12px;
+  padding: 1px 7px;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  border: 1px solid currentColor;
+  color: var(--con);
+}
+
+#v-blueprint .tile[data-cat="strategy"] .tcat { color: var(--ink); }
+#v-blueprint .tile[data-cat="puzzle"] .tcat { color: var(--leg-green); }
+#v-blueprint .tile[data-cat="arcade"] .tcat { color: var(--leg-violet); }
+
+/* The part balloon, centred exactly on the tile's top-left corner, with a
+ * leader line to a fixed point on the icon box. Both ends are known: the
+ * balloon centre is (0,0) in tile coordinates and the icon box's top-left
+ * corner is (14,16) — the tile's own padding. Hence 21.3px at 48.8deg, and a
+ * terminator dot that lands on the corner it points at. */
+#v-blueprint .tnum {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  top: -11px;
+  left: -11px;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--con);
+  border-radius: 50%;
+  background: var(--paper);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--note);
+  z-index: 2;
+  transition: background 0.12s linear, color 0.12s linear, border-color 0.12s linear;
+}
+
+#v-blueprint .tnum::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 11px;
+  width: 21.3px;
+  height: 1px;
+  background: var(--con);
+  transform-origin: 0 50%;
+  transform: rotate(48.8deg);
+}
+
+#v-blueprint .tnum::after {
+  content: "";
+  position: absolute;
+  left: 23px;
+  top: 25px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--con);
+}
+
+#v-blueprint .tile:hover,
+#v-blueprint .tile:focus-visible,
+#v-blueprint .tile.is-selected {
+  outline: none;
+  border-color: var(--hi);
+  background: #12253a;
+  /* the doubled outline of an emphasised part */
+  box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px var(--con);
+}
+
+#v-blueprint .tile:hover::before,
+#v-blueprint .tile:focus-visible::before,
+#v-blueprint .tile.is-selected::before { opacity: 1; }
+
+#v-blueprint .tile:hover .tnum,
+#v-blueprint .tile:focus-visible .tnum,
+#v-blueprint .tile.is-selected .tnum {
+  background: var(--hi);
+  border-color: var(--hi);
+  color: var(--paper);
+  font-weight: 600;
+}
+
+#v-blueprint .tile:hover .tnum::before,
+#v-blueprint .tile:hover .tnum::after,
+#v-blueprint .tile:focus-visible .tnum::before,
+#v-blueprint .tile:focus-visible .tnum::after,
+#v-blueprint .tile.is-selected .tnum::before,
+#v-blueprint .tile.is-selected .tnum::after { background: var(--hi); }
+
+#v-blueprint .tile:hover .tico,
+#v-blueprint .tile:focus-visible .tico,
+#v-blueprint .tile.is-selected .tico { border-color: var(--con); }
+
+/* -------------------------------------------------------------- detail box */
+
+#v-blueprint .info {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "name cta"
+    "meta cta"
+    "desc desc";
+  align-items: center;
+  column-gap: 1.5rem;
+  margin-top: 46px;
+  padding: 20px 22px 18px;
+  border: 1px solid var(--con);
+}
+
+/* The connector from the parts grid down to the detail box. It starts on the
+ * grid's bottom edge and ends on this box's top edge; it is a reference line
+ * between two things that are both on the sheet. */
+#v-blueprint .info::before {
+  content: "";
+  position: absolute;
+  left: 46px;
+  top: -46px;      /* exactly .info's margin-top: the line touches both edges */
+  width: 1px;
+  height: 46px;
+  background: var(--con);
+}
+
+#v-blueprint .ilabel {
+  position: absolute;
+  top: -8px;
+  left: 18px;
+  padding: 0 8px;
+  background: var(--paper);
+  font-size: 9px;
+  letter-spacing: 0.24em;
+  color: var(--con);
+}
+
+#v-blueprint .inm {
+  grid-area: name;
+  align-self: end;
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--chalk);
+}
+
+#v-blueprint .imeta {
+  grid-area: meta;
+  align-self: start;
+  margin-top: 4px;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--ink);
+}
+
+#v-blueprint .idesc {
+  grid-area: desc;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--con-2);
+  font-size: 12.5px;
+  color: var(--note);
+}
+
+#v-blueprint .icta {
+  grid-area: cta;
+  align-self: center;
+  padding: 8px 16px;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  color: var(--hi);
+  border: 1px solid var(--hi);
+}
+
+#v-blueprint .info.is-launching .icta {
+  animation: blueprint-launch 0.14s steps(1) 5;
+}
+
+@keyframes blueprint-launch {
+  50% { background: var(--hi); color: var(--paper); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #v-blueprint .info.is-launching .icta {
+    animation: none;
+    background: var(--hi);
+    color: var(--paper);
+  }
+}
+
+/* ------------------------------------------------------------ detail views */
+
+#v-blueprint .sample { margin-top: 46px; }
+
+#v-blueprint .sample-h {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 18px;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--note);
+}
+
+#v-blueprint .sample-h::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--con-2);
+}
+
+#v-blueprint .sample-row { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+
+/* 0 1 auto, not 0 0 auto: at phone width the Minesweeper strip is wider than
+ * the sheet and a non-shrinking box pushed itself out through the frame. */
+#v-blueprint .sbox {
+  flex: 0 1 auto;
+  max-width: 100%;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--con-2);
+  background: var(--paper-2);
+}
+
+/* Room under the Pong court for its dimension line, which would otherwise sit
+ * on the detail box's own border. */
+#v-blueprint .sbox:nth-child(3) { padding-bottom: 40px; }
+
+#v-blueprint .sbox-h {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--note);
+}
+
+/* Detail letters, the way a drawing keys its enlargements. */
+#v-blueprint .sbox:nth-child(1) .sbox-h::before { content: "DETAIL A / "; color: var(--con); }
+#v-blueprint .sbox:nth-child(2) .sbox-h::before { content: "DETAIL B / "; color: var(--con); }
+#v-blueprint .sbox:nth-child(3) .sbox-h::before { content: "DETAIL C / "; color: var(--con); }
+
+/* Sudoku */
+
+/* width: max-content, or the 1px gap colour fills the whole box width and the
+ * grid grows a phantom fourth column. */
+#v-blueprint .sgrid {
+  display: grid;
+  width: max-content;
+  grid-template-columns: repeat(3, 34px);
+  gap: 1px;
+  /* Two line weights, the way a drawing separates an outline from a
+   * construction line: the box edge is --con, the cell divisions --con-2. */
+  background: var(--con-2);
+  border: 1px solid var(--con);
+}
+
+#v-blueprint .scell {
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: var(--paper-3);
+  font-size: 15px;
+  color: var(--note);
+}
+
+#v-blueprint .scell.given { color: var(--ink); }
+#v-blueprint .scell.entered { color: var(--hi); }
+
+/* The selected cell is marked twice — a warm outline and an inner rule 3px in —
+ * so it survives being read in greyscale. Three stacked inset shadows were
+ * tried first and read as a solid grey block, not as line work. */
+/* The tint has to be layered over --paper-3, not substituted for it: setting
+ * `background` alone let the grid's own --con-2 show through the alpha and the
+ * cell rendered as a solid blue-grey block. */
+#v-blueprint .scell.sel {
+  background-color: var(--paper-3);
+  background-image: linear-gradient(rgba(255, 196, 107, 0.1), rgba(255, 196, 107, 0.1));
+  box-shadow: inset 0 0 0 1px var(--hi);
+  outline: 1px solid rgba(255, 196, 107, 0.5);
+  outline-offset: -4px;
+}
+
+/* Minesweeper 1–8 */
+
+/* A grid of fixed columns rather than a wrapping flex row. The 1px "rules" are
+ * the container colour showing through the gaps, and a flex row that wraps
+ * leaves a short last line — which paints as a solid blue bar where the missing
+ * cells would be. Fixed columns can only ever be full. */
+#v-blueprint .mgrid {
+  display: grid;
+  grid-template-columns: repeat(10, 32px);
+  width: max-content;
+  max-width: 100%;
+  gap: 1px;
+  background: var(--con-2);
+  border: 1px solid var(--con);
+}
+
+/* Two rows of five below 480px, where ten across no longer fit the sheet. */
+@media (max-width: 480px) {
+  #v-blueprint .mgrid { grid-template-columns: repeat(5, 32px); }
+}
+
+#v-blueprint .mcell {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: var(--paper-3);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* Eight annotation colours, chosen as a legend rather than as a ramp: five
+ * hues well apart on the wheel, then two neutrals separated by lightness, then
+ * the construction blue-grey for the rarest. A brightness ramp of one cyan
+ * cannot carry eight steps — it runs out of contrast at about four. */
+#v-blueprint .n1 { color: var(--ink); }          /* cyan   — the sheet's own ink */
+#v-blueprint .n2 { color: var(--leg-green); }    /* green  */
+#v-blueprint .n3 { color: var(--hi); }           /* amber  */
+#v-blueprint .n4 { color: var(--leg-violet); }   /* violet */
+#v-blueprint .n5 { color: var(--leg-red); }      /* red    */
+#v-blueprint .n6 { color: var(--leg-teal); }     /* teal   */
+#v-blueprint .n7 { color: var(--chalk); }        /* chalk  */
+#v-blueprint .n8 { color: #a3b8c8; }             /* grey   — the quietest, and 8 is the rarest */
+
+/* U+2691 otherwise falls through to a colour-emoji font, which ignores `color`
+ * and drops a glossy orange flag into a flat drawing. */
+#v-blueprint .mcell.flag {
+  color: var(--leg-red);
+  font-size: 14px;
+  font-variant-emoji: text;
+}
+
+/* Unexcavated ground, hatched at 45° the way a section is. */
+#v-blueprint .mcell.hidden-cell {
+  background:
+    repeating-linear-gradient(45deg,
+      rgba(127, 212, 255, 0.16) 0 1px, transparent 1px 6px),
+    var(--paper-2);
+}
+
+/* Pong */
+
+#v-blueprint .pbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#v-blueprint .pscore {
+  font-size: 20px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--chalk);
+}
+
+#v-blueprint .plabel { font-size: 9.5px; letter-spacing: 0.2em; color: var(--note); }
+#v-blueprint .pdiv { flex: 0 0 1px; width: 1px; height: 20px; background: var(--con); }
+
+#v-blueprint .pcourt {
+  position: relative;
+  width: 210px;
+  height: 60px;
+  margin-top: 14px;
+  border: 1px solid var(--con);
+  background: var(--paper-3);
+}
+
+#v-blueprint .pcourt::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  bottom: 4px;
+  border-left: 1px dashed var(--con);
+}
+
+/* Court width, dimensioned. This is the one measurement on the page taken from
+ * a real number: the court is 210px wide and the figure says 210. */
+#v-blueprint .pcourt::after {
+  content: "210";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -22px;
+  height: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 8.5px;
+  letter-spacing: 0.18em;
+  color: var(--con);
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(to right,
+      var(--con) 0 calc(50% - 16px),
+      transparent calc(50% - 16px) calc(50% + 16px),
+      var(--con) calc(50% + 16px) 100%),
+    linear-gradient(var(--con) 0 0),
+    linear-gradient(var(--con) 0 0);
+  background-size: 100% 1px, 1px 9px, 1px 9px;
+  background-position: left 50%, left 50%, right 50%;
+}
+
+#v-blueprint .ppad { position: absolute; width: 4px; height: 22px; background: var(--ink); }
+#v-blueprint .ppad.l { left: 8px; top: 12px; }
+#v-blueprint .ppad.r { right: 8px; top: 26px; }
+#v-blueprint .pball { position: absolute; left: 62%; top: 27px; width: 6px; height: 6px; background: var(--hi); }
+
+/* --------------------------------------------------------------- title block
+ *
+ * Built from .foot: two pseudo-element cells either side of the visitor line,
+ * which stays exactly as written. Monospace makes the two-line label/value
+ * columns align on spaces, which is one reason this is IBM Plex Mono.
+ */
+
+#v-blueprint .foot {
+  display: flex;
+  flex-wrap: wrap;
+  /* centre so the visitor line (an anonymous flex item, unselectable) sits on
+   * the block's midline; the two cells opt back into stretch so their divider
+   * rules run the full height. */
+  align-items: center;
+  column-gap: 26px;
+  margin-top: 52px;
+  border: 1px solid var(--con);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  color: var(--note);
+}
+
+#v-blueprint .foot::before,
+#v-blueprint .foot::after {
+  white-space: pre;
+  flex: 0 0 auto;
+  align-self: stretch;
+  padding: 9px 16px;
+  line-height: 1.75;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+
+/* `\A ` — the trailing space terminates the escape. Without it CSS reads
+ * `\A1` as a six-digit hex code point and the newline is lost, which is how
+ * this first rendered as "REV;OF 1". The columns line up on spaces because
+ * the face is monospaced. */
+#v-blueprint .foot::before {
+  content: "DRAWN BY   SCALE\A HAND       1:1";
+  border-right: 1px solid var(--con);
+}
+
+#v-blueprint .foot::after {
+  content: "SHEET      REV\A 1 OF 1     2026.09";
+  border-left: 1px solid var(--con);
+  margin-left: auto;
+}
+
+/* ------------------------------------------------------------- narrow sheet
+ *
+ * 820px, not 760: with .screen's padding and the grid's right margin, the tile
+ * grid drops from three columns to two somewhere around 790px, and the "2 ROWS"
+ * dimension would then be measuring three. A dimension that stops being true is
+ * exactly the failure this variant has to avoid, so the breakpoint is set where
+ * the count changes rather than where the layout gets tight. Above it the
+ * .screen caps at 1020px, which never fits a fourth column.
+ */
+
+@media (max-width: 820px) {
+  #v-blueprint .screen { padding: 34px 30px 30px; }  /* 30px keeps the part balloons clear of the sheet frame */
+  #v-blueprint .grid { margin: 54px 0 0; }
+  #v-blueprint .grid::after { display: none; }
+  #v-blueprint .brand { font-size: 1.2rem; letter-spacing: 0.22em; }
+
+  #v-blueprint .info {
+    grid-template-columns: 1fr;
+    grid-template-areas: "name" "meta" "desc" "cta";
+  }
+  #v-blueprint .icta { justify-self: start; margin-top: 16px; }
+
+  /* Stack the title block instead of letting it wrap: the negative margins let
+   * each cell span the full width while the visitor line keeps its padding —
+   * it is an anonymous flex item and cannot be given any of its own. */
+  #v-blueprint .foot {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px 16px;
+    column-gap: 0;
+    row-gap: 10px;
+  }
+  #v-blueprint .foot::before {
+    margin: -10px -16px 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--con);
+  }
+  #v-blueprint .foot::after {
+    margin: 0 -16px -10px;
+    border-left: 0;
+    border-top: 1px solid var(--con);
+  }
+}

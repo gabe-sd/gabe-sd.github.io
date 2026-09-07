@@ -426,11 +426,14 @@ than oversights:
   version shipped. It is a heading, three difficulty buttons, a "first to" row and
   Play, stacked centred over the board. It was five buttons when that complaint
   was made, so re-look before assuming it still applies.
-- **The mode colours are placeholders.** Assisted green, Normal blue, Insane red,
-  from `--win`, `--accent` and `--lose`. Blue doubling as "selected" is survivable
-  only because selected is a filled button and unselected is an outline; if the
-  art pass changes what selected looks like, check that Normal still reads as
-  unchosen.
+- **The mode colours are placeholders.** Assisted green, Normal amber, Insane red,
+  from `--win`, `--accent` and `--lose` — amber since the redesign's palette
+  landed; it was blue before. Amber doubling as "selected" is more of a problem
+  now than blue ever was: `design/DESIGN.md` makes amber the site's one selected/
+  active colour everywhere else, so Normal's button and "this is chosen" now use
+  the same hue for two different things. Survivable only because selected is a
+  filled button and unselected is an outline; check it again once anything else
+  changes what selected looks like.
 - **Real art assets**, which the game has never had — everything is `fillRect`
   against theme tokens.
 
@@ -487,10 +490,11 @@ in `draw()`.
   `makeBolt`/`strokePath` will draw a jagged glowing path between any two points.
   Extend those rather than building parallel machinery beside them — the knobs
   live in `ABILITY.afterimages`, `ABILITY.pop` and `ABILITY.squeeze`.
-- Read the Theme section of `games/pong/DESIGN.md` first. A white core is
-  invisible on the light theme's board, which is pure white, and effects drawn
-  over the *board* rather than over a paddle have to pick their colour from the
-  background's luminance.
+- Read the Theme section of `games/pong/DESIGN.md` first. It explains why
+  `boltCore()` picks a colour from the board's own luminance rather than using a
+  fixed white — that reasoning predates the redesign's dark-only board and one of
+  its two branches is now dead code; decide what (if anything) still needs a
+  luminance pick before copying the pattern for a new effect.
 - Anything that flashes has to be driven by the tick count rather than by wall
   time, or it will run at different speeds on different monitors.
 

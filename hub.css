@@ -1,41 +1,334 @@
-.game-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
-  width: 100%;
-  max-width: 720px;
+/* The hub's chrome and its tile grid. design/DESIGN.md, "The hub" is the
+   source of truth for every value here — built from design/mockups/
+   hub-preview.html, not a port of it. */
+
+.hub {
+  position: relative;
 }
 
-.game-card {
+/* A framing wash + vignette, so the page reads as inside a machine rather
+   than flat rectangles on black. z-index 0 puts it behind the .crt lines and
+   the chrome text alike — see design/DESIGN.md, "The hub", for the values
+   and why they stay this faint: any stronger and the ground stops being
+   black and starts being brown. */
+.deco {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+      85% 65% at 50% 2%,
+      rgba(255, 176, 0, 0.16),
+      transparent 74%
+    ),
+    radial-gradient(65% 50% at 50% 100%, rgba(255, 140, 0, 0.06), transparent 70%),
+    radial-gradient(125% 105% at 50% 45%, transparent 52%, rgba(0, 0, 0, 0.72));
+}
+
+/* The CRT texture. Sits over the whole page (chrome included) so the top nav
+   and wordmark visibly carry it — that is the point. The grid gives itself
+   an opaque background and rises above this layer, per "chrome against
+   screen": the texture is a fact about the display, not about the games.
+   At 0.34 opacity per line (gallery.css's "mock" strength) rather than the
+   0.16 "soft" strength this shipped with first — soft read as invisible on a
+   served page. See design/DESIGN.md, "The hub". */
+.crt {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.34) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+.screen {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2.6rem 1.8rem 3.6rem;
+  position: relative;
+}
+
+.top {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 1.5rem 1rem;
-  background: var(--card-bg);
-  border: 2px solid var(--cell-border);
-  border-radius: 12px;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--p-hairline);
+}
+
+.brand {
+  font-size: 3.1rem;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  color: var(--p-hot);
+  text-shadow: var(--bloom-lg);
+}
+
+.nav {
+  display: flex;
+  gap: 1.6rem;
+}
+
+.nav a {
+  color: var(--p-dim);
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
   text-decoration: none;
-  color: var(--fg);
-  transition: border-color 0.15s, transform 0.15s;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid transparent;
 }
 
-.game-card:hover {
-  border-color: var(--accent);
+.nav a:hover,
+.nav a:focus-visible {
+  color: var(--p-pale);
+  outline: none;
+}
+
+.nav a.active {
+  color: var(--p-amber);
+  border-bottom-color: var(--p-amber);
+  text-shadow: var(--bloom);
+}
+
+.hub .status {
+  margin: 1.1rem 0 2rem;
+  font-size: 1.3rem;
+  color: var(--p-pale);
+  text-align: left;
+  min-height: 0;
+}
+
+/* The strap cursor, per design/previews/variants/amberlit.css: a slow fade
+   rather than a hard blink, since this whole direction is the calm reading
+   of the idea. */
+.hub .status::after {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 0.95em;
+  margin-left: 0.45em;
+  background: var(--p-amber);
+  box-shadow: 0 0 12px rgba(255, 176, 0, 0.55);
+  vertical-align: -0.1em;
+  animation: cursor-pulse 2.4s ease-in-out infinite;
+}
+@keyframes cursor-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.12;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hub .status::after {
+    animation: none;
+    opacity: 0.75;
+  }
+}
+
+/* The grid gives up nothing to the texture: position + z-index above the
+   .crt layer's 6, plus an opaque background so the texture cannot show
+   through the gaps between tiles either. Every tile inherits legibility for
+   free from this one rule. */
+.grid {
+  position: relative;
+  z-index: 7;
+  background: var(--bg);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(285px, 1fr));
+  gap: 1.1rem;
+}
+
+.tile {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "ico name"
+    "ico desc"
+    "ico cat";
+  grid-template-rows: auto auto 1fr;
+  column-gap: 1.05rem;
+  padding: 1.4rem 1.3rem 1.25rem 1.5rem;
+  background: var(--card-bg);
+  border: 1px solid var(--p-hairline);
+  border-left: 4px solid transparent;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease,
+    box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+/* The category edge as a glowing bar rather than a flat border-left, per
+   design/previews/variants/amberlit.css — but unlike that file, visible at
+   rest rather than hidden until hover: "Category colour: at rest, all the
+   time" in design/DESIGN.md is settled and this does not reopen it. */
+.tile::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: -1px;
+  bottom: -1px;
+  width: 4px;
+  background: var(--cat-accent);
+  box-shadow: 0 0 10px 1px color-mix(in srgb, var(--cat-accent) 50%, transparent);
+}
+
+/* A second, brighter bar in the same spot, collapsed to nothing at rest and
+   grown from the centre outward on hover/focus/arm — the amberlit.css
+   reveal, layered on top of the always-visible bar above rather than
+   replacing it, so the "at rest" rule above still holds even mid-animation. */
+.tbar {
+  position: absolute;
+  left: -1px;
+  top: -1px;
+  bottom: -1px;
+  width: 4px;
+  background: var(--cat-accent);
+  box-shadow: 0 0 18px 4px color-mix(in srgb, var(--cat-accent) 80%, transparent);
+  transform: scaleY(0);
+  transform-origin: 50% 50%;
+  transition: transform 0.18s ease;
+  pointer-events: none;
+}
+
+.tile:hover .tbar,
+.tile:focus-visible .tbar,
+.tile.selected .tbar {
+  transform: scaleY(1);
+}
+
+.tile:hover,
+.tile:focus-visible {
+  background: var(--p-panel-lit);
+  border-color: color-mix(in srgb, var(--cat-accent) 40%, var(--p-hairline));
+  outline: none;
   transform: translateY(-2px);
+  box-shadow: 0 0 24px 2px color-mix(in srgb, var(--cat-accent) 30%, transparent);
 }
 
-.game-icon {
-  font-size: 2.5rem;
+.tile:hover .tname,
+.tile:focus-visible .tname {
+  color: var(--p-hot);
+  text-shadow: var(--bloom);
 }
 
-.game-name {
-  font-size: 1.1rem;
-  font-weight: 600;
+.tile:hover .tico,
+.tile:focus-visible .tico {
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--cat-accent) 55%, transparent));
 }
 
-.game-desc {
-  font-size: 0.85rem;
-  color: var(--muted);
-  text-align: center;
+.tile[data-cat="strategy"] {
+  --cat-accent: var(--p-jade);
+}
+.tile[data-cat="puzzle"] {
+  --cat-accent: var(--p-cyan);
+}
+.tile[data-cat="arcade"] {
+  --cat-accent: var(--p-rose);
+}
+
+.tico {
+  grid-area: ico;
+  align-self: start;
+  color: var(--p-dim);
+  transition: color 0.16s ease;
+}
+
+.tile:hover .tico,
+.tile:focus-visible .tico {
+  color: var(--p-amber);
+}
+
+/* Stroke icons on a 48x48 grid, one weight, coloured through currentColor —
+   see design/DESIGN.md, "Icons", for where these come from. */
+.ico {
+  display: block;
+  width: 46px;
+  height: 46px;
+}
+.tname {
+  grid-area: name;
+  font-size: 1.75rem;
+  line-height: 1.05;
+  color: var(--p-pale);
+}
+.tdesc {
+  grid-area: desc;
+  margin-top: 0.35rem;
+  font-size: 1.08rem;
+  line-height: 1.28;
+  color: var(--p-desc);
+}
+.tcat {
+  grid-area: cat;
+  align-self: end;
+  margin-top: 0.7rem;
+  font-size: 0.92rem;
+  letter-spacing: 0.22em;
+  text-transform: lowercase;
+  color: var(--cat-accent);
+}
+
+/* Tap 1 arms the tile (pulsing glow); tap 2 on the armed tile plays it —
+   the whole tile is the control, no separate button or panel. See
+   design/DESIGN.md, "Tile selection: the whole tile is the control". */
+.tile.selected {
+  background: var(--p-panel-lit);
+  border-color: var(--cat-accent);
+  animation: armed-pulse 2.3s ease-in-out infinite;
+}
+@keyframes armed-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px var(--cat-accent),
+      0 0 18px 3px color-mix(in srgb, var(--cat-accent) 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 2px var(--cat-accent),
+      0 0 29px 8px color-mix(in srgb, var(--cat-accent) 72%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tile.selected {
+    animation: none;
+    box-shadow: 0 0 0 2px var(--cat-accent),
+      0 0 26px 6px color-mix(in srgb, var(--cat-accent) 70%, transparent);
+  }
+  .tile {
+    transition: none;
+  }
+  .tile:hover,
+  .tile:focus-visible {
+    transform: none;
+  }
+  .tbar {
+    transition: none;
+  }
+}
+
+.foot {
+  margin-top: 3.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--p-hairline);
+  font-size: 1.02rem;
+  letter-spacing: 0.06em;
+  color: var(--p-dim);
+}
+
+@media (max-width: 760px) {
+  .screen {
+    padding: 1.8rem 1.1rem 2.6rem;
+  }
+  .brand {
+    font-size: 2.4rem;
+  }
 }

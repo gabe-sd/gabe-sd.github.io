@@ -1,0 +1,713 @@
+/* 03 — Vector Neon
+ *
+ * Not a raster screen. Asteroids, Tempest, Battlezone: an oscilloscope with a
+ * game attached, where the beam is steered along the shape rather than swept
+ * across a raster. Three consequences drive every value in this file.
+ *
+ * 1. The unlit screen is genuinely #000000. There is no "off" pixel to be
+ *    slightly grey — nothing is drawn there, so nothing is emitted. The near-
+ *    black grounds the other phosphor variants use would be a lie here.
+ * 2. Nothing is filled. A vector display can only draw strokes; a solid
+ *    rectangle costs it a raster it does not have. So every box on this page
+ *    is an outline, at 1px, and the only exception is the CTA — see there.
+ * 3. The beam is white at the core and bleeds its colour outward. One flat
+ *    text-shadow reads as a blur; a near-white inner plus one or two wide
+ *    coloured outers reads as light. Every glow here is layered that way, and
+ *    tuned per element — strong on the wordmark, near-nothing on body text.
+ *
+ * CRT texture is off for this variant and should stay off: scanlines are the
+ * artefact of the display this direction is explicitly not.
+ */
+
+#v-vector {
+  --ink: #000000;      /* the ground, and the text colour inside the one filled element */
+  --ice: #3fd4ff;      /* primary beam */
+  --mag: #ff4dd8;      /* second beam: category accent, flags, the opponent */
+  --hot: #ffffff;      /* the beam core, and the hottest elements */
+
+  /* Two dimmed ices for structure. Anything a hairline is drawn in comes from
+   * here; body text never does — see the note on --read below. */
+  --line: #14556b;     /* resting hairline: visible on black, recedes at once */
+  --line-hi: #2a9dc4;  /* a rule that is doing work */
+
+  /* Reading tint. The temptation in a glow direction is to set body copy in the
+   * accent, which on black gives saturated 100%-blue text that vibrates and is
+   * genuinely tiring. This is --ice desaturated toward white until it stops
+   * fighting the eye, and it is what the strap, .idesc and the footer use. */
+  --read: #bfeaff;
+  --read-dim: #79b6cd;
+
+  --icon-hole: #000000;  /* the mine icon punches its highlight with this */
+
+  background: var(--ink);
+  color: var(--read);
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+/* The empty screen is the point, so the backdrop is almost nothing: a faint
+ * bloom where the brightest cluster sits, and one wireframe rock — drawn, not
+ * filled, the same as everything else.
+ *
+ * The rock started at 0.55 opacity and was a mistake: at that strength it read
+ * as a diagram sitting on top of the grid rather than as the ghost of one, and
+ * it collided with the fourth tile. 0.14 and pushed half off the right edge is
+ * the level where you notice it on the second look and never on the first. */
+#v-vector .deco {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cpolygon points='100,8 152,32 186,92 168,158 108,192 44,170 12,110 30,44' fill='none' stroke='%233fd4ff' stroke-width='1.4'/%3E%3Cpolygon points='100,52 128,66 144,104 118,142 74,132 62,88' fill='none' stroke='%23ff4dd8' stroke-width='1'/%3E%3C/svg%3E"),
+    radial-gradient(70% 45% at 50% 4%, rgba(63, 212, 255, 0.11), transparent 72%),
+    radial-gradient(60% 45% at 50% 58%, rgba(255, 77, 216, 0.05), transparent 78%);
+  background-repeat: no-repeat;
+  background-position: right -240px top 700px, center, center;
+  background-size: 460px 460px, auto, auto;
+  opacity: 0.14;
+}
+
+#v-vector .screen {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2.6rem 1.6rem 3.4rem;
+}
+
+/* ------------------------------------------------------------------- top */
+
+#v-vector .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.8rem 1.5rem;
+  position: relative;
+  padding-bottom: 1.1rem;
+}
+
+/* A drawn rule, not a CSS border: it starts at the left edge and stops short
+ * at 72%, the way a beam that has finished its stroke does. Fading the last
+ * eighth rather than cutting it is the difference between a line that was
+ * drawn and a line that was clipped. */
+#v-vector .top::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 72%;
+  height: 1px;
+  background: linear-gradient(90deg, var(--line-hi) 0 62%, var(--line) 62% 88%, transparent 100%);
+  box-shadow: 0 0 6px rgba(63, 212, 255, 0.35);
+}
+
+/* Orbitron earns its keep here and nowhere else: one wide techno word, set
+ * large and tracked out, is exactly the shape a vector marquee has. Kept to
+ * 700 rather than 900 — the black weight is where it starts to read as a
+ * hackathon logo, because the strokes stop looking like a beam. */
+#v-vector .brand {
+  font-family: 'Orbitron', 'VT323', sans-serif;
+  font-weight: 700;
+  font-size: 1.9rem;
+  letter-spacing: 0.2em;
+  color: var(--hot);
+  /* The full beam: white core, tight ice, wide ice, one very wide magenta so
+   * the bloom is not a single flat hue. Four layers is the most anything on
+   * this page gets. */
+  text-shadow:
+    0 0 2px rgba(255, 255, 255, 0.95),
+    0 0 10px rgba(63, 212, 255, 0.9),
+    0 0 26px rgba(63, 212, 255, 0.55),
+    0 0 54px rgba(255, 77, 216, 0.28);
+}
+
+#v-vector .nav { display: flex; gap: 1.6rem; align-items: baseline; }
+
+#v-vector .nav a {
+  position: relative;
+  color: var(--read-dim);
+  font-size: 0.95rem;
+  letter-spacing: 0.26em;
+  text-decoration: none;
+  padding-bottom: 0.3rem;
+  transition: color 0.14s ease, text-shadow 0.14s ease;
+}
+
+#v-vector .nav a:hover,
+#v-vector .nav a:focus-visible,
+#v-vector .nav a.active {
+  color: var(--hot);
+  outline: none;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.7), 0 0 12px rgba(63, 212, 255, 0.75);
+}
+
+/* The active item is underscored by a short beam that stops before the last
+ * letter — colour is not carrying this state on its own. */
+#v-vector .nav a.active::after,
+#v-vector .nav a:hover::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0.26em;
+  bottom: 0;
+  height: 1px;
+  background: var(--ice);
+  box-shadow: 0 0 6px rgba(63, 212, 255, 0.8);
+}
+
+#v-vector .strap {
+  margin: 1.5rem 0 2.4rem;
+  font-size: 1rem;
+  letter-spacing: 0.42em;   /* vector screens were mostly empty; the type spreads into it */
+  color: var(--read);
+  text-shadow: 0 0 8px rgba(63, 212, 255, 0.3);   /* one soft layer only: this is small text */
+}
+
+/* The beam parks at the end of the line and idles. */
+#v-vector .strap::after {
+  content: "";
+  display: inline-block;
+  width: 0.14em;
+  height: 0.95em;
+  margin-left: 0.1em;
+  background: var(--hot);
+  vertical-align: -0.1em;
+  box-shadow: 0 0 4px var(--hot), 0 0 12px var(--ice);
+  animation: vector-idle 1.9s ease-in-out infinite;
+}
+
+@keyframes vector-idle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #v-vector .strap::after { animation: none; opacity: 0.8; }
+}
+
+/* ------------------------------------------------------------------ grid */
+
+/* Spaced apart, not butted together. Shared 1px borders are a raster idiom —
+ * two adjacent cells sharing an edge is what a grid of filled boxes does. Six
+ * separately drawn outlines with black between them is what a vector display
+ * would actually put on the screen. */
+/* 240px is chosen to land on three columns at this max-width rather than four:
+ * six tiles in a 3x2 block is a shape, six in a 4+2 is a leftover row, and the
+ * shape matters more here than the extra density. */
+#v-vector .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.3rem;
+}
+
+#v-vector .tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.95rem;
+  /* Art director's correction: was 2.3rem/1.7rem, which left the icon, name and
+   * category floating in the middle of a box twice their height. Empty screen is
+   * the direction; an empty box is not the same thing, and the difference is
+   * whether the border looks like a deliberate frame or like a container nobody
+   * filled. */
+  padding: 1.5rem 0.8rem 1.2rem;                 /* three columns make a wide box; the
+                                                  * padding is what stops it reading as
+                                                  * a banner rather than a cabinet */
+  background: transparent;                       /* nothing is filled */
+  border: 1px solid var(--line);
+  color: var(--read-dim);
+  text-decoration: none;
+  transition: color 0.14s ease, border-color 0.14s ease,
+              box-shadow 0.14s ease, transform 0.14s ease;
+}
+
+/* Corner ticks. These are the non-colour half of the selected state: at rest
+ * they are absent, and on hover/selection two corners get bracketed. A user
+ * who cannot separate #14556b from #3fd4ff still sees the brackets arrive. */
+#v-vector .tile::before,
+#v-vector .tile::after {
+  content: "";
+  position: absolute;
+  width: 17px;
+  height: 17px;
+  opacity: 0;
+  transition: opacity 0.14s ease;
+}
+
+#v-vector .tile::before {
+  top: 5px; left: 5px;
+  border-top: 1px solid var(--hot);
+  border-left: 1px solid var(--hot);
+}
+
+#v-vector .tile::after {
+  bottom: 5px; right: 5px;
+  border-bottom: 1px solid var(--hot);
+  border-right: 1px solid var(--hot);
+}
+
+/* The icon is the tile's main content, so it sits at reading brightness rather
+ * than at the tile's dimmed inherited colour — the hover still has plenty to
+ * say through the border, the brackets and the white. Setting a colour here
+ * means the hover has to name .tico explicitly; inheritance no longer reaches
+ * it from .tile. */
+#v-vector .tico { display: block; color: var(--read); }
+
+/* drop-shadow follows the strokes rather than the box, which is the only way
+ * to make a stroke icon glow like a drawn shape. Two layers, dim at rest. */
+#v-vector .ico {
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 0 3px rgba(63, 212, 255, 0.45));
+  transition: filter 0.14s ease;
+}
+
+#v-vector .tname {
+  font-size: 1.2rem;
+  letter-spacing: 0.16em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--read);
+}
+
+/* The tile is a shape, not a paragraph. The description lives in the info
+ * panel, which is what lets the grid stay this sparse. */
+#v-vector .tdesc { display: none; }
+
+/* Category tinting, subtle enough to be a texture rather than a code: the
+ * accent only shows up on .tcat, and only enough to notice on the second
+ * pass. Anything stronger and six outlined boxes turn into a colour chart.
+ *
+ * The three tints are the two beam colours and neutral, nothing else. A green
+ * for strategy was tried and pulled: it is a third hue in a two-gun palette
+ * and it read as muddy against the saturated ice and magenta either side. */
+#v-vector .tcat {
+  font-size: 0.78rem;
+  letter-spacing: 0.3em;
+  color: var(--read-dim);
+}
+
+#v-vector .tile[data-cat="arcade"] .tcat { color: #e58fd0; }
+#v-vector .tile[data-cat="puzzle"] .tcat { color: #86d6f0; }
+#v-vector .tile[data-cat="strategy"] .tcat { color: #c9d6dc; }
+
+#v-vector .tnum {
+  display: block;
+  position: absolute;
+  top: 0.5rem;
+  right: 0.7rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  color: var(--read-dim);
+}
+
+#v-vector .tile:hover,
+#v-vector .tile:focus-visible,
+#v-vector .tile.is-selected {
+  outline: none;
+  color: var(--hot);
+  border-color: var(--ice);
+  transform: translateY(-2px);
+  /* Outer bloom plus a faint inner one, so the light looks as if it comes off
+   * the stroke in both directions. No fill even here. */
+  box-shadow:
+    0 0 14px rgba(63, 212, 255, 0.45),
+    inset 0 0 22px rgba(63, 212, 255, 0.10);
+}
+
+#v-vector .tile:hover::before, #v-vector .tile:hover::after,
+#v-vector .tile:focus-visible::before, #v-vector .tile:focus-visible::after,
+#v-vector .tile.is-selected::before, #v-vector .tile.is-selected::after { opacity: 1; }
+
+#v-vector .tile:hover .tname,
+#v-vector .tile:focus-visible .tname,
+#v-vector .tile.is-selected .tname {
+  color: var(--hot);
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.8), 0 0 14px rgba(63, 212, 255, 0.8);
+}
+
+#v-vector .tile:hover .tico,
+#v-vector .tile:focus-visible .tico,
+#v-vector .tile.is-selected .tico { color: var(--hot); }
+
+#v-vector .tile:hover .ico,
+#v-vector .tile:focus-visible .ico,
+#v-vector .tile.is-selected .ico {
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.85))
+          drop-shadow(0 0 9px rgba(63, 212, 255, 0.85));
+}
+
+#v-vector .tile.is-selected .tnum { color: var(--ice); }
+
+@media (prefers-reduced-motion: reduce) {
+  #v-vector .tile { transition: color 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease; }
+  #v-vector .tile:hover, #v-vector .tile:focus-visible, #v-vector .tile.is-selected { transform: none; }
+}
+
+/* ------------------------------------------------------------ info panel */
+
+/* Three columns rather than two. Stacking the CTA under the description left
+ * the right-hand 55% of a full-width outlined box completely empty, which on
+ * a page that is nothing but outlines reads as a mistake rather than as space.
+ * Pushing the one filled element to the far right turns the panel into a
+ * readout with a GO at the end of it, and the emptiness becomes the gap
+ * between them. */
+#v-vector .info {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "label name cta"
+    "label meta cta"
+    "label desc cta";
+  column-gap: 1.8rem;
+  align-items: start;
+  margin-top: 2.6rem;
+  padding: 1.5rem 1.7rem 1.6rem;
+  border: 1px solid var(--line);
+  box-shadow: inset 0 0 30px rgba(63, 212, 255, 0.05);
+}
+
+#v-vector .ilabel {
+  grid-area: label;
+  font-size: 0.8rem;
+  letter-spacing: 0.3em;
+  color: var(--read-dim);
+  padding-top: 0.6rem;
+}
+
+#v-vector .inm {
+  grid-area: name;
+  font-family: 'Orbitron', 'VT323', sans-serif;
+  font-weight: 500;
+  font-size: 1.4rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hot);
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.7), 0 0 16px rgba(63, 212, 255, 0.7);
+}
+
+#v-vector .imeta {
+  grid-area: meta;
+  margin-top: 0.45rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.26em;
+  color: var(--read-dim);
+}
+
+/* The one place the category accent is allowed to be strong, because here it
+ * is labelled by the text sitting next to it. */
+#v-vector .info[data-cat="arcade"] .imeta { color: var(--mag); }
+#v-vector .info[data-cat="puzzle"] .imeta { color: var(--ice); }
+#v-vector .info[data-cat="strategy"] .imeta { color: #e2f0f6; }
+
+#v-vector .idesc {
+  grid-area: desc;
+  margin-top: 0.4rem;
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+  color: var(--read);   /* body copy: no glow at all. See --read. */
+}
+
+/* The single filled element on the page, and the argument for it is that a
+ * vector game's one bright object — the ship, the shot — is where the beam
+ * dwells long enough to bloom into a solid. Everything else being an outline
+ * is what makes this read as the target instead of as another box. */
+#v-vector .icta {
+  grid-area: cta;
+  justify-self: end;
+  align-self: center;
+  padding: 0.45rem 1.5rem 0.35rem;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  letter-spacing: 0.28em;
+  color: var(--ink);
+  background: var(--ice);
+  box-shadow: 0 0 12px rgba(63, 212, 255, 0.75), 0 0 34px rgba(63, 212, 255, 0.35);
+}
+
+#v-vector .info.is-launching .icta {
+  animation: vector-fire 0.14s steps(1) 5;
+}
+
+@keyframes vector-fire {
+  50% { background: var(--hot); box-shadow: 0 0 22px var(--hot), 0 0 60px rgba(63, 212, 255, 0.8); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #v-vector .info.is-launching .icta { animation: none; background: var(--hot); }
+}
+
+/* ---------------------------------------------------------- game samples */
+
+#v-vector .sample { margin-top: 3.2rem; position: relative; padding-top: 1.4rem; }
+
+/* Another drawn rule, deliberately a different length and inset from the one
+ * under the header — a beam does not repeat itself exactly. */
+#v-vector .sample::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 44%;
+  height: 1px;
+  background: linear-gradient(90deg, var(--line-hi) 0 40%, var(--line) 40% 82%, transparent);
+}
+
+#v-vector .sample-h {
+  margin: 0 0 1.2rem;
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--read-dim);
+}
+
+/* flex-start, not the default stretch: the three boxes are three different
+ * heights and forcing them level leaves a tall empty outline under the
+ * Minesweeper row, which on a page made only of outlines is very loud. */
+#v-vector .sample-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1.6rem; }
+
+#v-vector .sbox {
+  flex: 0 0 auto;
+  padding: 0.9rem 1.1rem 1.1rem;
+  border: 1px solid var(--line);
+  background: transparent;
+}
+
+#v-vector .sbox-h {
+  display: block;
+  margin-bottom: 0.8rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--read-dim);
+}
+
+/* Sudoku: the grid is drawn, so the rules are hairlines shared between cells
+ * rather than gaps between filled tiles. This is the one place a shared border
+ * is right — the beam draws one long line across the whole board, not four
+ * separate cell edges. */
+#v-vector .sgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 34px);
+  border: 1px solid var(--line-hi);
+}
+
+#v-vector .scell {
+  height: 34px;
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+  background: transparent;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  color: var(--read-dim);
+}
+
+#v-vector .scell:nth-child(3n) { border-right: 0; }
+#v-vector .scell:nth-child(n+7) { border-bottom: 0; }
+
+/* Givens are the board's own light; entries are the player's, in the second
+ * beam colour so the two are separable without reading the glow. */
+#v-vector .scell.given { color: var(--hot); text-shadow: 0 0 7px rgba(63, 212, 255, 0.6); }
+#v-vector .scell.entered { color: var(--mag); text-shadow: 0 0 7px rgba(255, 77, 216, 0.55); }
+
+#v-vector .scell.sel {
+  box-shadow: inset 0 0 0 1px var(--ice), inset 0 0 14px rgba(63, 212, 255, 0.18);
+}
+
+/* Minesweeper. A row of separately drawn cells, gapped — unlike Sudoku there
+ * is no continuous rule to draw, each cell is its own little box. */
+#v-vector .mgrid { display: flex; gap: 4px; }
+
+#v-vector .mcell {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+  background: transparent;
+  border: 1px solid var(--line);
+}
+
+/* Eight numbers. A vector monitor is not a phosphor — the beam can be any
+ * colour the gun is driven to — so this variant does not have to ration hue
+ * the way the green and amber ones do, and it should not. These are spread
+ * around the wheel with roughly 40-70 degrees between neighbours, all at high
+ * value on black, with white taking the slot that hue cannot fill.
+ * Rejected: an ice-blue brightness ramp (four steps in and 5 through 8 were
+ * indistinguishable) and pairing hue with weight (VT323 has one weight). */
+#v-vector .n1 { color: #3fd4ff; }   /* ice blue     195 */
+#v-vector .n2 { color: #3fff9f; }   /* spring green 150 */
+#v-vector .n3 { color: #ff4dd8; }   /* magenta      313 */
+#v-vector .n4 { color: #ffb43f; }   /* amber         35 */
+#v-vector .n5 { color: #ff5147; }   /* coral red      3 */
+#v-vector .n6 { color: #c79dff; }   /* violet       265 — lightened twice from
+                                     * #a06bff: violet has the lowest perceived
+                                     * luminance of the eight and at the hue's
+                                     * "correct" value the 6 was visibly the
+                                     * dimmest digit in the row */
+#v-vector .n7 { color: #ffffff; }   /* white          — */
+#v-vector .n8 { color: #c8ff3f; }   /* chartreuse    75 */
+
+/* One tight glow per digit, in the digit's own colour, and deliberately much
+ * weaker than the wordmark's: at 1.3rem a wide bloom fills the counters of the
+ * 6 and the 8 and they stop being separable. 4px is the point where the digit
+ * still looks lit and still looks like a digit.
+ *
+ * The obvious move — giving each digit the same white core the wordmark has —
+ * is wrong here and was tried. VT323's strokes are about 2px at this size, so
+ * a 1px white inner is half the stroke: every digit desaturates toward white
+ * and the hue separation that the whole scheme depends on collapses. The core
+ * is for large type only. */
+#v-vector .mcell[class*="n"] { text-shadow: 0 0 4px currentColor; }
+
+#v-vector .mcell.flag { color: var(--mag); text-shadow: 0 0 6px rgba(255, 77, 216, 0.8); }
+
+/* An unrevealed cell has nothing drawn in it, which on this display means it
+ * is simply empty. The border is dropped to the resting hairline and a single
+ * dim dot marks it as a cell rather than a gap. */
+#v-vector .mcell.hidden-cell { border-color: #0d3444; position: relative; }
+#v-vector .mcell.hidden-cell::after {
+  content: "";
+  width: 2px; height: 2px;
+  background: var(--line-hi);
+}
+
+/* Pong. */
+#v-vector .pbar {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 1.3rem;
+  letter-spacing: 0.14em;
+}
+
+#v-vector .pscore {
+  color: var(--hot);
+  text-shadow: 0 0 3px rgba(255, 255, 255, 0.8), 0 0 14px rgba(63, 212, 255, 0.7);
+}
+
+/* The CPU score is the last .pscore in the bar; tinting its bloom magenta ties
+ * it to the magenta paddle below without changing the digit's own colour. */
+#v-vector .pbar .plabel + .pdiv + .plabel + .pscore {
+  text-shadow: 0 0 3px rgba(255, 255, 255, 0.8), 0 0 14px rgba(255, 77, 216, 0.7);
+}
+
+#v-vector .plabel { font-size: 0.82rem; letter-spacing: 0.28em; color: var(--read-dim); }
+#v-vector .pdiv { flex: 0 0 30px; height: 1px; background: var(--line); }
+
+#v-vector .pcourt {
+  position: relative;
+  height: 52px;
+  margin-top: 0.8rem;
+  border: 1px solid var(--line-hi);
+  background: transparent;
+  box-shadow: 0 0 10px rgba(63, 212, 255, 0.12);
+}
+
+/* The centre line on a vector Pong is a stack of short strokes, not a dashed
+ * border — the beam draws each dash as its own segment. */
+#v-vector .pcourt::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  transform: translateX(-0.5px);
+  background: repeating-linear-gradient(to bottom,
+    var(--line-hi) 0 4px, transparent 4px 9px);
+}
+
+/* Paddles and ball are the one place a stroke goes above 1px: this is where
+ * the beam holds still long enough to burn a wider mark, which is exactly why
+ * they were the brightest things on a real vector screen. */
+#v-vector .ppad {
+  position: absolute;
+  top: 12px;
+  width: 3px;
+  height: 26px;
+  background: var(--ice);
+  box-shadow: 0 0 3px var(--hot), 0 0 12px var(--ice);
+}
+
+#v-vector .ppad.l { left: 8px; }
+#v-vector .ppad.r {
+  right: 8px;
+  top: 18px;
+  background: var(--mag);
+  box-shadow: 0 0 3px var(--hot), 0 0 12px var(--mag);
+}
+
+#v-vector .pball {
+  position: absolute;
+  left: 60%;
+  top: 22px;
+  width: 6px;
+  height: 6px;
+  background: var(--hot);
+  box-shadow: 0 0 4px var(--hot), 0 0 16px var(--ice);
+}
+
+/* ----------------------------------------------------------------- foot */
+
+#v-vector .foot {
+  position: relative;
+  margin-top: 3.4rem;
+  padding-top: 1rem;
+  font-size: 0.84rem;
+  letter-spacing: 0.26em;
+  color: var(--read-dim);
+}
+
+/* Third rule, third length, and this one starts short of the left edge so the
+ * three do not stack up as a set of matching borders. */
+#v-vector .foot::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0 3%, var(--line) 3% 55%, transparent 92%);
+}
+
+/* --------------------------------------------------------------- narrow */
+
+@media (max-width: 700px) {
+  #v-vector { font-size: 18px; }
+  #v-vector .screen { padding: 1.8rem 1rem 2.4rem; }
+  #v-vector .brand { font-size: 1.35rem; letter-spacing: 0.14em; }
+  #v-vector .strap { letter-spacing: 0.28em; margin: 1.1rem 0 1.6rem; }
+
+  /* 190px, not 140px: at 140 the six tiles come out 4+2 again on a 700px
+   * screen, which is the same leftover row the desktop breakpoint was widened
+   * to avoid. 190 gives 3+3 here and falls to 2+2+2 by about 560px. */
+  #v-vector .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.8rem; }
+  #v-vector .tile { padding: 1.6rem 0.6rem 1.2rem; gap: 0.7rem; }
+
+  #v-vector .info { grid-template-columns: 1fr; grid-template-areas: "label" "name" "meta" "desc" "cta"; }
+  #v-vector .ilabel { padding-top: 0; margin-bottom: 0.4rem; }
+  #v-vector .icta { justify-self: start; margin-top: 1.1rem; }
+  #v-vector .sample-row { gap: 1rem; }
+
+  /* The wireframe ghost is sized for a wide screen; on a narrow one a much
+   * larger fraction of it lands on the content, so it drops further back. */
+  #v-vector .deco { opacity: 0.08; }
+}
+
+/* Below this the 190px track can only fit one column, and a single stack of
+ * six full-width outlines is a very long page for very little. */
+@media (max-width: 440px) {
+  #v-vector .grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 0.6rem; }
+  #v-vector .tile { padding: 1.2rem 0.4rem 0.9rem; }
+  #v-vector .ico { width: 32px; height: 32px; }
+  #v-vector .tname { font-size: 1rem; letter-spacing: 0.1em; }
+  #v-vector .tcat { letter-spacing: 0.2em; }
+
+  /* Ten Minesweeper cells at 34px plus gaps and padding come to ~416px, which
+   * overruns a 420px screen and gets silently clipped by the gallery's
+   * overflow:hidden. 28px brings the row back inside. */
+  #v-vector .sbox { padding: 0.8rem 0.9rem 0.9rem; }
+  #v-vector .mgrid { gap: 3px; }
+  #v-vector .mcell { width: 28px; height: 28px; font-size: 1.15rem; }
+}

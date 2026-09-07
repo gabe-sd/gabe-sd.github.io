@@ -1,0 +1,457 @@
+/* Gallery chrome: the frame around the previews, deliberately neutral so it
+ * does not colour the thing being judged. Everything here is scoped to
+ * .chrome / .stage / .variant; a variant's own look lives in variants/<id>.css
+ * and is scoped to its section id.
+ *
+ * Throwaway. See gallery.js.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Mono:wght@400;700&family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=Silkscreen:wght@400;700&family=Orbitron:wght@500;700;900&display=swap');
+
+/* Self-hosted, exactly as the site will ship it — so the preview is also a
+ * test that the committed woff2 actually works from a relative path. */
+@font-face {
+  font-family: 'VT323';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('../../assets/fonts/vt323-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'VT323';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('../../assets/fonts/vt323-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: #17171a;
+  color: #e7e7ea;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* ----------------------------------------------------------------- chrome */
+
+.chrome {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #17171a;
+  border-bottom: 1px solid #303036;
+}
+
+.chrome-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.85rem;
+  border-bottom: 1px solid #26262b;
+}
+
+.chrome-brand {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+}
+
+.chrome-brand-dim { color: #75757e; font-weight: 400; letter-spacing: 0.06em; }
+
+.chrome-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.chrome-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+  padding: 0.32rem 0.6rem;
+  font: inherit;
+  font-size: 0.73rem;
+  color: #b6b6bd;
+  background: #1f1f24;
+  border: 1px solid #303036;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chrome-tab:hover { color: #fff; border-color: #4a4a54; }
+
+.chrome-tab.is-on {
+  color: #17171a;
+  background: #e7e7ea;
+  border-color: #e7e7ea;
+  font-weight: 600;
+}
+
+.tab-group {
+  font-size: 0.6rem;
+  opacity: 0.55;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 0 0.25em;
+}
+
+.chrome-caption {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  padding: 0.55rem 0.85rem 0.6rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.cap-main { flex: 1 1 auto; min-width: 0; }
+.cap-side { flex: 0 1 42%; color: #a5a5ad; }
+
+.cap-n { color: #6c6c76; font-variant-numeric: tabular-nums; margin-right: 0.5rem; font-size: 0.72rem; }
+.cap-name { font-weight: 700; margin-right: 0.6rem; }
+.cap-pitch { color: #c6c6cd; }
+.cap-cost { display: block; }
+.cap-cost b { color: #e7e7ea; font-weight: 600; }
+
+.crt-ctl {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  color: #8e8e97;
+}
+
+.crt-ctl button {
+  font: inherit;
+  padding: 0.1rem 0.42rem;
+  color: #c6c6cd;
+  background: #1f1f24;
+  border: 1px solid #35353d;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.crt-ctl button.on { background: #e7e7ea; color: #17171a; border-color: #e7e7ea; }
+
+/* ------------------------------------------------------------------ stage */
+
+.stage { display: block; }
+
+.variant {
+  position: relative;
+  overflow: hidden;
+  min-height: calc(100vh - 96px);
+}
+
+.variant .screen { position: relative; z-index: 2; }
+.variant .deco { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+
+.variant a { -webkit-tap-highlight-color: transparent; }
+.variant .ico { display: block; }
+
+/* On a phone, twelve wrapped tabs push the thing being judged 600px down the
+ * page, so the rail scrolls sideways instead of wrapping and the caption
+ * stacks. The design under review gets the screen; the chrome gets a strip. */
+@media (max-width: 760px) {
+  .chrome-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.45rem;
+    padding: 0.5rem 0.7rem 0.55rem;
+  }
+
+  .chrome-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    width: 100%;
+    padding-bottom: 0.15rem;
+  }
+
+  .chrome-tabs::-webkit-scrollbar { display: none; }
+
+  .chrome-caption {
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.5rem 0.7rem 0.55rem;
+    font-size: 0.74rem;
+  }
+
+  .cap-side { flex: 1 1 auto; }
+  .variant { min-height: 0; }
+}
+
+/* ------------------------------------------------------------ start here */
+
+.variant.is-intro { background: #17171a; color: #d8d8dd; }
+
+.intro {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2.6rem 1.4rem 4rem;
+  font-size: 0.95rem;
+  line-height: 1.62;
+}
+
+.intro h1 {
+  margin: 0 0 0.7rem;
+  font-size: 1.85rem;
+  line-height: 1.2;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.intro h2 {
+  margin: 2.1rem 0 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8e8e99;
+}
+
+.intro-cols h2 { margin-top: 0; }
+
+.intro p { margin: 0 0 0.8rem; }
+.intro b { color: #fff; font-weight: 600; }
+.intro i { color: #cfcfd6; }
+
+.intro code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.88em;
+  padding: 0.05em 0.35em;
+  border-radius: 4px;
+  background: #232329;
+  color: #e7e7ea;
+}
+
+.intro-lede {
+  font-size: 1.06rem;
+  line-height: 1.55;
+  color: #c2c2ca;
+  margin-bottom: 1.6rem;
+  padding-bottom: 1.4rem;
+  border-bottom: 1px solid #2c2c33;
+}
+
+.intro-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.6rem 2.4rem;
+  padding-bottom: 0.4rem;
+}
+
+.intro ul, .intro ol { margin: 0; padding-left: 1.15rem; }
+.intro li { margin-bottom: 0.45rem; }
+
+.intro-q li { margin-bottom: 0.6rem; }
+.intro-q { counter-reset: none; }
+
+.intro-find li { margin-bottom: 0.7rem; }
+
+.intro-rec {
+  font-size: 1.06rem;
+  color: #e7e7ea;
+  padding: 0.85rem 1.1rem;
+  border-left: 3px solid #7a7a86;
+  background: #1d1d22;
+  margin-bottom: 1rem;
+}
+
+.intro-rec-alt { color: #a8a8b2; }
+
+/* The two directions built in answer to Gabriel's first pass over the gallery.
+ * Boxed and put above the fold because the other nine are now background: the
+ * decision has moved on from "which of eleven" to "which of these two". */
+.intro-new {
+  margin: 0 0 1.8rem;
+  padding: 1.1rem 1.3rem 1.2rem;
+  border: 1px solid #3c4a3c;
+  border-left: 3px solid #6ee08a;
+  background: #171d18;
+}
+
+.intro-new h2 { margin-top: 0; }
+.intro-new p { margin: 0 0 0.8rem; }
+.intro-new ul { margin-bottom: 0.8rem; }
+.intro-new li { margin-bottom: 0.6rem; }
+.intro-new > p:last-child { margin-bottom: 0; color: #a8a8b2; }
+
+/* -------------------------------------------------------- reference sheet */
+
+.ref-item {
+  padding: 1.25rem 0 1.35rem;
+  border-top: 1px solid #2c2c33;
+}
+
+.ref-item h3 {
+  margin: 0 0 0.7rem;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.ref-jump {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid #4a4a54;
+}
+
+.ref-jump:hover { border-bottom-color: #b6b6bd; }
+
+.ref-sw {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.7rem;
+  margin-bottom: 0.85rem;
+}
+
+.ref-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.2rem 0.5rem 0.2rem 0.25rem;
+  background: #1d1d22;
+  border: 1px solid #2c2c33;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.ref-chip b {
+  width: 17px;
+  height: 17px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+.ref-chip code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  color: #e7e7ea;
+  background: none;
+  padding: 0;
+  font-size: 0.73rem;
+}
+
+.ref-chip i { color: #8e8e99; font-style: normal; }
+
+.ref-type, .ref-note, .ref-nums { margin: 0 0 0.5rem; font-size: 0.9rem; }
+.ref-type b, .ref-note b, .ref-nums b { color: #a5a5ad; font-weight: 600; }
+.ref-note { color: #b6b6bd; }
+
+.ref-nums { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.35rem; }
+
+.ref-num {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5em;
+  height: 1.5em;
+  background: #101014;
+  border-radius: 3px;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+}
+
+.ref-hexes {
+  flex: 1 1 100%;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.72rem;
+  color: #75757e;
+}
+
+.intro-foot {
+  margin-top: 2.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid #2c2c33;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #75757e;
+}
+
+/* --------------------------------------------------- the CRT texture layer
+ * One implementation, four strengths, switched from the caption bar. This is
+ * the open question the first phase has to answer: how far the texture
+ * reaches, and what it costs on a board you have to read.
+ */
+
+.variant .crt {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+/* A real scanline is the gap between lines, not the line — on a dark page a
+ * white stripe does nothing, because there is nothing to lighten. Drawing the
+ * dark gap instead modulates the bright text and the glow, which is where the
+ * effect is actually visible. That is the difference between this and the
+ * mockup's white-on-overlay version, which reads as nothing at all here. */
+.variant[data-crt="off"] .crt { display: none; }
+
+.variant[data-crt="soft"] .crt {
+  background: repeating-linear-gradient(to bottom,
+    rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px);
+}
+
+.variant[data-crt="mock"] .crt {
+  background: repeating-linear-gradient(to bottom,
+    rgba(0, 0, 0, 0.34) 0 1px, transparent 1px 3px);
+}
+
+.variant[data-crt="heavy"] .crt {
+  background:
+    repeating-linear-gradient(to bottom,
+      rgba(0, 0, 0, 0.55) 0 1.5px, transparent 1.5px 3.5px),
+    radial-gradient(120% 100% at 50% 50%,
+      transparent 52%, rgba(0, 0, 0, 0.5) 100%);
+}
+
+.variant[data-crt="heavy"] .crt::after {
+  content: "";
+  position: absolute;
+  inset: -30% 0;
+  background: linear-gradient(to bottom,
+    transparent, rgba(255, 255, 255, 0.045) 45%, rgba(255, 255, 255, 0.06) 50%, transparent);
+  animation: glare 7s linear infinite;
+}
+
+@keyframes glare {
+  from { transform: translateY(-40%); }
+  to { transform: translateY(140%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .variant[data-crt="heavy"] .crt::after { animation: none; opacity: 0.35; }
+}
+
+/* --------------------------------------------------------- shared defaults
+ * Sensible fallbacks so a half-written variant still renders something rather
+ * than a pile of unstyled spans. Every variant overrides these.
+ */
+
+.variant .screen { padding: 2rem 1.5rem 3rem; }
+.variant .top { display: flex; justify-content: space-between; align-items: baseline; }
+.variant .nav { display: flex; gap: 1rem; }
+.variant .nav a { text-decoration: none; color: inherit; }
+.variant .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+.variant .tile { display: flex; flex-direction: column; gap: 0.4rem; text-decoration: none; color: inherit; }
+.variant .tnum { display: none; }
+.variant .sample-row { display: flex; flex-wrap: wrap; gap: 1.25rem; }
+.variant .sgrid { display: grid; grid-template-columns: repeat(3, 1fr); }
+.variant .mgrid { display: flex; }
+.variant .scell, .variant .mcell { display: grid; place-items: center; }
+.variant .pbar { display: flex; align-items: center; gap: 0.5rem; }
+.variant .pcourt { position: relative; }
+.variant .ppad { position: absolute; }
+.variant .ppad.l { left: 0; }
+.variant .ppad.r { right: 0; }
+.variant .pball { position: absolute; }

@@ -541,16 +541,23 @@ const { check, report } = makeChecks();
       (await read()).player.y === MAX_Y, (await read()).player.y);
   }
 
-  console.log("13. the canvas palette follows the OS theme");
+  console.log("13. the canvas palette is dark-only, regardless of the OS theme");
   {
+    // shared.css dropped prefers-color-scheme - one phosphor palette, always.
+    // This used to assert the opposite (that the OS theme flipped the canvas
+    // colours); design/DESIGN.md, "Dark only" says why that changed underneath
+    // it. The guard worth keeping is that colors{} still reads real values from
+    // the CSS custom properties, not that it responds to the OS at all.
     await page.emulateMedia({ colorScheme: "light" });
     await page.waitForTimeout(80);
     const light = await page.evaluate(() => ({ ...colors }));
     await page.emulateMedia({ colorScheme: "dark" });
     await page.waitForTimeout(80);
     const dark = await page.evaluate(() => ({ ...colors }));
-    check("foreground changes with the theme, without a reload",
-      light.fg !== dark.fg, `${light.fg} -> ${dark.fg}`);
+    check("the palette does not change with the OS theme",
+      light.fg === dark.fg && light.accent === dark.accent &&
+        light.border === dark.border,
+      `${JSON.stringify(light)} vs ${JSON.stringify(dark)}`);
     check("the palette is fully populated in both",
       [light.fg, light.accent, light.border, dark.fg, dark.accent, dark.border]
         .every((c) => typeof c === "string" && c.length > 0));
@@ -1819,10 +1826,16 @@ const { check, report } = makeChecks();
           Math.round(METER.y + METER.h / 2), 1, 1).data;
         return [d[0], d[1], d[2]];
       };
+      // A point just past the paddle's edge, still on bare board when nothing
+      // is lit. Compared against the board's own colour rather than a
+      // hardcoded "255,255,255" - that was the light theme's white, and
+      // reads as permanently "glowing" now that the board is dark-only.
+      const boardRgb = getComputedStyle(canvas).backgroundColor
+        .match(/\d+/g).slice(0, 3).join(",");
       const paddleGlows = () => {
         const d = ctx.getImageData(PADDLE_WIDTH + 5,
           Math.round(player.y + player.h / 2), 1, 1).data;
-        return `${d[0]},${d[1]},${d[2]}` !== "255,255,255";
+        return `${d[0]},${d[1]},${d[2]}` !== boardRgb;
       };
       const edgeHit = () => onPlayerReturn(player.y + 2 - BALL_SIZE / 2);
 
@@ -2333,12 +2346,31 @@ const { check, report } = makeChecks();
     await page.evaluate(() => {
       cancelAnimationFrame(rafId);
       // Counts red-dominant pixels in a vertical strip. Brightness will not do:
-      // the light theme's background is near-white, so it lights up every pixel.
+      // the board background sits near-black, so it lights up every pixel.
+      // A per-channel gap will not do either, now: Amber Arcade's ordinary
+      // paddle fill and ball (colors.fg, colors.accent) are themselves
+      // red-leaning by raw channel magnitude, so a bare threshold either lets
+      // amber through as "red" or, tightened past amber, starts missing the
+      // real attack colour wherever it is glow-blurred rather than solid -
+      // a shadowBlur halo blends toward the near-black board, which scales
+      // every channel down by the same factor and can put a faint patch of
+      // real red under a threshold built for a solid fill.
+      // Hue is what actually distinguishes them, and blending toward black
+      // does not move it: scaling r, g and b by the same alpha leaves every
+      // ratio between them unchanged. So classify by hue instead of
+      // magnitude - amber sits at 37-41°, colors.villain (coral) at 6-7°, and
+      // that gap holds however faint the pixel is.
       window.redIn = (x, w) => {
         const d = ctx.getImageData(x, 0, w, HEIGHT).data;
         let n = 0;
         for (let i = 0; i < d.length; i += 4) {
-          if (d[i] > d[i + 1] + 40 && d[i] > d[i + 2] + 40 && d[i + 3] > 0) n++;
+          const r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
+          if (a === 0 || r !== Math.max(r, g, b)) continue;
+          const min = Math.min(r, g, b);
+          if (r - min < 20) continue;   // too washed out to have a real hue
+          let hue = 60 * (((g - b) / (r - min)) % 6);
+          if (hue < 0) hue += 360;
+          if (hue <= 20) n++;
         }
         return n;
       };
@@ -2441,13 +2473,17 @@ const { check, report } = makeChecks();
     check("and it still shrinks the paddle - the effect is not the visuals",
       off.shrank);
 
-    // The board is pure white in the light theme and near-black in the dark one,
-    // and the bolt's core is the brightest thing in it. A fixed white core is
-    // invisible on a white board - the effect loses the part that makes it read
-    // as lightning, in the theme most people are using.
-    for (const scheme of ["light", "dark"]) {
+    // Dark-only now (design/DESIGN.md, "Dark only"): there is one board, not a
+    // light one and a dark one, so this used to loop `emulateMedia` over both
+    // and run the identical check twice once shared.css stopped giving it
+    // anything to switch - staying green while testing nothing, which is
+    // exactly the failure this suite's own "canvas measurement" rule warns
+    // about. The claim worth keeping is that the bolt's core still reads
+    // against whatever the board now is; the boardLum-based branch stays,
+    // computed rather than hardcoded, so a later palette change cannot make
+    // this pass by accident either.
+    {
       const themed = await browser.newPage();
-      await themed.emulateMedia({ colorScheme: scheme });
       await themed.goto(PAGE);
       await themed.waitForSelector("#board");
       const seen = await themed.evaluate(() => {
@@ -2483,7 +2519,7 @@ const { check, report } = makeChecks();
         draw();
         return { before, after: contrast() };
       });
-      check(`the bolt has a bright core against a ${scheme} board`,
+      check("the bolt has a bright core against the board",
         seen.after > seen.before + 200, `${seen.before} -> ${seen.after}`);
       await themed.close();
     }
@@ -2589,11 +2625,22 @@ const { check, report } = makeChecks();
     await page.waitForSelector("#board");
     await page.evaluate(() => {
       cancelAnimationFrame(rafId);
+      // See case 28's copy of this for why this classifies by hue rather than
+      // channel magnitude: Amber Arcade's ordinary paddle and ball colours are
+      // themselves red-leaning by raw magnitude, and only hue tells them apart
+      // from colors.villain - the actual attack colour - at every opacity a
+      // glow blends down to.
       window.redIn = (x, w) => {
         const d = ctx.getImageData(x, 0, w, HEIGHT).data;
         let n = 0;
         for (let i = 0; i < d.length; i += 4) {
-          if (d[i] > d[i + 1] + 40 && d[i] > d[i + 2] + 40 && d[i + 3] > 0) n++;
+          const r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
+          if (a === 0 || r !== Math.max(r, g, b)) continue;
+          const min = Math.min(r, g, b);
+          if (r - min < 20) continue;
+          let hue = 60 * (((g - b) / (r - min)) % 6);
+          if (hue < 0) hue += 360;
+          if (hue <= 20) n++;
         }
         return n;
       };

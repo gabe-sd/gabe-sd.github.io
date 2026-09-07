@@ -1,0 +1,706 @@
+/* 05 — Full Cabinet
+ *
+ * The maximalist end of the phosphor family: a moulded plastic cabinet with a
+ * lit marquee above an inset, rounded, curved sheet of glass, and one colour
+ * per category driving the tiles and the info plate. Built with
+ * data-crt="heavy" on, because that is what this section defaults to.
+ *
+ * The heavy CRT layer is not free and every value here is picked against it.
+ * gallery.css draws 1.5px of rgba(0,0,0,0.55) every 3.5px (~24% of the total
+ * light gone), then a vignette that removes another ~35% at the corners, then
+ * a drifting white glare band. So every colour in this file is roughly one
+ * step brighter than it would be on a clean ground, and nothing important is
+ * allowed to live below about #8 in luminance. Where a value looks garish
+ * with the texture off, that is the trade being made, not an accident.
+ *
+ * Geometry note: the glass well is drawn by .deco::before, and its top edge
+ * has to line up with the bottom of the marquee, which is a real element in
+ * .screen. Those two numbers are coupled — --marquee-h and --bezel — and both
+ * change together in the narrow breakpoint at the bottom of the file.
+ */
+
+#v-cabinet {
+  /* the cabinet itself: warm dark grey moulded plastic, not black */
+  --plastic: #4a423a;
+  --plastic-hi: #6d6155;
+  --plastic-lo: #241f1b;
+  --plastic-edge: #0b0a09;
+
+  /* the screen behind the glass */
+  --glass: #050806;
+  --glass-lift: #0c130e;      /* tile ground: one step off the glass */
+  --glass-line: #1d3a26;
+
+  /* category accents. green / amber / ice blue, all pushed bright enough to
+   * survive the heavy scanline knock-down */
+  --strategy: #46ff7d;
+  --puzzle: #ffb52e;
+  --arcade: #6fdcff;
+  --cat: var(--strategy);     /* default, overridden per [data-cat] */
+
+  /* marquee light: warm white core, amber halo */
+  --lamp: #fff4d6;
+  --lamp-glow: rgba(255, 176, 64, 0.55);
+
+  --ink: #cfe8d6;             /* body text on glass — not the accent */
+  --ink-dim: #7fa98c;
+  --red: #ff5348;
+
+  /* coupled geometry, see header note */
+  --bezel: 44px;
+  --inner: 30px;
+  --marquee-h: 86px;
+  --screen-w: 1120px;
+
+  background:
+    /* moulding speckle, so the plastic is not a flat fill */
+    repeating-linear-gradient(112deg,
+      rgba(255, 255, 255, 0.022) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #6a5e51 0%, var(--plastic) 13%, #3a332c 74%, var(--plastic-lo) 100%);
+  color: var(--ink);
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+/* ------------------------------------------------------------- the cabinet
+ * .deco is the physical object. The section background is the plastic; this
+ * layer adds the light catching the top edge and cuts the screen well into it.
+ */
+
+#v-cabinet .deco::after {
+  /* highlight along the moulded top edge, plus the sides falling away */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg,
+      rgba(255, 240, 218, 0.4) 0 2px, rgba(255, 236, 210, 0.1) 2px 10px, transparent 10px 22px),
+    /* Only a narrow falloff at the very edge: gallery.css's heavy vignette is
+     * already taking ~35% out of the corners, and a second one on top of it
+     * turned the plastic black and lost the cabinet altogether. */
+    linear-gradient(90deg,
+      rgba(0, 0, 0, 0.45) 0, transparent 2.5%, transparent 97.5%, rgba(0, 0, 0, 0.45) 100%),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.5) 0 10px, transparent 10px 46px);
+}
+
+#v-cabinet .deco::before {
+  /* the screen well: a rounded rectangle cut into the plastic. The bezel is
+   * the box-shadow spread rather than a border, so the moulding reads as one
+   * continuous lip with a hard dark line at the glass edge. */
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(calc(var(--screen-w) - var(--bezel) * 2), calc(100% - var(--bezel) * 2));
+  top: calc(var(--bezel) + var(--marquee-h) + var(--bezel));
+  bottom: var(--bezel);
+  border-radius: 30px / 40px;   /* elliptical: glass is more curved vertically */
+  background:
+    /* specular sheen across the top of the glass — behind the text (z-index 0),
+     * so it can never wash out anything you have to read */
+    radial-gradient(70% 46% at 26% 6%, rgba(180, 255, 210, 0.075), transparent 68%),
+    radial-gradient(130% 110% at 50% 46%, var(--glass) 42%, #010301 100%);
+  box-shadow:
+    0 0 0 3px #000,                        /* the hard line where glass meets lip */
+    0 0 0 4px #7d7064,                     /* the lit top face of the moulded lip */
+    0 0 0 16px var(--plastic),             /* the lip itself */
+    0 0 0 17px var(--plastic-edge),
+    0 0 26px 17px rgba(0, 0, 0, 0.55),     /* the lip casting onto the plastic */
+    inset 0 3px 22px rgba(0, 0, 0, 0.95), /* the glass sitting down in the well */
+    inset 0 0 60px rgba(0, 0, 0, 0.8),
+    inset 0 -2px 0 rgba(255, 255, 255, 0.05);
+}
+
+#v-cabinet .screen {
+  max-width: var(--screen-w);
+  margin: 0 auto;
+  padding: var(--bezel) calc(var(--bezel) + var(--inner)) calc(var(--bezel) + var(--inner) + 12px);
+}
+
+/* -------------------------------------------------------------- marquee */
+
+#v-cabinet .top {
+  /* pulled back out to the bezel line: the marquee spans the cabinet, not the
+   * glass, because it physically sits above the screen on a real machine */
+  margin: 0 calc(var(--inner) * -1) var(--bezel);
+  height: var(--marquee-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 1.15rem;
+  border-radius: 7px;
+  border: 3px solid #17110b;
+  /* A real marquee is a translucent panel with a fluorescent tube behind it,
+   * so it is lit from the inside and it is the brightest surface on the
+   * machine. Painting it dark and glowing the letters was the first attempt
+   * and it just read as another panel — the light has to be the ground. */
+  background:
+    linear-gradient(180deg,
+      #fff6e2 0%, #f6e2b4 34%, #eecf90 62%, #d9ab5c 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -6px 14px rgba(150, 96, 24, 0.35),
+    0 0 46px rgba(255, 190, 96, 0.4),    /* the light spilling onto the plastic */
+    0 0 96px rgba(255, 170, 60, 0.22),
+    0 6px 14px rgba(0, 0, 0, 0.7);
+}
+
+#v-cabinet .brand {
+  font-family: 'Press Start 2P', 'VT323', monospace;
+  font-size: 23px;
+  line-height: 1.75;           /* Press Start 2P needs it everywhere it appears */
+  letter-spacing: 0.02em;
+  color: #1a1008;
+  /* Dark letters on the lit panel, not glowing ones: silkscreened marquee art
+   * is opaque and the tube shines round it. The offset is the ink edge. */
+  text-shadow: 3px 3px 0 rgba(255, 255, 255, 0.8), -2px -2px 0 rgba(120, 74, 20, 0.3);
+  animation: cabinet-marquee 4.2s ease-in-out infinite;
+}
+
+/* The marquee tube breathing, not flashing. 4.2s and a 12% swing: any faster
+ * or deeper and it reads as a fault rather than as a lit sign. */
+@keyframes cabinet-marquee {
+  0%, 100% { opacity: 1; }
+  47% { opacity: 0.82; }
+}
+
+#v-cabinet .nav { display: flex; gap: 0.55rem; flex: 0 0 auto; }
+
+#v-cabinet .nav a {
+  padding: 0.2rem 0.85rem 0.26rem;
+  font-size: 1.15rem;
+  letter-spacing: 0.16em;
+  color: #4b3617;
+  text-decoration: none;
+  border: 2px solid rgba(60, 40, 12, 0.35);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.35);
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+
+#v-cabinet .nav a:hover,
+#v-cabinet .nav a.active {
+  color: #fff3d6;
+  background: #241809;
+  border-color: #241809;
+}
+
+/* ---------------------------------------------------------------- strap */
+
+#v-cabinet .strap {
+  margin: 0.1rem 0 1.25rem;
+  text-align: center;
+  font-size: 1.15rem;
+  letter-spacing: 0.22em;
+  color: var(--arcade);
+  text-shadow: 0 0 10px rgba(111, 220, 255, 0.45);
+  animation: cabinet-attract 4.5s steps(1) infinite;
+}
+
+/* Attract-mode colour cycle through the three category hues — the cheapest way
+ * to state "these three colours mean something" before you reach the grid. */
+@keyframes cabinet-attract {
+  0%, 33% { color: var(--arcade); text-shadow: 0 0 10px rgba(111, 220, 255, 0.45); }
+  34%, 66% { color: var(--puzzle); text-shadow: 0 0 10px rgba(255, 181, 46, 0.45); }
+  67%, 100% { color: var(--strategy); text-shadow: 0 0 10px rgba(70, 255, 125, 0.45); }
+}
+
+/* ----------------------------------------------------------------- grid */
+
+#v-cabinet .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+  gap: 12px;
+}
+
+#v-cabinet .tile[data-cat="strategy"] { --cat: var(--strategy); }
+#v-cabinet .tile[data-cat="puzzle"] { --cat: var(--puzzle); }
+#v-cabinet .tile[data-cat="arcade"] { --cat: var(--arcade); }
+
+#v-cabinet .tile {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "ico name"
+    "ico cat";
+  align-items: center;
+  column-gap: 0.85rem;
+  padding: 0.95rem 0.9rem 0.95rem 0.85rem;
+  text-decoration: none;
+  color: var(--ink);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 40%),
+    var(--glass-lift);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--cat) 50%, transparent),
+    inset 0 0 22px rgba(0, 0, 0, 0.5);
+  transition: transform 0.1s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+#v-cabinet .tico {
+  grid-area: ico;
+  display: block;
+  color: var(--cat);
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--cat) 55%, transparent));
+}
+
+#v-cabinet .ico { width: 48px; height: 48px; }   /* 8px grid × 6, so pixels stay square */
+
+#v-cabinet .tname {
+  grid-area: name;
+  align-self: end;
+  /* the number chip is absolutely positioned top-right; this is the gutter it
+   * needs, and without it "MINESWEEPER" runs straight under "03" at 700px */
+  padding-right: 2.6rem;
+  font-size: 1.32rem;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #eafff0;
+}
+
+#v-cabinet .tdesc { display: none; }   /* the info plate below carries it */
+
+#v-cabinet .tcat {
+  grid-area: cat;
+  align-self: start;
+  margin-top: 0.15rem;
+  font-size: 0.86rem;
+  letter-spacing: 0.2em;
+  color: var(--cat);
+}
+
+#v-cabinet .tnum {
+  display: block;
+  position: absolute;
+  top: 0.4rem;
+  right: 0.45rem;
+  padding: 0.22em 0.4em 0.16em;
+  border-radius: 3px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--cat) 80%, #000);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Hover and select do four things at once, only one of which is colour: the
+ * ring goes solid 2px, the card lifts, the number chip inverts, and a solid
+ * play caret appears on the left edge. Colour alone would not survive a
+ * greyscale print, and would not survive the vignette in the corners either. */
+#v-cabinet .tile::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 50%;
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: left;
+  width: 5px;
+  height: 58%;
+  border-radius: 0 3px 3px 0;
+  background: var(--cat);
+  transition: transform 0.12s ease;
+}
+
+#v-cabinet .tile:hover,
+#v-cabinet .tile:focus-visible,
+#v-cabinet .tile.is-selected {
+  outline: none;
+  transform: translateY(-2px);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--cat) 12%, transparent), transparent 60%),
+    #101a14;
+  box-shadow:
+    inset 0 0 0 2px var(--cat),
+    0 0 24px color-mix(in srgb, var(--cat) 30%, transparent),
+    0 6px 12px rgba(0, 0, 0, 0.55);
+}
+
+#v-cabinet .tile:hover::before,
+#v-cabinet .tile:focus-visible::before,
+#v-cabinet .tile.is-selected::before { transform: translateY(-50%) scaleX(1); }
+
+#v-cabinet .tile.is-selected .tnum,
+#v-cabinet .tile:hover .tnum {
+  color: #05080a;
+  background: var(--cat);
+}
+
+/* ----------------------------------------------------------- info plate */
+
+#v-cabinet .info[data-cat="strategy"] { --cat: var(--strategy); }
+#v-cabinet .info[data-cat="puzzle"] { --cat: var(--puzzle); }
+#v-cabinet .info[data-cat="arcade"] { --cat: var(--arcade); }
+
+#v-cabinet .info {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "label cta"
+    "name  cta"
+    "meta  cta"
+    "desc  cta";
+  align-items: center;
+  column-gap: 1.2rem;
+  margin-top: 1.15rem;
+  padding: 0.9rem 1.1rem 1rem;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 50%), #0b130f;
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--cat) 55%, transparent),
+    inset 0 0 30px rgba(0, 0, 0, 0.55),
+    0 0 26px color-mix(in srgb, var(--cat) 16%, transparent);
+}
+
+/* Rejected: this set vertically down the left edge, which is the arcade thing
+ * to do and which VT323 will not survive — vertical writing-mode plus letter
+ * spacing stacked the glyphs into an unreadable column. */
+#v-cabinet .ilabel {
+  grid-area: label;
+  justify-self: start;
+  margin-bottom: 0.3rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.28em;
+  line-height: 1.2;
+  color: #05080a;
+  background: var(--cat);
+  padding: 0.16rem 0.55rem 0.1rem;
+  border-radius: 3px;
+}
+
+#v-cabinet .inm {
+  grid-area: name;
+  font-size: 1.75rem;
+  line-height: 1.05;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #f2fff6;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--cat) 60%, transparent);
+}
+
+#v-cabinet .imeta {
+  grid-area: meta;
+  font-size: 0.9rem;
+  letter-spacing: 0.18em;
+  color: var(--cat);
+}
+
+#v-cabinet .idesc {
+  grid-area: desc;
+  font-size: 1.02rem;
+  color: var(--ink);
+}
+
+#v-cabinet .icta {
+  grid-area: cta;
+  align-self: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  line-height: 1.9;
+  padding: 0.85rem 1rem;
+  border-radius: 5px;
+  color: #05080a;
+  background: var(--cat);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--cat) 45%, transparent), inset 0 -3px 0 rgba(0, 0, 0, 0.3);
+  animation: cabinet-cta 1.5s steps(1) infinite;
+}
+
+@keyframes cabinet-cta { 0%, 72% { opacity: 1; } 73%, 100% { opacity: 0.55; } }
+
+/* The launch flash first filled the whole plate with the category colour, and
+ * for 700ms the game name, the meta line and the description were all invisible
+ * inside a solid blue block — an unreadable panel is not a nicer transition.
+ * It now strobes the button and pulses the plate's ring, which is the part that
+ * says "accepted" without taking the text away. */
+#v-cabinet .info.is-launching { animation: cabinet-launch 0.14s steps(1) 5; }
+#v-cabinet .info.is-launching .icta { animation: cabinet-launch-cta 0.14s steps(1) 5; }
+
+@keyframes cabinet-launch {
+  50% {
+    box-shadow:
+      inset 0 0 0 2px #ffffff,
+      inset 0 0 30px rgba(0, 0, 0, 0.55),
+      0 0 40px color-mix(in srgb, var(--cat) 55%, transparent);
+  }
+}
+
+@keyframes cabinet-launch-cta {
+  50% { background: #ffffff; color: #05080a; }
+}
+
+/* --------------------------------------------------------- game samples
+ * The honest half. Everything below is judged through the heavy scanlines and
+ * the vignette, which is the whole reason this section defaults to heavy.
+ */
+
+#v-cabinet .sample { margin-top: 1.9rem; }
+
+#v-cabinet .sample-h {
+  margin: 0 0 0.75rem;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.9;
+  letter-spacing: 0.06em;
+  color: #9cd8b0;
+  text-transform: uppercase;
+}
+
+/* Grid rather than a flex row: three equal panels across the full width of the
+ * glass. As a flex row they sat in the left third with the rest of the screen
+ * empty, which made the honest half of the review look like an afterthought. */
+#v-cabinet .sample-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
+  gap: 14px;
+  align-items: stretch;
+}
+
+#v-cabinet .sbox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.7rem 0.85rem 1rem;
+  border-radius: 6px;
+  background: #0a1109;
+  box-shadow: inset 0 0 0 1px var(--glass-line), inset 0 0 24px rgba(0, 0, 0, 0.6);
+}
+
+#v-cabinet .sbox-h {
+  display: block;
+  margin-bottom: 0.55rem;
+  text-align: center;
+  font-size: 0.88rem;
+  letter-spacing: 0.2em;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+}
+
+/* Sudoku */
+
+#v-cabinet .sgrid {
+  display: grid;
+  width: max-content;
+  grid-template-columns: repeat(3, 50px);
+  gap: 2px;
+  background: var(--glass-line);
+  padding: 2px;
+  border-radius: 3px;
+}
+
+#v-cabinet .scell {
+  height: 50px;
+  display: grid;
+  place-items: center;
+  background: #101b13;
+  font-size: 2rem;
+  color: var(--ink-dim);
+  text-shadow: 0 0 6px currentColor;   /* 10px halated the white givens into mush */
+}
+
+#v-cabinet .scell.given { color: #ffffff; }              /* fixed clues: neutral */
+#v-cabinet .scell.entered { color: var(--arcade); }      /* what you typed: ice blue */
+#v-cabinet .scell.sel {
+  background: #17301f;
+  box-shadow: inset 0 0 0 2px var(--strategy);
+}
+
+/* Minesweeper 1–8.
+ *
+ * Eight steps that must stay apart from each other AND stay legible through
+ * ~24% scanline loss plus a vignette. A brightness ramp cannot do it, and the
+ * classic Windows set is worse than useless here — half of it (navy, maroon,
+ * black) disappears on a dark ground. So: six well-separated hues at high
+ * luminance, then white and hot pink for 7 and 8.
+ *
+ * The pair I am least happy with is 3 (#ff5348 tomato) against 8 (#ff7bd6 hot
+ * pink) — 35° apart in hue. They survive because one is clearly warm-red and
+ * the other clearly magenta, but if a ninth were ever needed there is nowhere
+ * left to put it. Rejected: 7=white / 8=grey (the classic pairing), because
+ * grey against white is a brightness-only distinction and the scanlines eat
+ * exactly that.
+ */
+#v-cabinet .mgrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  background: var(--glass-line);
+  padding: 2px;
+  border-radius: 3px;
+  width: max-content;
+  max-width: 244px;
+}
+
+/* Size and bloom are not decoration here. At 1.55rem the heavy texture — a
+ * 1.5px black line every 3.5px — was cutting two bands straight through every
+ * glyph, and VT323's strokes are about 2px, so a digit lost most of itself.
+ * 2.1rem puts roughly 3px of stroke against a 1.5px cut, and the double glow
+ * does what a real phosphor does: bleeds into the gap and puts the shape back.
+ * Even so this is the weakest part of the direction — see the report. */
+#v-cabinet .mcell {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  background: #101b13;
+  font-size: 2.1rem;
+  text-shadow: 0 0 4px currentColor, 0 0 13px currentColor;
+}
+
+#v-cabinet .n1 { color: #8ecdff; }   /* 210° ice blue   */
+#v-cabinet .n2 { color: #5cff94; }   /* 140° green      */
+#v-cabinet .n3 { color: #ff6f62; }   /*   8° tomato     */
+#v-cabinet .n4 { color: #cfa6ff; }   /* 275° violet     */
+#v-cabinet .n5 { color: #ffc850; }   /*  42° amber      */
+#v-cabinet .n6 { color: #4df0d8; }   /* 172° teal       */
+#v-cabinet .n7 { color: #ffffff; }   /*   —  white      */
+#v-cabinet .n8 { color: #ff92e0; }   /* 330° hot pink   */
+
+#v-cabinet .mcell.flag { color: #ff6257; text-shadow: 0 0 4px currentColor, 0 0 14px currentColor; }
+
+/* The unrevealed cell has to be visibly a raised button and not just an empty
+ * hole, or the grid looks like it lost two cells. */
+#v-cabinet .mcell.hidden-cell {
+  background: linear-gradient(150deg, #2a3d2f, #14201a);
+  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.16), inset -2px -2px 0 rgba(0, 0, 0, 0.7);
+}
+
+/* Pong */
+
+#v-cabinet .pbar {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 244px;
+}
+
+#v-cabinet .pscore {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 17px;
+  line-height: 1.7;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(111, 220, 255, 0.7);
+}
+
+#v-cabinet .plabel { font-size: 0.85rem; letter-spacing: 0.2em; color: var(--ink-dim); }
+#v-cabinet .pdiv { flex: 0 0 22px; height: 2px; background: var(--glass-line); }
+
+#v-cabinet .pcourt {
+  position: relative;
+  width: 100%;
+  max-width: 244px;
+  height: 86px;
+  margin-top: 0.55rem;
+  border-radius: 3px;
+  background: #050a07;
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+}
+
+#v-cabinet .pcourt::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 5px;
+  bottom: 5px;
+  border-left: 2px dashed #2b5638;
+}
+
+#v-cabinet .ppad {
+  position: absolute;
+  top: 16px;
+  width: 5px;
+  height: 34px;
+  border-radius: 2px;
+  background: var(--arcade);
+  box-shadow: 0 0 9px rgba(111, 220, 255, 0.6);
+}
+
+#v-cabinet .ppad.l { left: 7px; }
+#v-cabinet .ppad.r { right: 7px; top: 40px; background: var(--red); box-shadow: 0 0 9px rgba(255, 83, 72, 0.6); }
+
+#v-cabinet .pball {
+  position: absolute;
+  left: 61%;
+  top: 42px;
+  width: 6px;
+  height: 6px;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.85);
+}
+
+/* ------------------------------------------------------ push start / foot */
+
+#v-cabinet .foot {
+  margin-top: 1.5rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--glass-line);
+  text-align: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  line-height: 2;
+  letter-spacing: 0.06em;
+  color: var(--lamp);
+  text-shadow: 0 0 14px var(--lamp-glow);
+  animation: cabinet-push 1.15s steps(1) infinite;
+}
+
+/* Attract mode. steps(1) rather than a fade: a real attract screen hard-cuts. */
+@keyframes cabinet-push { 0%, 58% { opacity: 1; } 59%, 100% { opacity: 0.16; } }
+
+@media (prefers-reduced-motion: reduce) {
+  #v-cabinet .brand,
+  #v-cabinet .strap,
+  #v-cabinet .icta,
+  #v-cabinet .info.is-launching,
+  #v-cabinet .info.is-launching .icta,
+  #v-cabinet .foot { animation: none; }
+  #v-cabinet .strap { color: var(--arcade); }
+  #v-cabinet .tile { transition: none; }
+  #v-cabinet .tile::before { transition: none; }
+}
+
+/* ---------------------------------------------------------------- narrow
+ * The bezel and the marquee both shrink, and --marquee-h has to move with the
+ * marquee because .deco::before is positioned off it.
+ */
+
+@media (max-width: 760px) {
+  #v-cabinet {
+    --bezel: 12px;
+    --inner: 16px;
+    --marquee-h: 108px;
+    font-size: 19px;
+  }
+
+  #v-cabinet .top {
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.7rem;
+  }
+
+  #v-cabinet .brand { font-size: 12px; text-align: center; }
+
+  #v-cabinet .deco::before { border-radius: 18px / 22px; }
+
+  #v-cabinet .grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+
+  #v-cabinet .info {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "label name"
+      "label meta"
+      "label desc"
+      "label cta";
+    align-items: start;
+    row-gap: 0.2rem;
+  }
+
+  #v-cabinet .icta { justify-self: start; margin-top: 0.5rem; }
+
+  #v-cabinet .foot { font-size: 12px; }
+}

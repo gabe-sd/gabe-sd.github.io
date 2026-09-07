@@ -32,7 +32,29 @@ will otherwise copy:
   decided. See the entry in `design/TODO.md`.
 
 What is being built from it: the base phosphor look, the type, the always-on
-accent treatment, the selected-game info panel, and the top nav.
+accent treatment, and the top nav. **Not** the selected-game info panel — see
+`hub-preview.html` below for what replaced it and why.
+
+## `hub-select-overlay.html`
+
+The tap-to-arm-then-play tile interaction, built and tuned in isolation to prove
+it out before it went anywhere near the real hub styling. Whole-tile control, no
+button, no panel — the interaction itself, not the look. Superseded in scope by
+`hub-preview.html` below, which carries the same interaction forward into the
+real chrome; kept because it isolates the mechanism without the visual noise.
+
+## `hub-preview.html`
+
+The settled result: Amber Arcade's chrome (wordmark, top nav, subtle CRT texture
+on the chrome only) married to the tile interaction above, with category colour
+at rest and the pulsing-glow values as tuned live against Gabriel's reaction.
+This is what `design/DESIGN.md`'s "The hub" section describes in prose and exact
+values — read that first; this file is the reference to build from, not to port
+markup out of verbatim (it's still a throwaway preview, e.g. it loads VT323 from
+the Google Fonts CDN rather than self-hosting it).
+
+**There is no info panel in this design**, unlike `hub-full-color.html` below,
+whose selected-game panel this decision drops entirely rather than repositions.
 
 ## `pong-lightning-magenta.html`
 

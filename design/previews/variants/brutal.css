@@ -1,0 +1,479 @@
+/* 11 — Signal
+ *
+ * The full departure. No icons, no texture, no glow, no gradient, no rounded
+ * corner, no second colour. What is left is type, rule weight, alignment and
+ * one signal orange used only where something is live or selected.
+ *
+ * The six games stop being a grid of cards and become a numbered index. The
+ * numbers gallery.js already supplies ("01"–"06") are the visual device that
+ * replaces the icon, set at twice the size of the game's own name so they are
+ * structure rather than a label in a corner.
+ *
+ * The whole interaction language is inversion: a live row flips to a solid
+ * accent block with the ground colour as its text. There is no hover glow, no
+ * border colour change, no lift. One state, and it is unmistakable.
+ */
+
+#v-brutal {
+  --bg: #0b0b0b;
+  --fg: #f5f5f0;
+  --fg-2: #b9b9b2;          /* secondary text — 9.9:1 on the ground */
+  --fg-3: #8b8b85;          /* the dimmest text allowed anywhere — 5.8:1 */
+  --rule: #2a2a26;          /* hairline */
+  --rule-2: #45453f;        /* box edge, one step up so a border is not a hairline */
+  --block: #2e2e2a;         /* an unrevealed / inert solid */
+  --accent: #ff3b00;        /* live or selected. Nowhere else. */
+
+  /* The one strong margin. Everything on the page hangs off it, including the
+   * spine drawn in .deco. */
+  --m: clamp(1.25rem, 4vw, 3.4rem);
+
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Space Mono', ui-monospace, monospace;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+/* The margin made visible: a single hairline running the full height, with the
+ * text hanging off it. Not an ornament — it is the one alignment the layout
+ * has, drawn. Rejected: making this spine 3px and accent-coloured. It looked
+ * decisive and it spent the accent on furniture, which is the one thing this
+ * direction cannot afford. */
+#v-brutal .deco {
+  inset: 0 auto 0 calc(var(--m) - 0.85rem);
+  width: 1px;
+  background: var(--rule);
+}
+
+/* Left-aligned, not centred: max-width with no auto margin, so the column
+ * hangs on the left edge at any viewport width. Nothing on this page is
+ * centred, including the page itself. */
+#v-brutal .screen {
+  max-width: 1340px;
+  margin: 0;
+  padding: 2.4rem var(--m) 4rem;
+}
+
+/* -------------------------------------------------------------- wordmark */
+
+/* The header stacks rather than splitting left/right: a right-aligned nav
+ * would give the page a second margin, and there is only one. */
+#v-brutal .top {
+  display: block;
+  padding-bottom: 1.1rem;
+}
+
+#v-brutal .brand {
+  display: block;
+  font-family: 'Archivo Black', 'Space Grotesk', sans-serif;
+  font-size: clamp(2.6rem, 9vw, 6.2rem);
+  line-height: 0.86;
+  letter-spacing: -0.038em;   /* tight enough that the two words read as a mass */
+  text-transform: uppercase;
+  color: var(--fg);
+}
+
+#v-brutal .nav {
+  display: flex;
+  gap: 1.6rem;
+  margin-top: 1.1rem;
+}
+
+#v-brutal .nav a {
+  position: relative;
+  padding-bottom: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  border-bottom: 3px solid transparent;
+}
+
+#v-brutal .nav a:hover,
+#v-brutal .nav a:focus-visible { color: var(--fg); border-bottom-color: var(--fg); outline: none; }
+
+/* The current page is live, so it gets the accent — and a 3px rule under it,
+ * so the state survives being read in greyscale. */
+#v-brutal .nav a.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+#v-brutal .strap {
+  margin: 0 0 2.1rem;
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+/* ----------------------------------------------------------------- index */
+
+/* A list, not a grid. gallery.css defaults this to auto-fill cards with a 1rem
+ * gap; both have to go or the rules stop touching and the rhythm dies. */
+#v-brutal .grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  border-top: 3px solid var(--fg);
+}
+
+#v-brutal .tile {
+  display: grid;
+  grid-template-columns: 6.6rem minmax(0, 1fr);
+  grid-template-areas:
+    "num name"
+    "num cat"
+    "num desc";
+  column-gap: 1.4rem;
+  align-items: start;
+
+  /* The row bleeds 0.85rem left of the text so that when it inverts, the solid
+   * block lands exactly on the spine. */
+  margin-left: -0.85rem;
+  padding: 1.15rem 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--fg);
+  text-decoration: none;
+  transition: background 0.09s steps(2), color 0.09s steps(2), padding-left 0.09s ease;
+}
+
+#v-brutal .tile:last-child { border-bottom: 3px solid var(--fg); }
+
+/* No icon at all in this direction, so the slot is closed rather than left
+ * holding an empty box. */
+#v-brutal .tico { display: none; }
+
+/* The device that replaces the icon. Twice the size of the name it belongs to,
+ * so it is composition rather than annotation. A spanning grid item does not
+ * take part in baseline alignment, so the cap heights are matched by hand:
+ * line-height 0.8 plus a 0.08rem nudge lines it up with .tname. */
+#v-brutal .tnum {
+  display: block;
+  grid-area: num;
+  align-self: start;
+  margin-top: 0.22rem;
+  font-family: 'Archivo Black', 'Space Grotesk', sans-serif;
+  font-size: 4.2rem;
+  line-height: 0.8;
+  letter-spacing: -0.04em;
+  color: #a8a8a1;
+}
+
+#v-brutal .tname {
+  grid-area: name;
+  align-self: start;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+/* Kept in the tile rather than hidden. There is no icon doing the explaining
+ * here, so the sentence has to. */
+#v-brutal .tdesc {
+  grid-area: desc;
+  margin-top: 0.34rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.01em;
+  color: var(--fg-2);
+}
+
+/* The category is a typographic label, not a colour. Rejected: an accent per
+ * data-cat — three colours in a system whose entire argument is that there is
+ * one. */
+#v-brutal .tcat {
+  grid-area: cat;
+  align-self: start;
+  margin-top: 0.5rem;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  color: var(--fg-3);
+}
+
+/* Inversion, and an indent. Two cues, and the indent is the one that survives
+ * a greyscale print or a colour-blind reader. */
+#v-brutal .tile:hover,
+#v-brutal .tile:focus-visible,
+#v-brutal .tile.is-selected {
+  background: var(--accent);
+  color: var(--bg);
+  padding-left: 1.6rem;
+  outline: none;
+}
+
+/* Everything on the inverted row is solid ground colour. Rejected: alpha on
+ * the secondary text — rgba(11,11,11,0.72) over the accent blends to about
+ * #4f1808, roughly 4:1, which is under the bar at 0.82rem. Hierarchy on this
+ * row is size and weight only. */
+#v-brutal .tile:hover .tnum,
+#v-brutal .tile:focus-visible .tnum,
+#v-brutal .tile.is-selected .tnum,
+#v-brutal .tile:hover .tdesc,
+#v-brutal .tile:focus-visible .tdesc,
+#v-brutal .tile.is-selected .tdesc,
+#v-brutal .tile:hover .tcat,
+#v-brutal .tile:focus-visible .tcat,
+#v-brutal .tile.is-selected .tcat { color: var(--bg); }
+
+/* ------------------------------------------------------------ info panel */
+
+/* No rule of its own: the 3px that closes the index is the rule above this
+ * panel. Two parallel 3px rules a rem apart read as an accident, not a
+ * device. */
+#v-brutal .info {
+  display: block;
+  margin-top: 2.4rem;
+}
+
+#v-brutal .ilabel {
+  display: block;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: var(--fg-3);
+}
+
+#v-brutal .inm {
+  display: block;
+  margin-top: 0.45rem;
+  font-family: 'Archivo Black', 'Space Grotesk', sans-serif;
+  font-size: clamp(1.9rem, 4.6vw, 3rem);
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+}
+
+#v-brutal .imeta {
+  display: block;
+  margin-top: 0.55rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  color: var(--fg-2);
+}
+
+#v-brutal .idesc {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.95rem;
+  color: var(--fg-2);
+}
+
+/* The solid block the composition needs against the hairlines — but white, not
+ * accent. The selected row above is already an orange block; two of them a few
+ * hundred pixels apart is how a scarce colour stops being scarce. */
+#v-brutal .icta {
+  display: inline-block;
+  margin-top: 1.15rem;
+  padding: 0.5rem 1.15rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  color: var(--bg);
+  background: var(--fg);
+}
+
+/* Launching is the one moment the CTA is live, so that is when it takes the
+ * accent. steps(1) because nothing here fades. */
+#v-brutal .info.is-launching .icta { animation: brutal-launch 0.14s steps(1) 5; }
+@keyframes brutal-launch { 50% { background: var(--accent); color: var(--bg); } }
+
+/* --------------------------------------------------------- game samples */
+
+#v-brutal .sample {
+  margin-top: 3rem;
+  padding-top: 1.1rem;
+  border-top: 3px solid var(--fg);
+}
+
+#v-brutal .sample-h {
+  margin: 0 0 1.4rem;
+  font-family: 'Archivo Black', 'Space Grotesk', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+#v-brutal .sample-row { display: flex; flex-wrap: wrap; gap: 2.2rem; align-items: flex-start; }
+
+#v-brutal .sbox { flex: 0 0 auto; }
+
+#v-brutal .sbox-h {
+  display: block;
+  margin-bottom: 0.7rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+/* Sudoku: given and entered are told apart by weight, exactly as n3 and n4 are
+ * in the mine grid below. The only accent in this box is the selected cell,
+ * because selection is what the accent means. */
+#v-brutal .sgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 2.6rem);
+  gap: 1px;
+  background: var(--rule-2);
+  border: 1px solid var(--rule-2);
+}
+
+#v-brutal .scell {
+  height: 2.6rem;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  font-size: 1.15rem;
+}
+
+/* Given and entered are told apart by weight and one grey step — the same two
+ * devices as n3/n4 below, rather than a new one. Givens are the fixed half of
+ * the puzzle, so they are the heavier of the two. */
+#v-brutal .scell.given { color: var(--fg); font-weight: 700; }
+#v-brutal .scell.entered { color: var(--fg-2); font-weight: 400; }
+#v-brutal .scell.sel { background: var(--accent); color: var(--bg); }
+
+/* Eight numbers, one colour.
+ *
+ * The obvious answer — eight hues — would break the only rule this direction
+ * has, and a plain brightness ramp cannot carry eight steps apart. So the
+ * numbers escalate the way the game itself does: 1 is nearly nothing, 8 is the
+ * loudest thing on the board. Four devices stacked in order —
+ *   grey step (1,2,3) → weight (4) → rule (5) → box (6) → inversion (7,8)
+ * — with the accent spent on 8 alone, the one that is genuinely dangerous.
+ * Every step is a different *shape*, so the set survives greyscale, and no two
+ * adjacent numbers share a device. */
+#v-brutal .mgrid {
+  display: grid;
+  grid-template-columns: repeat(10, 2.6rem);
+  gap: 1px;
+  background: var(--rule-2);
+  border: 1px solid var(--rule-2);
+}
+
+#v-brutal .mcell {
+  height: 2.6rem;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+#v-brutal .n1 { color: #808079; }
+#v-brutal .n2 { color: #b0b0a9; }
+#v-brutal .n3 { color: var(--fg); }
+#v-brutal .n4 { color: var(--fg); font-weight: 700; }
+/* The rule goes under the glyph rather than across the bottom of the cell —
+ * an inset box-shadow sat on the grid line and read as a border, not a mark. */
+#v-brutal .n5 {
+  color: var(--fg);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 0.16em;
+}
+#v-brutal .n6 { color: var(--fg); font-weight: 700; box-shadow: inset 0 0 0 2px var(--fg); }
+#v-brutal .n7 { color: var(--bg); font-weight: 700; background: var(--fg); }
+#v-brutal .n8 { color: var(--bg); font-weight: 700; background: var(--accent); }
+
+/* The unrevealed square is the raised one, so in a flat system it is the solid
+ * and the revealed squares are bare ground. Same inversion language, no new
+ * device. The flag is a white glyph on it — 8 owns the accent in this box. */
+#v-brutal .mcell.hidden-cell { background: var(--block); }
+#v-brutal .mcell.flag { color: var(--fg); background: var(--block); }
+
+/* Pong: the score is set at display size because a score is the one number a
+ * player actually looks at. */
+#v-brutal .pbar {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+#v-brutal .pscore {
+  font-family: 'Archivo Black', 'Space Grotesk', sans-serif;
+  font-size: 2.4rem;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+}
+
+#v-brutal .plabel {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  color: var(--fg-3);
+}
+
+#v-brutal .pdiv { flex: 0 0 2rem; height: 3px; background: var(--fg); align-self: center; }
+
+#v-brutal .pcourt {
+  position: relative;
+  width: 15rem;
+  height: 4.6rem;
+  margin-top: 0.9rem;
+  border: 1px solid var(--rule-2);
+}
+
+#v-brutal .pcourt::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0.35rem;
+  bottom: 0.35rem;
+  border-left: 1px dashed var(--rule-2);
+}
+
+#v-brutal .ppad { position: absolute; width: 4px; height: 1.6rem; background: var(--fg); }
+#v-brutal .ppad.l { left: 0.5rem; top: 0.7rem; }
+#v-brutal .ppad.r { right: 0.5rem; top: 2.1rem; }
+
+/* The ball is the live thing on the court, so it is the accent, and it is the
+ * only accent in this box. */
+#v-brutal .pball {
+  position: absolute;
+  left: 62%;
+  top: 1.9rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  background: var(--accent);
+}
+
+/* ------------------------------------------------------------------ foot */
+
+#v-brutal .foot {
+  margin-top: 3rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: #a5a59e;
+}
+
+/* ------------------------------------------------------------ narrow ---- */
+
+@media (max-width: 720px) {
+  #v-brutal .tile {
+    grid-template-columns: 4.4rem minmax(0, 1fr);
+    column-gap: 0.9rem;
+  }
+  #v-brutal .tnum { font-size: 2.9rem; }
+  #v-brutal .tname { font-size: 1.25rem; }
+  #v-brutal .tcat { margin-top: 0.45rem; font-size: 0.58rem; letter-spacing: 0.18em; }
+  #v-brutal .tdesc { margin-top: 0.3rem; }
+  #v-brutal .mgrid { grid-template-columns: repeat(5, 2.6rem); }
+  #v-brutal .pcourt { width: 100%; max-width: 15rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #v-brutal .tile { transition: none; }
+  #v-brutal .info.is-launching .icta { animation: none; }
+}
