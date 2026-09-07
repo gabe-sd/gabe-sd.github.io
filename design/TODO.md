@@ -107,6 +107,62 @@ each assumes the ones above it have landed.
 
 **Branch from:** `redesign`
 
+**Status, 2026-09-06: built, committed, and rejected on sight.** The palette,
+type scale and hub landed in `shared.css`/`hub.css`/`index.html`/`hub.js`/
+`about.html` (commits `4866ab4` and `df0eb91` on `redesign-tokens-hub`, in
+`.claude/worktrees/redesign-tokens-hub`), `npm test` green throughout including
+the required break-and-restore proofs for the four `tests/pong.test.js`
+assertions touched. None of that is in question. The look is: shown a served
+preview, Gabriel's reaction was "why does it look like the cheap mockups" — not
+a request for tweaks, a rejection of the build as delivered.
+
+**Do not rebuild any of this until Gabriel approves a direction. He wants to
+discuss first.** The two commits above stand as-is in the meantime — this is a
+record for whoever picks the discussion back up, not a set of instructions to
+go implement.
+
+His itemized reaction, verbatim where it matters:
+
+- **No depth or framing.** The page reads as flat rectangles on black, not a
+  physical machine — no bezel, shadow, or vignette gives it a sense of being
+  inside something.
+- **The CRT texture is invisible.** "Subtle on the chrome" (settled above, under
+  "The hub") reads, in the actual build, as *absent*. Whether the recipe needs
+  to move off the preview gallery's "soft" setting, or whether invisible-until-
+  you-look-for-it was never going to survive contact with an actual opinion, is
+  part of what needs discussing rather than assumed.
+- **Missing hover animations.**
+- **The glow needs a redo.**
+- **The tile border treatment should follow the Amber Arcade preview
+  (`design/previews/variants/amberlit.css`), not what got built.** Checked
+  against that file directly: its `.tile` has a plain 1px `border` all the way
+  round, and the category-coloured left edge is a *separate* 4px `::before`
+  layer with its own `box-shadow` glow — solid colour plus bloom, not a flat
+  `border-left`. That `::before` also **animates in from `scaleY(0)` on hover/
+  focus/selection** and is invisible at rest in that file, alongside a hover
+  state that lifts the tile (`translateY(-2px)`), glows the whole card, and
+  blooms the icon and name.
+
+  **The build instead followed `design/mockups/hub-preview.html`**, which this
+  phase was explicitly told to build from — and that file already simplified
+  the tile down to a flat `border-left`, `.tile:hover` doing nothing but a
+  background swap, no glow, no lift, no animated stripe. That simplification
+  was reasonable *for its own purpose*: `hub-preview.html` exists to prove out
+  the tap-to-arm-then-play interaction (`design/DESIGN.md`, "Tile selection"),
+  and stripped everything not load-bearing for that question. Nobody carried
+  the richer `amberlit.css` treatment back in before this became the file the
+  real build was told to match. That gap — a mockup narrowed for one question
+  becoming the reference for everything — is most of why the result reads as
+  a mockup: it *is* one, just relocated into the real files.
+
+  Note this is **not** simply "restore `amberlit.css` verbatim": that file
+  also has the left stripe hidden until hover, which `design/DESIGN.md`'s
+  "Category colour: at rest, all the time" section explicitly overrides for a
+  documented reason (Gabriel reversed a hover-only version live in a later
+  session — "bring back the green pink and blue game colors"). The glow and the
+  hover animation are worth pulling back in; the stripe's *visibility at rest*
+  is settled and should not silently revert along with them.
+
 The foundation phase. Everything after it consumes what this one decides, so it
 is the phase to go slowly on.
 
