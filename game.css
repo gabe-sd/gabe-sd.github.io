@@ -1,0 +1,219 @@
+/* The frame every game page sits in: the machine around the screen.
+ *
+ * hub.css does this for the root page; this is its counterpart for a game, and
+ * the two are deliberately the same machine one size down — the same breadcrumb
+ * hue, the same bloom on the title, the same scanlines, the same hairline rules.
+ * A visitor moving from the hub into a game should not feel they changed sites.
+ *
+ * It is loaded *between* shared.css and the game's own style.css:
+ *
+ *   <link rel="stylesheet" href="../../shared.css">
+ *   <link rel="stylesheet" href="../../game.css">
+ *   <link rel="stylesheet" href="style.css">
+ *
+ * so a game can still override anything here, and tests/contract.test.js still
+ * sees shared.css first.
+ *
+ * Chess is the only consumer today. Five other games need the same frame and
+ * adopting one is three lines of markup plus this link — see design/TODO.md,
+ * `redesign-game-chrome`.
+ *
+ * The rule that shapes all of it: **chrome against screen.** Every glow, wash
+ * and scanline belongs to the machine; the board is lifted out from under them
+ * on z-index 7 with its own opaque ground, because a scanline over a Sudoku
+ * digit or a chess hairline is texture bought at the cost of reading the game.
+ */
+
+/* ---------- the frame ---------- */
+
+.game-page {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  margin: 0;
+}
+
+/* The wash: a warm bloom off the top of the tube and a vignette into the
+   corners, so the page has a light source instead of being flat black. */
+.game-deco {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(90% 55% at 50% 0%, rgba(255, 176, 0, 0.13), transparent 72%),
+    radial-gradient(120% 100% at 50% 45%, transparent 50%, rgba(0, 0, 0, 0.7));
+}
+
+/* Scanlines. 1px of near-black every 3px — enough to read as a tube at arm's
+   length, faint enough not to fight text. It sits above the wash and below the
+   board, which is what "chrome against screen" means in z-index terms. */
+.game-crt {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.34) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+.game-in {
+  position: relative;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 1.4rem 1.6rem 2rem;
+}
+
+/* ---------- the head ---------- */
+
+.game-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--p-hairline);
+}
+
+/* A breadcrumb rather than a back-link: it says where you are as well as where
+   you can go, and the game's own name in it is what stops the title reading as
+   the only label on the page. Still `../../index.html` — the contract's link
+   home is this element. */
+.crumb {
+  color: var(--p-dim);
+  font-size: 1.02rem;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+}
+
+.crumb b {
+  color: var(--p-pale);
+  font-weight: 400;
+}
+
+.crumb:hover {
+  color: var(--p-pale);
+}
+
+.crumb:hover b {
+  color: var(--p-hot);
+}
+
+.game-title {
+  margin: 0;
+  font-size: 2.1rem;
+  line-height: 1;
+  letter-spacing: 0.09em;
+  font-weight: 400;
+  color: var(--p-hot);
+  text-shadow: var(--bloom-lg);
+}
+
+/* ---------- the status strap ---------- */
+
+/* #status, restyled. It keeps shared.css's reserved height so the board does
+   not jump when the text changes, and gains the hub's fading block cursor —
+   the device that says this is a terminal waiting on you. */
+.game-strap {
+  margin: 0.95rem 0 1.1rem;
+  color: var(--p-pale);
+  font-size: 1.22rem;
+  letter-spacing: 0.03em;
+  text-align: left;
+}
+
+/* Whatever the strap wants to emphasise — the side to move, the state of play.
+   --strap-accent lets the game repoint it without a rule of its own. */
+.game-strap .who {
+  color: var(--strap-accent, var(--p-amber));
+}
+
+.game-strap::after {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 0.95em;
+  margin-left: 0.45em;
+  vertical-align: -0.1em;
+  background: var(--p-amber);
+  box-shadow: 0 0 12px rgba(255, 176, 0, 0.55);
+  animation: game-cursor 2.4s ease-in-out infinite;
+}
+
+@keyframes game-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.12; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-strap::after {
+    animation: none;
+    opacity: 0.75;
+  }
+}
+
+/* ---------- the stage ---------- */
+
+/* The board and anything standing beside it. z-index 7 and an opaque ground
+   lift it clear of the scanlines above. */
+.game-stage {
+  position: relative;
+  z-index: 7;
+  display: flex;
+  gap: 1.6rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+/* The controls row under the board rides above the scanlines too, or the
+   buttons pick up stripes their labels have to be read through. */
+.game-page .controls {
+  position: relative;
+  z-index: 7;
+  margin-top: 1.1rem;
+}
+
+/* ---------- the foot ---------- */
+
+/* Standing instructions live here rather than in #status: the contract keeps
+   the status line for game state only, and a hint that never changes is not
+   state. Left is what to do, right is what the game quietly handles for you. */
+.game-foot {
+  position: relative;
+  z-index: 7;
+  margin-top: 1.3rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--p-hairline);
+  color: var(--p-dim);
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.game-foot b {
+  color: var(--p-soft);
+  font-weight: 400;
+}
+
+@media (max-width: 620px) {
+  .game-in {
+    padding: 1.1rem 1rem 1.6rem;
+  }
+
+  .game-title {
+    font-size: 1.7rem;
+  }
+
+  /* Two columns of hint text on a phone is two unreadable columns. */
+  .game-foot {
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+}

@@ -1,11 +1,79 @@
-const PIECE_GLYPHS = {
-  wK: "♔", wQ: "♕", wR: "♖", wB: "♗", wN: "♘", wP: "♙",
-  bK: "♚", bQ: "♛", bR: "♜", bB: "♝", bN: "♞", bP: "♟",
+// The six pieces, drawn rather than typed. This used to be a map of Unicode
+// chess characters (U+2654-265F) written into each square's textContent, and
+// every one of them fell through to whatever face the reader's OS served: VT323
+// stops at Latin Extended and has no chess glyphs at all. Stroke SVG on the
+// hub's own 48x48 icon grid at the hub's own weight fixes that and gives the
+// site one drawing hand — see design/DESIGN.md, "Chess: the vector grid".
+//
+// One weight, one grid, no fills. Every piece stands on the same base bar,
+// which is what makes six different silhouettes read as one set.
+const PIECE_PATHS = {
+  P:
+    '<circle cx="24" cy="12.5" r="4.5"/>' +
+    '<path d="M19 19h10l-2 4h-6z"/>' +
+    '<path d="M21 23c0 6-2.5 9-4 12h14c-1.5-3-4-6-4-12"/>' +
+    '<path d="M13 35h22v5H13z"/>',
+
+  R:
+    '<path d="M14 9h5v4h4V9h4v4h4V9h5v11H14z"/>' +
+    '<path d="M17.5 20l1.5 13h10l1.5-13"/>' +
+    '<path d="M13 33h22v6H13z"/>',
+
+  B:
+    '<circle cx="24" cy="9" r="2.5"/>' +
+    '<path d="M24 12.5c-5.5 4-8 8.5-8 12.5 0 4.5 3.6 7.5 8 7.5s8-3 8-7.5c0-4-2.5-8.5-8-12.5z"/>' +
+    '<path d="M24 18l3.5 4.5"/>' +
+    '<path d="M13 35h22v5H13z"/>',
+
+  // Straight lines only — chosen over three rounder alternatives. The parts
+  // that identify it are the wedge muzzle with the jaw cut back under it, the
+  // straight forehead, and the single pointed ear; lose any of those and it
+  // stops being a horse. It is the only piece in the set with no curve in it.
+  N:
+    '<path d="M16 35L17 27L23 22L12 25L10 19.5L17 12L22 9L20.5 3.5L27 8.5L32 14.5L34 23V35Z"/>' +
+    '<circle cx="19.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/>' +
+    '<path d="M13 35h22v5H13z"/>',
+
+  Q:
+    '<circle cx="11.5" cy="12.5" r="2.2"/><circle cx="17.5" cy="9.5" r="2.2"/>' +
+    '<circle cx="24" cy="8" r="2.2"/><circle cx="30.5" cy="9.5" r="2.2"/>' +
+    '<circle cx="36.5" cy="12.5" r="2.2"/>' +
+    '<path d="M11.5 15L15 28h18l3.5-13-6.5 7-6-11-6 11z"/>' +
+    '<path d="M15 28h18l-1.5 5h-15z"/>' +
+    '<path d="M13 35h22v5H13z"/>',
+
+  // "Broad": a wide dome, a collar band, and the standard base. Chosen after
+  // two entire further sets were rejected, both on silhouette — do not redraw
+  // it as a taller, narrower figure, which is the shape both rejected sets
+  // shared. design/DESIGN.md records why.
+  K:
+    '<path d="M24 4V13"/><path d="M20.5 8.5H27.5"/>' +
+    '<path d="M24 14.5c-4.5-1.8-10 1-11 6.8-.8 4.8 1.2 9.8 1.8 12.7h18.4' +
+      'c.6-2.9 2.6-7.9 1.8-12.7-1-5.8-6.5-8.6-11-6.8z"/>' +
+    '<path d="M15 28h18" stroke-width="1.5"/>' +
+    '<path d="M13 35h22v5H13z"/>',
 };
+
+// The standard values, and the order every chess interface puts a tray in.
+const PIECE_VALUES = { Q: 9, R: 5, B: 3, N: 3, P: 1 };
+const TRAY_ORDER = "QRBNP";
 
 const boardEl = document.getElementById("board");
 const statusEl = document.getElementById("status");
 const restartBtn = document.getElementById("restart");
+const takenByWhiteEl = document.getElementById("taken-by-white");
+const takenByBlackEl = document.getElementById("taken-by-black");
+
+// Colour arrives through currentColor from .piece-w / .piece-b, so a piece
+// never carries a colour of its own — which is what lets the same markup serve
+// the live board and the dimmed capture trays.
+function pieceSVG(piece) {
+  const cls = color(piece) === "w" ? "piece-w" : "piece-b";
+  return '<svg class="' + cls + '" viewBox="0 0 48 48" fill="none" ' +
+    'stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" ' +
+    'stroke-linecap="round" aria-hidden="true">' +
+    PIECE_PATHS[type(piece)] + "</svg>";
+}
 
 let squareEls = [];
 let state = null;
@@ -32,6 +100,11 @@ function newGameState() {
     selected: null,
     legalMoves: [],
     gameOver: false,
+    // Display only, and deliberately outside applyMove, which is pure and gets
+    // called once per candidate move while filtering for legality — anything
+    // recorded in there would count every move nobody played.
+    captured: { w: [], b: [] },  // captured[side] = what that side has taken
+    lastMove: null,              // { from: {r,c}, to: {r,c} }
   };
 }
 
@@ -339,20 +412,25 @@ function render() {
   const inCheckColor = isInCheck(state.board, state.turn) ? state.turn : null;
   const kingPos = inCheckColor ? findKing(state.board, inCheckColor) : null;
 
+  // The move marks follow the side to move; style.css reads this. One colour
+  // means one side, the same reading rule the pieces themselves follow.
+  boardEl.dataset.turn = state.turn;
+
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
       const sq = squareEls[r][c];
       const piece = state.board[r][c];
-      sq.innerHTML = "";
-      sq.classList.remove("selected", "check", "piece-w", "piece-b");
-      sq.textContent = piece ? PIECE_GLYPHS[piece] : "";
-      if (piece) sq.classList.add(color(piece) === "w" ? "piece-w" : "piece-b");
+      sq.classList.remove("selected", "check", "last");
+      sq.innerHTML = piece ? pieceSVG(piece) : "";
 
       if (state.selected && state.selected.r === r && state.selected.c === c) {
         sq.classList.add("selected");
       }
       if (kingPos && kingPos.r === r && kingPos.c === c) {
         sq.classList.add("check");
+      }
+      if (isLastMoveSquare(r, c)) {
+        sq.classList.add("last");
       }
     }
   }
@@ -363,24 +441,69 @@ function render() {
     marker.className = state.board[move.to.r][move.to.c] || move.enPassant ? "ring" : "dot";
     sq.appendChild(marker);
   }
+
+  renderTrays();
+}
+
+function isLastMoveSquare(r, c) {
+  const m = state.lastMove;
+  if (!m) return false;
+  return (m.from.r === r && m.from.c === c) || (m.to.r === r && m.to.c === c);
+}
+
+function materialOf(taken) {
+  return taken.reduce((sum, piece) => sum + PIECE_VALUES[type(piece)], 0);
+}
+
+// One number on the whole board: the material difference, carried only by the
+// side that is ahead. Two running totals would be two numbers to subtract
+// before learning the only thing a player reads for, and the losing side
+// showing nothing is itself the fastest way to say who is losing.
+function renderTrays() {
+  const diff = materialOf(state.captured.w) - materialOf(state.captured.b);
+  paintTray(takenByWhiteEl, state.captured.w, diff > 0 ? diff : 0);
+  paintTray(takenByBlackEl, state.captured.b, diff < 0 ? -diff : 0);
+}
+
+function paintTray(el, taken, advantage) {
+  const sorted = taken
+    .slice()
+    .sort((a, b) => TRAY_ORDER.indexOf(type(a)) - TRAY_ORDER.indexOf(type(b)));
+  let html = '<span class="pcs">' + sorted.map(pieceSVG).join("") + "</span>";
+  if (advantage > 0) html += '<span class="adv">+' + advantage + "</span>";
+  el.innerHTML = html;
+}
+
+// What this move takes, if anything. Read off the board before the move is
+// applied, because applyMove is pure and returns only the resulting position.
+function capturedBy(move) {
+  if (move.enPassant) return state.board[move.from.r][move.to.c];
+  return state.board[move.to.r][move.to.c];
+}
+
+// The side is named and coloured to match its own army, so the sentence and the
+// board agree without the reader checking twice. The colour is carried by a
+// class on the side's name rather than by the turn, because at checkmate the
+// side named is the winner and the side to move is the one that lost.
+function side(c) {
+  return `<span class="who ${c}">${c === "w" ? "WHITE" : "BLACK"}</span>`;
 }
 
 function updateStatus() {
   if (state.gameOver) return;
-  const turnName = state.turn === "w" ? "White" : "Black";
   const inCheck = isInCheck(state.board, state.turn);
   const anyMoves = hasAnyLegalMove(state, state.turn);
 
   if (!anyMoves && inCheck) {
     state.gameOver = true;
-    statusEl.textContent = `Checkmate — ${state.turn === "w" ? "Black" : "White"} wins!`;
+    statusEl.innerHTML = `Checkmate &#183; ${side(opponent(state.turn))} wins`;
   } else if (!anyMoves) {
     state.gameOver = true;
-    statusEl.textContent = "Stalemate — draw!";
+    statusEl.innerHTML = "Stalemate &#183; draw";
   } else if (inCheck) {
-    statusEl.textContent = `${turnName}'s turn — check!`;
+    statusEl.innerHTML = `${side(state.turn)} to move &#183; check`;
   } else {
-    statusEl.textContent = `${turnName}'s turn`;
+    statusEl.innerHTML = `${side(state.turn)} to move`;
   }
 }
 
@@ -391,10 +514,13 @@ function handleSquareClick(r, c) {
   if (state.selected) {
     const move = state.legalMoves.find((m) => m.to.r === r && m.to.c === c);
     if (move) {
+      const taken = capturedBy(move);
       const result = applyMove(state, move);
       state.board = result.board;
       state.castling = result.castling;
       state.enPassant = result.enPassant;
+      if (taken) state.captured[state.turn].push(taken);
+      state.lastMove = { from: move.from, to: move.to };
       state.turn = opponent(state.turn);
       state.selected = null;
       state.legalMoves = [];
