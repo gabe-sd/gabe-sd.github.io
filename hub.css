@@ -17,11 +17,11 @@
   z-index: 0;
   pointer-events: none;
   background: radial-gradient(
-      78% 58% at 50% 2%,
-      rgba(255, 176, 0, 0.075),
-      transparent 72%
+      85% 65% at 50% 2%,
+      rgba(255, 176, 0, 0.16),
+      transparent 74%
     ),
-    radial-gradient(60% 45% at 50% 100%, rgba(255, 140, 0, 0.035), transparent 70%),
+    radial-gradient(65% 50% at 50% 100%, rgba(255, 140, 0, 0.06), transparent 70%),
     radial-gradient(125% 105% at 50% 45%, transparent 52%, rgba(0, 0, 0, 0.72));
 }
 
@@ -103,6 +103,36 @@
   min-height: 0;
 }
 
+/* The strap cursor, per design/previews/variants/amberlit.css: a slow fade
+   rather than a hard blink, since this whole direction is the calm reading
+   of the idea. */
+.hub .status::after {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 0.95em;
+  margin-left: 0.45em;
+  background: var(--p-amber);
+  box-shadow: 0 0 12px rgba(255, 176, 0, 0.55);
+  vertical-align: -0.1em;
+  animation: cursor-pulse 2.4s ease-in-out infinite;
+}
+@keyframes cursor-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.12;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hub .status::after {
+    animation: none;
+    opacity: 0.75;
+  }
+}
+
 /* The grid gives up nothing to the texture: position + z-index above the
    .crt layer's 6, plus an opaque background so the texture cannot show
    through the gaps between tiles either. Every tile inherits legibility for
@@ -150,13 +180,30 @@
   width: 4px;
   background: var(--cat-accent);
   box-shadow: 0 0 10px 1px color-mix(in srgb, var(--cat-accent) 50%, transparent);
-  transition: box-shadow 0.16s ease;
 }
 
-.tile:hover::before,
-.tile:focus-visible::before,
-.tile.selected::before {
-  box-shadow: 0 0 16px 3px color-mix(in srgb, var(--cat-accent) 70%, transparent);
+/* A second, brighter bar in the same spot, collapsed to nothing at rest and
+   grown from the centre outward on hover/focus/arm — the amberlit.css
+   reveal, layered on top of the always-visible bar above rather than
+   replacing it, so the "at rest" rule above still holds even mid-animation. */
+.tbar {
+  position: absolute;
+  left: -1px;
+  top: -1px;
+  bottom: -1px;
+  width: 4px;
+  background: var(--cat-accent);
+  box-shadow: 0 0 18px 4px color-mix(in srgb, var(--cat-accent) 80%, transparent);
+  transform: scaleY(0);
+  transform-origin: 50% 50%;
+  transition: transform 0.18s ease;
+  pointer-events: none;
+}
+
+.tile:hover .tbar,
+.tile:focus-visible .tbar,
+.tile.selected .tbar {
+  transform: scaleY(1);
 }
 
 .tile:hover,
@@ -192,8 +239,21 @@
 .tico {
   grid-area: ico;
   align-self: start;
-  font-size: 2rem;
-  line-height: 1;
+  color: var(--p-dim);
+  transition: color 0.16s ease;
+}
+
+.tile:hover .tico,
+.tile:focus-visible .tico {
+  color: var(--p-amber);
+}
+
+/* Stroke icons on a 48x48 grid, one weight, coloured through currentColor —
+   see design/DESIGN.md, "Icons", for where these come from. */
+.ico {
+  display: block;
+  width: 46px;
+  height: 46px;
 }
 .tname {
   grid-area: name;
@@ -249,6 +309,9 @@
   .tile:hover,
   .tile:focus-visible {
     transform: none;
+  }
+  .tbar {
+    transition: none;
   }
 }
 

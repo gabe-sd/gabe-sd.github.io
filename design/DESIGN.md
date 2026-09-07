@@ -295,9 +295,6 @@ rest and gains a stronger glow on interaction rather than appearing from nothing
   width: 4px; background: var(--cat-accent);
   box-shadow: 0 0 10px 1px color-mix(in srgb, var(--cat-accent) 50%, transparent);
 }
-.tile:hover::before, .tile:focus-visible::before, .tile.selected::before {
-  box-shadow: 0 0 16px 3px color-mix(in srgb, var(--cat-accent) 70%, transparent);
-}
 .tile:hover, .tile:focus-visible {
   border-color: color-mix(in srgb, var(--cat-accent) 40%, var(--p-hairline));
   transform: translateY(-2px);
@@ -305,9 +302,63 @@ rest and gains a stronger glow on interaction rather than appearing from nothing
 }
 ```
 
-`.tile.selected`'s pulsing arm glow (above) is untouched by any of this — it is a
+**A second bar grows from the centre on hover, per Gabriel's live request the
+same day.** `.tile::before` above is the always-visible one; `.tbar` sits in the
+same spot, `scaleY(0)` with `transform-origin: 50% 50%` at rest, `scaleY(1)` on
+hover/focus/arm — the amberlit.css reveal animation, layered on top of the
+always-visible bar rather than replacing it, so "at rest, all the time" above
+still holds mid-animation. A dedicated `<span class="tbar" aria-hidden="true">`
+markup element, not a second pseudo-element — `::before` is already spoken for.
+
+```css
+.tbar {
+  position: absolute; left: -1px; top: -1px; bottom: -1px; width: 4px;
+  background: var(--cat-accent);
+  box-shadow: 0 0 18px 4px color-mix(in srgb, var(--cat-accent) 80%, transparent);
+  transform: scaleY(0); transform-origin: 50% 50%;
+  transition: transform 0.18s ease; pointer-events: none;
+}
+.tile:hover .tbar, .tile:focus-visible .tbar, .tile.selected .tbar {
+  transform: scaleY(1);
+}
+```
+
+`.tile.selected`'s pulsing arm glow is untouched by any of this — it is a
 separate, already-tuned state, and hover and selected read as two different
 things on purpose.
+
+### Icons
+
+**Ported from `design/previews/gallery.js`'s `LINE_ICONS`**, at Gabriel's request
+after he pointed at a screenshot of the Amber Arcade preview gallery and asked for
+that icon style back — the first build had kept the six emoji from the
+pre-redesign hub, which is what the "look like the cheap mockups" reaction was
+partly about. Six hand-drawn stroke icons on one 48x48 grid at a single weight
+(`stroke-width` 2.4–3.2 depending on the glyph), coloured entirely through
+`currentColor` so a game's icon never needs its own colour rule. Inlined directly
+in `index.html` as `<svg class="ico" viewBox="0 0 48 48">` inside each tile's
+`.tico` span — copied verbatim from `LINE_ICONS`, one exception: the mine icon's
+punched highlight hole was `fill="var(--icon-hole, #040604)"` in the gallery
+(a token that only exists there); repointed to `fill="var(--bg)"`, the real
+token for this page's ground.
+
+`.tico` carries the colour: `--p-dim` at rest, `--p-amber` on
+hover/focus-visible, so the icon reads as chrome (one hue, not category-tinted)
+even though the bar beside it is. The existing category-tinted `filter:
+drop-shadow(...)` on hover layers a coloured glow around the now-brighter amber
+glyph rather than tinting the glyph itself — deliberately different from
+amberlit.css, which used a flat amber glow, because every other hover cue on this
+tile is already category-coloured and an amber-only glow here would be the one
+inconsistent one.
+
+### The strap cursor
+
+A slow-fading amber block after the status line ("Pick a game to play"), added at
+Gabriel's request the same day — `.hub .status::after` rather than markup, mirroring
+`design/previews/variants/amberlit.css`'s `.strap::after` exactly: 2.4s
+ease-in-out between opacity 1 and 0.12, a fade rather than a hard blink, because
+the whole direction is the calm reading of the idea. Respects
+`prefers-reduced-motion` by holding at a fixed 0.75 opacity instead of animating.
 
 ### The CRT texture, applied
 
@@ -336,26 +387,31 @@ and stops it showing through the gaps between tiles.
 ### Depth and framing: `.deco`
 
 The first build had no framing layer at all — Gabriel's first reaction was "no
-depth or framing... reads as flat rectangles on black." `.deco` is
-`design/previews/variants/amberlit.css`'s wash-and-vignette, ported unchanged: a
-faint amber wash top-centre, a fainter warm wash at the bottom, and a vignette
-darkening the corners. `z-index: 0`, same stacking layer as `.crt`'s 6 but below
-it, so both the texture and the game grid still paint over it correctly with no
-change to either.
+depth or framing... reads as flat rectangles on black." `.deco` started as
+`design/previews/variants/amberlit.css`'s wash-and-vignette ported unchanged, then
+Gabriel asked for more amber glow than that source itself carries — checked
+directly against the archive, amberlit.css's own values were already what had
+shipped, so this is a deliberate departure from the previewed direction rather
+than a fix to a mis-port. `z-index: 0`, same stacking layer as `.crt`'s 6 but
+below it, so both the texture and the game grid still paint over it correctly
+with no change to either.
 
 ```css
 .deco {
   position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background:
-    radial-gradient(78% 58% at 50% 2%, rgba(255, 176, 0, 0.075), transparent 72%),
-    radial-gradient(60% 45% at 50% 100%, rgba(255, 140, 0, 0.035), transparent 70%),
+    radial-gradient(85% 65% at 50% 2%, rgba(255, 176, 0, 0.16), transparent 74%),
+    radial-gradient(65% 50% at 50% 100%, rgba(255, 140, 0, 0.06), transparent 70%),
     radial-gradient(125% 105% at 50% 45%, transparent 52%, rgba(0, 0, 0, 0.72));
 }
 ```
 
-Kept faint on purpose — amberlit.css's own note applies unchanged: any stronger
-and the ground stops being black and starts being brown. `<div class="deco">`
-goes first inside `.hub`, before `.crt`, on every page that shares the hub chrome
+Amberlit.css's own caution — any stronger and the ground stops being black and
+starts being brown — was written for *that* direction's values, not as a hard
+ceiling; Gabriel's eye overrides it per `ART-DIRECTOR.md`. If a later round wants
+to push this further, keep checking it against real content (the tiles, the
+wordmark) rather than the wash in isolation. `<div class="deco">` goes first
+inside `.hub`, before `.crt`, on every page that shares the hub chrome
 (`index.html` and `about.html` both).
 
 ### Chrome, as built
