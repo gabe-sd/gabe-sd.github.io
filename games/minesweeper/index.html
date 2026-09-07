@@ -5,41 +5,69 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Minesweeper · Game Arcade</title>
 <link rel="stylesheet" href="../../shared.css">
+<link rel="stylesheet" href="../../game.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="page">
-    <a class="back-link" href="../../index.html">← All games</a>
-    <h1>Minesweeper</h1>
-    <div class="hud">
-      <span id="flag-count" title="Flags left to place">🚩 10</span>
-      <span id="timer">⏱ 0</span>
-      <span id="best-time" title="Your best time on this device">🏆 —</span>
-    </div>
-    <p id="status" class="status">Click any cell to start</p>
-    <div id="board" role="grid" aria-label="Minesweeper board"></div>
-    <div class="controls">
-      <button id="restart" class="btn">Restart</button>
-      <button id="help-toggle" class="btn secondary"
-              aria-expanded="false" aria-controls="instructions">How to play</button>
-      <button id="settings-toggle" class="btn secondary icon" title="Advanced"
-              aria-expanded="false" aria-controls="settings"
-              aria-label="Advanced controls">⚙</button>
-    </div>
-    <div id="instructions" class="instructions" hidden>
-      <ul>
-        <li><b>Left click</b> — reveal a cell</li>
-        <li><b>Right click</b> — place or remove a flag</li>
-        <li><b>Middle click</b> — chord (see below)</li>
-      </ul>
-      <p>
-        Chording opens all remaining neighbours of a revealed number in one go,
-        once you have flagged exactly that many cells around it. If one of those
-        flags is wrong the chord uncovers a mine and ends the game.
-      </p>
-    </div>
-    <div id="settings" class="settings" hidden>
-      <button id="reset-best" class="btn secondary" disabled>Reset best time</button>
+  <main class="game-page">
+    <!-- The machine: the wash behind everything, the scanlines over it. Both
+         are decoration and neither is announced. The board is lifted above
+         them by .game-stage — see game.css, "chrome against screen". -->
+    <div class="game-deco" aria-hidden="true"></div>
+    <div class="game-crt" aria-hidden="true"></div>
+
+    <div class="game-in">
+      <div class="game-top">
+        <!-- The contract's link home. A breadcrumb rather than a back-link:
+             it says where you are as well as where you can go. -->
+        <a class="crumb" href="../../index.html">← ARCADE / <b>MINESWEEPER</b></a>
+        <h1 class="game-title">MINESWEEPER</h1>
+      </div>
+
+      <p id="status" class="status game-strap">Click any cell to start</p>
+
+      <div class="game-stage">
+        <!-- The hud is the board's own readout, so it is inside the stack and
+             as wide as the board rather than as wide as the page. -->
+        <div class="board-stack">
+          <div class="hud">
+            <span id="flag-count" title="Flags left to place">🚩 10</span>
+            <span id="timer">⏱ 0</span>
+            <span id="best-time" title="Your best time on this device">🏆 —</span>
+          </div>
+          <div id="board" role="grid" aria-label="Minesweeper board"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="restart" class="btn">Restart</button>
+        <button id="help-toggle" class="btn secondary"
+                aria-expanded="false" aria-controls="instructions">How to play</button>
+        <button id="settings-toggle" class="btn secondary icon" title="Advanced"
+                aria-expanded="false" aria-controls="settings"
+                aria-label="Advanced controls">⚙</button>
+      </div>
+
+      <div id="instructions" class="instructions" hidden>
+        <ul>
+          <li><b>Left click</b> — reveal a cell</li>
+          <li><b>Right click</b> — place or remove a flag</li>
+          <li><b>Middle click</b> — chord (see below)</li>
+        </ul>
+        <p>
+          Chording opens all remaining neighbours of a revealed number in one go,
+          once you have flagged exactly that many cells around it. If one of those
+          flags is wrong the chord uncovers a mine and ends the game.
+        </p>
+      </div>
+      <div id="settings" class="settings" hidden>
+        <button id="reset-best" class="btn secondary" disabled>Reset best time</button>
+      </div>
+
+      <div class="game-foot">
+        <span>left click reveals · right click flags · middle click chords</span>
+        <span>first click is always safe</span>
+      </div>
     </div>
   </main>
   <script src="script.js"></script>

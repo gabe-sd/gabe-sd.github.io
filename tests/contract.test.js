@@ -118,6 +118,41 @@ async function describe(button) {
     check(`${game}: links back to the hub`, back.includes("../../index.html"),
       back.join(", "));
 
+    // game.css sits *between* shared.css and the game's own sheet, so a game
+    // can still override the frame. Loading it last would silently reverse
+    // that, and nothing would look broken until a game tried to override
+    // something and could not.
+    const frameSheet = sheets.findIndex((h) => h.endsWith("game.css"));
+    check(`${game}: links game.css between shared.css and its own`,
+      frameSheet !== -1 && shared < frameSheet && frameSheet < own,
+      sheets.join(" then "));
+
+    // All six games wear the frame. A new one that skips it will not look
+    // broken on its own page - it will look like the site before the redesign,
+    // which is exactly the thing nobody notices until they arrive from the hub.
+    const frame = await page.evaluate(() => ({
+      page: !!document.querySelector("main.game-page"),
+      deco: !!document.querySelector(".game-deco"),
+      crt: !!document.querySelector(".game-crt"),
+      inner: !!document.querySelector(".game-in"),
+      // The breadcrumb *is* the contract's link home on a framed page.
+      crumb: document.querySelector(".crumb")?.getAttribute("href") ?? null,
+      title: document.querySelector("h1.game-title")?.textContent.trim() ?? null,
+      strap: document.querySelector("#status.game-strap") !== null,
+      foot: !!document.querySelector(".game-foot"),
+    }));
+    const bare = Object.entries(frame)
+      .filter(([, v]) => !v)
+      .map(([k]) => k);
+    check(`${game}: wears the shared frame`, bare.length === 0,
+      bare.length ? `missing: ${bare.join(", ")}` : JSON.stringify(frame));
+    check(`${game}: the breadcrumb is the link home`,
+      frame.crumb === "../../index.html", frame.crumb);
+    check(`${game}: the title is the game's name in caps`,
+      typeof frame.title === "string" && frame.title === frame.title.toUpperCase()
+        && frame.title.length > 0,
+      frame.title);
+
     const scriptSource = fs.readFileSync(
       path.join(ROOT, "games", game, "script.js"), "utf8"
     );

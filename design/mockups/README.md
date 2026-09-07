@@ -88,9 +88,37 @@ from under them. That frame is deliberately *not* one of the options: it is the
 same for all seven and it is what `game.css` was built from.
 
 Chosen: **chess direction C**, and **all three Pong changes** in the order given.
-The Pong half is not built — Gabriel wants adjustments to it that are not yet
-specified, so treat the three mocks as agreed in principle and unsettled in
-detail.
+Chess was built from this file. Pong was not — see `pong-cabinet.html` below,
+which is this page revised, and is what the Pong build was matched against. This
+one is kept because it is what the chess build was held to.
+
+## `pong-cabinet.html`, `pong-handoff.md`
+
+The Pong half of the file above, revised on 2026-09-07 after Gabriel looked at it
+a second time and said the mocks needed adjustments. **The adjustment is the one
+column**: the strap, scorebar, court, buttons and footer narrow to the court's own
+width (626px) and centre, so `you` and `ai` sit over the paddles they label
+instead of hundreds of pixels away on a wide monitor. Everything else is as it
+was. `pong-cabinet.html` still carries the four chess directions unchanged — it is
+the same page revised, not a new one — and they can be ignored.
+
+`pong-handoff.md` is the written half: what is settled, with values, and a short
+"what not to change" list. **The mockup won where the two disagreed**, on
+Gabriel's instruction, and they did disagree once: the handoff says the paddle
+colours are "already correct and not to be touched", when in the built game both
+paddles rested on `--fg` and only took rose and coral while an ability tell was
+running. The mockup draws them rose and coral at rest, and that is what shipped.
+
+Two things the mockup shows that were deliberately not built, both in
+`design/DESIGN.md`, "Pong: the cabinet": a glow on the resting paddles, and the
+score in the status strap. One thing it shows that was built differently: the
+`charge` label is drawn on the canvas rather than positioned over it, because the
+canvas scales with the viewport and an overlay pinned at `left: 14px` drifts off
+the meter it labels.
+
+As with the chess handoff, the Google Fonts link was swapped for the self-hosted
+face on the way in, so the file renders with no network. The original is in this
+commit's git history.
 
 ## `chess-c-handoff.md`, `chess-c.reference.css`, `chess-pieces.reference.js`, `chess-c.preview.html`
 

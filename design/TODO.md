@@ -325,60 +325,14 @@ Constraints beyond the settled list:
   difference between a phosphor palette and a costume, and legibility on the
   puzzle games is what it costs.
 
-### redesign-pong — Anime Pong
-
-**Branch from:** `redesign`
-
-The hardest game and deliberately second: if the token layer survives Pong it
-survives everything. Pong paints itself in `games/pong/script.js`, so most of this
-phase is there rather than in `style.css`.
-
-**Superseded in part, 2026-09-07.** The colours are settled and the shape of the
-phase is now three named changes rather than a list — `design/DESIGN.md`, "Pong:
-chosen, not yet built", has them with values. The magenta `#ff4dd8` of
-`design/mockups/pong-lightning-magenta.html` is **out**: the player is the hub's
-rose `#ff7fcb` and the opponent is coral `#ff6a56`, which also answers whether an
-in-game accent matches its hub tile. The player half has landed already; the
-opponent's has not.
-
-**Gabriel wants adjustments to the three mocks that he has not specified yet
-(2026-09-07). Ask him before building this phase.**
-
-- Rose player against the coral opponent. Pong defines both locally; it stops
-  reading `--win` and `--lose` for hero and villain.
-- The scorebar, the menu, the instructions panel, the board chrome — and note
-  that the score is painted on the canvas today, so moving it onto a bezel is a
-  script change that also makes `#score-reader` redundant.
-- The serve prompt, the burn-in score, the ball trail and the court vignette.
-  Check the trail against Insane mode: on a fast ball a trail reads as three
-  balls.
-
-Constraints:
-
-- **`redIn()` in `tests/pong.test.js` will misread a magenta player.** It counts
-  "red-dominant" pixels as `r > g + 40 && r > b + 40`, and uses that to prove a
-  wind-up belongs to the *attacker*. The mockup's `#ff4dd8` is r255 b216 — it
-  fails the blue test by **one unit**. Any magenta with slightly less blue starts
-  counting as the opponent's red and the assertion quietly measures the wrong
-  thing. Re-base it on hue distance from the opponent's colour before tuning the
-  magenta by eye.
-- **`boltCore()` picks the bolt's core colour from the board's luminance**, which
-  existed only because the light theme's board was pure white. Under a dark-only
-  palette one branch is dead. Removing it is fine; leaving it is fine; deciding by
-  accident is not, and `games/pong/DESIGN.md`'s Theme section says the opposite of
-  whichever you choose.
-- **Do not touch "three wind-ups, one colour."** It is recorded in
-  `games/pong/DESIGN.md` as a rule about *reading the game* — one colour means one
-  thing is happening to you — not as a palette choice. Changing it is a proposal
-  to Pong, not a restyle.
-- `games/pong/DESIGN.md` and `games/pong/TODO.md` both carry colour claims that
-  this phase makes false. The look half is yours to fix in the same commits.
-- Unresolved and Gabriel's call: whether an in-game accent should match its hub
-  tile's category colour. The mockup's magenta deliberately does not.
-
 ### redesign-flappy-bird — Flappy Bird
 
 **Branch from:** `redesign`
+
+**The frame has landed** — breadcrumb, title, strap, scanlines, footer and the
+shared `#instructions` panel are all in place and covered by
+`tests/contract.test.js`. What is left is the inside of the board, which is what
+this entry is for.
 
 The other canvas game, and much simpler than Pong. `readColors()` in
 `games/flappy-bird/script.js` maps `--win` to the pipes and `--lose` to the beak,
@@ -389,6 +343,11 @@ new palette or whether Flappy takes its own.
 
 **Branch from:** `redesign`
 
+**The frame has landed** — breadcrumb, title, strap, scanlines, footer and the
+shared `#instructions` panel are all in place and covered by
+`tests/contract.test.js`. What is left is the inside of the board, which is what
+this entry is for.
+
 Mostly `style.css`. The one real piece of work is `.n1` through `.n8`, eight
 hardcoded number colours that are the only place in the site with a palette of
 their own. They have to stay distinguishable from each other *and* legible on the
@@ -398,51 +357,23 @@ phosphor ground, which the current eight will not be.
 
 **Branch from:** `redesign`
 
+**The frame has landed** — breadcrumb, title, strap, scanlines, footer and the
+shared `#instructions` panel are all in place and covered by
+`tests/contract.test.js`. What is left is the inside of the board, which is what
+this entry is for.
+
 `style.css` only. The grid's box borders are drawn with `--fg` and the selected
 cell with `color-mix()` on `--accent`; both want checking against the new values
 rather than assuming they carry over.
 
-### redesign-game-chrome — Give the other five games the frame chess has
-
-**Branch from:** `redesign`
-
-`game.css` was built on the chess phase because chess needed it, and chess is its
-only consumer. Minesweeper, Sudoku, Tic Tac Toe, Flappy Bird and Pong still sit
-on the bare `.page` — a back-link, an `h1`, a board and a button — which is what
-made the game pages read as a different site from the hub.
-
-Adopting it is three lines of markup plus the stylesheet link, per game:
-
-```html
-<link rel="stylesheet" href="../../game.css">   <!-- between shared and its own -->
-<main class="game-page">
-  <div class="game-deco" aria-hidden="true"></div>
-  <div class="game-crt" aria-hidden="true"></div>
-  <div class="game-in"> … </div>
-</main>
-```
-
-What it costs per game is not the markup, it is the three judgements the chess
-page had to make and that `game.css` deliberately does not make for you:
-
-- **What the breadcrumb and the title say.** Chess is `← ARCADE / CHESS` and
-  `CHESS`. A two-word game needs deciding, not defaulting.
-- **What moves out of `#status` into `.game-foot`.** The contract keeps the
-  status line for game state; standing instructions belong in the foot, and four
-  of the five have an `#instructions` panel that may want folding into it.
-- **Whether the board needs lifting.** `.game-stage` is z-index 7 with an opaque
-  ground so the scanlines stop at the board. A game that draws its own background
-  may need the same treatment on a different element.
-
-Gabriel was asked on 2026-09-07 whether the frame should go on all six at once
-and went to bed before answering, so chess shipped alone rather than five pages
-being restyled unasked. **Ask him before starting**: a framed page next to an
-unframed one reads as broken, which is an argument for doing all five together
-rather than one per phase.
-
 ### redesign-tic-tac-toe — Tic Tac Toe
 
 **Branch from:** `redesign`
+
+**The frame has landed** — breadcrumb, title, strap, scanlines, footer and the
+shared `#instructions` panel are all in place and covered by
+`tests/contract.test.js`. What is left is the inside of the board, which is what
+this entry is for.
 
 The smallest stylesheet on the site, 32 lines, all tokens already. Last because it
 is nearly free once everything above has settled.

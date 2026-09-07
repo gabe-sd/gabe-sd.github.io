@@ -5,25 +5,49 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tic Tac Toe · Game Arcade</title>
 <link rel="stylesheet" href="../../shared.css">
+<link rel="stylesheet" href="../../game.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="page">
-    <a class="back-link" href="../../index.html">← All games</a>
-    <h1>Tic Tac Toe</h1>
-    <p id="status" class="status">X's turn</p>
-    <div id="board" role="grid" aria-label="Tic Tac Toe board">
-      <button class="cell" data-index="0" aria-label="Cell 1"></button>
-      <button class="cell" data-index="1" aria-label="Cell 2"></button>
-      <button class="cell" data-index="2" aria-label="Cell 3"></button>
-      <button class="cell" data-index="3" aria-label="Cell 4"></button>
-      <button class="cell" data-index="4" aria-label="Cell 5"></button>
-      <button class="cell" data-index="5" aria-label="Cell 6"></button>
-      <button class="cell" data-index="6" aria-label="Cell 7"></button>
-      <button class="cell" data-index="7" aria-label="Cell 8"></button>
-      <button class="cell" data-index="8" aria-label="Cell 9"></button>
+  <main class="game-page">
+    <!-- The machine: the wash behind everything, the scanlines over it. Both
+         are decoration and neither is announced. The board is lifted above
+         them by .game-stage — see game.css, "chrome against screen". -->
+    <div class="game-deco" aria-hidden="true"></div>
+    <div class="game-crt" aria-hidden="true"></div>
+
+    <div class="game-in">
+      <div class="game-top">
+        <!-- The contract's link home. A breadcrumb rather than a back-link:
+             it says where you are as well as where you can go. -->
+        <a class="crumb" href="../../index.html">← ARCADE / <b>TIC TAC TOE</b></a>
+        <h1 class="game-title">TIC TAC TOE</h1>
+      </div>
+
+      <p id="status" class="status game-strap">X's turn</p>
+
+      <div class="game-stage">
+        <div id="board" role="grid" aria-label="Tic Tac Toe board">
+          <button class="cell" data-index="0" aria-label="Cell 1"></button>
+          <button class="cell" data-index="1" aria-label="Cell 2"></button>
+          <button class="cell" data-index="2" aria-label="Cell 3"></button>
+          <button class="cell" data-index="3" aria-label="Cell 4"></button>
+          <button class="cell" data-index="4" aria-label="Cell 5"></button>
+          <button class="cell" data-index="5" aria-label="Cell 6"></button>
+          <button class="cell" data-index="6" aria-label="Cell 7"></button>
+          <button class="cell" data-index="7" aria-label="Cell 8"></button>
+          <button class="cell" data-index="8" aria-label="Cell 9"></button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="restart" class="btn">Restart</button>
+      </div>
+
+      <div class="game-foot">
+        <span>click a square · two players, one keyboard</span>
+      </div>
     </div>
-    <button id="restart" class="btn">Restart</button>
   </main>
   <script src="script.js"></script>
 </body>

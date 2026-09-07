@@ -5,73 +5,114 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Anime Pong · Game Arcade</title>
 <link rel="stylesheet" href="../../shared.css">
+<link rel="stylesheet" href="../../game.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="page">
-    <a class="back-link" href="../../index.html">← All games</a>
-    <h1>Anime Pong</h1>
-    <p id="status" class="status"></p>
-    <!-- The score is painted on the canvas, which a screen reader cannot read.
-         This carries it for them and is never shown. -->
-    <p id="score-reader" class="visually-hidden" aria-live="polite">You 0, AI 0</p>
-    <div class="board-wrap">
-      <canvas id="board" width="600" height="400" aria-label="Anime Pong game board"></canvas>
-      <!-- Real buttons rather than shapes painted on the canvas: keyboard focus,
-           tab order and screen-reader support all come free, and canvas pixels
-           have none of it. -->
-      <div id="menu" class="menu" hidden>
-        <p id="menu-heading" class="menu-heading"></p>
-        <div class="menu-group">
-          <!-- A visible caption, not just aria-label: with two rows of buttons
-               an unlabelled one is ambiguous to everybody, not only to a screen
-               reader. aria-labelledby then avoids announcing it twice. -->
-          <p class="menu-label" id="difficulty-label">Difficulty</p>
-          <div id="difficulty" class="difficulty" role="radiogroup"
-               aria-labelledby="difficulty-label">
-            <!-- Three characters, not three notches. Assisted and Insane
-                 change the game itself and are coloured to say so; Normal is
-                 the plain one and is left plain. -->
-            <button type="button" class="btn secondary" role="radio"
-                    aria-checked="false" data-level="assisted">Assisted</button>
-            <button type="button" class="btn secondary" role="radio"
-                    aria-checked="true" data-level="normal">Normal</button>
-            <button type="button" class="btn secondary" role="radio"
-                    aria-checked="false" data-level="insane">Insane</button>
-          </div>
-        </div>
-        <div class="menu-group">
-          <p class="menu-label" id="win-score-label">First to</p>
-          <div id="win-score-choice" class="difficulty" role="radiogroup"
-               aria-labelledby="win-score-label">
-            <button type="button" class="btn secondary" role="radio"
-                    aria-checked="true" data-score="5">5</button>
-            <button type="button" class="btn secondary" role="radio"
-                    aria-checked="false" data-score="7">7</button>
-            <button type="button" class="btn secondary" role="radio"
-                    aria-checked="false" data-score="11">11</button>
-          </div>
-        </div>
-        <button id="play" class="btn">Play</button>
+  <main class="game-page">
+    <!-- The machine: the wash behind everything, the scanlines over it. Both
+         are decoration and neither is announced. The court is lifted above
+         them by .game-stage — see game.css, "chrome against screen". -->
+    <div class="game-deco" aria-hidden="true"></div>
+    <div class="game-crt" aria-hidden="true"></div>
+
+    <div class="game-in">
+      <div class="game-top">
+        <!-- The contract's link home. A breadcrumb rather than a back-link:
+             it says where you are as well as where you can go. -->
+        <a class="crumb" href="../../index.html">← ARCADE / <b>ANIME PONG</b></a>
+        <h1 class="game-title">ANIME PONG</h1>
       </div>
-    </div>
-    <div class="controls">
-      <button id="restart" class="btn">Restart</button>
-      <button id="help-toggle" class="btn secondary icon" title="How to play"
-              aria-expanded="false" aria-controls="instructions"
-              aria-label="How to play">?</button>
-    </div>
-    <div id="instructions" class="instructions" hidden>
-      <ul>
-        <li><b>W</b>/<b>S</b> or <b>↑</b>/<b>↓</b> — move your paddle</li>
-        <li><b>Mouse</b> — move the pointer over the board to steer</li>
-        <li><b>Space</b> or <b>click the board</b> — serve</li>
-        <li><b>Esc</b> or <b>P</b> — pause and resume</li>
-      </ul>
-      <p>
-        First to <span id="win-score">5</span> wins. After a point the ball is
-        served back at whoever conceded it.
-      </p>
+
+      <div class="game-stage">
+        <!-- One column, exactly as wide as the court. The strap, the scorebar,
+             the buttons and the footer all stop where the court stops, so
+             `you` and `ai` sit over the paddles they label instead of out at
+             the window's edge on a wide monitor. -->
+        <div class="cabinet">
+          <p id="status" class="status game-strap"></p>
+
+          <div class="bezel">
+            <!-- The score, in text, on the chrome — not painted on the court.
+                 It is the one thing here a screen reader can read, which is
+                 why the live region is on the bar itself rather than on a
+                 hidden copy of it: one score, announced and visible. Atomic,
+                 so a point is read as "you 2 first to 5 ai 1" rather than as
+                 a lone digit with no side attached. -->
+            <div class="scorebar" aria-live="polite" aria-atomic="true">
+              <span class="side you">you <b id="score-you" class="n">0</b></span>
+              <span class="target">first to <span id="win-score-bar">5</span></span>
+              <span class="side ai">ai <b id="score-ai" class="n">0</b></span>
+            </div>
+
+            <div class="board-wrap">
+              <canvas id="board" width="600" height="400" aria-label="Anime Pong game board"></canvas>
+              <!-- Real buttons rather than shapes painted on the canvas: keyboard focus,
+                   tab order and screen-reader support all come free, and canvas pixels
+                   have none of it. -->
+              <div id="menu" class="menu" hidden>
+                <p id="menu-heading" class="menu-heading"></p>
+                <div class="menu-group">
+                  <!-- A visible caption, not just aria-label: with two rows of buttons
+                       an unlabelled one is ambiguous to everybody, not only to a screen
+                       reader. aria-labelledby then avoids announcing it twice. -->
+                  <p class="menu-label" id="difficulty-label">difficulty</p>
+                  <div id="difficulty" class="difficulty" role="radiogroup"
+                       aria-labelledby="difficulty-label">
+                    <!-- Three characters, not three notches. Assisted and Insane
+                         change the game itself and are coloured to say so; Normal is
+                         the plain one and is left plain. -->
+                    <button type="button" class="btn secondary" role="radio"
+                            aria-checked="false" data-level="assisted">Assisted</button>
+                    <button type="button" class="btn secondary" role="radio"
+                            aria-checked="true" data-level="normal">Normal</button>
+                    <button type="button" class="btn secondary" role="radio"
+                            aria-checked="false" data-level="insane">Insane</button>
+                  </div>
+                </div>
+                <div class="menu-group">
+                  <p class="menu-label" id="win-score-label">first to</p>
+                  <div id="win-score-choice" class="difficulty" role="radiogroup"
+                       aria-labelledby="win-score-label">
+                    <button type="button" class="btn secondary" role="radio"
+                            aria-checked="true" data-score="5">5</button>
+                    <button type="button" class="btn secondary" role="radio"
+                            aria-checked="false" data-score="7">7</button>
+                    <button type="button" class="btn secondary" role="radio"
+                            aria-checked="false" data-score="11">11</button>
+                  </div>
+                </div>
+                <button id="play" class="btn play">▶ Play</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button id="restart" class="btn">Restart</button>
+            <button id="help-toggle" class="btn secondary icon" title="How to play"
+                    aria-expanded="false" aria-controls="instructions"
+                    aria-label="How to play">?</button>
+          </div>
+
+          <div id="instructions" class="instructions" hidden>
+            <ul>
+              <li><b>W</b>/<b>S</b> or <b>↑</b>/<b>↓</b> — move your paddle</li>
+              <li><b>Mouse</b> — move the pointer over the board to steer</li>
+              <li><b>Space</b> or <b>click the board</b> — serve</li>
+              <li><b>Esc</b> or <b>P</b> — pause and resume</li>
+            </ul>
+            <p>
+              First to <span id="win-score">5</span> wins. After a point the ball is
+              served back at whoever conceded it.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="game-foot">
+        <span>W/S or ↑/↓ · mouse to steer · space to serve</span>
+        <span>esc to pause</span>
+      </div>
     </div>
   </main>
   <script src="script.js"></script>

@@ -269,10 +269,10 @@ player's paddle to mark it.
 - Read the same base-size fraction the close-call check itself uses; do not
   recompute an independent one. `syncPaddleSize()` is still the only thing that
   writes a paddle's live height, and this entry should not need to touch it.
-- Pick a colour that is not already claimed: rose is Expand's and red is
-  reserved for "the opponent is doing something to you" per DESIGN.md's "Three
-  wind-ups, one colour." The tip tint needs its own colour, or it will misread as
-  one of those two.
+- Pick a colour that is not already claimed, and there is less room than there
+  used to be: **rose is your paddle itself**, coral is the opponent's, `--p-hot`
+  is Expand's tint, and amber is the ball. The tip tint needs a colour none of
+  those four use, or it will misread as one of them.
 - A test should read canvas pixels at the band's edge, the way the existing
   Clutch-meter tests already do, rather than asserting on state — per
   `CLAUDE.md`, a meter nobody can see is precisely the failure this is fixing,
@@ -425,17 +425,32 @@ than oversights:
 - **The menu does not feel right.** Called functional-for-now when the three-row
   version shipped. It is a heading, three difficulty buttons, a "first to" row and
   Play, stacked centred over the board. It was five buttons when that complaint
-  was made, so re-look before assuming it still applies.
-- **The mode colours are placeholders.** Assisted green, Normal amber, Insane red,
-  from `--win`, `--accent` and `--lose` — amber since the redesign's palette
-  landed; it was blue before. Amber doubling as "selected" is more of a problem
-  now than blue ever was: `design/DESIGN.md` makes amber the site's one selected/
-  active colour everywhere else, so Normal's button and "this is chosen" now use
-  the same hue for two different things. Survivable only because selected is a
-  filled button and unselected is an outline; check it again once anything else
-  changes what selected looks like.
+  was made, and the cabinet phase has since reskinned every button and given the
+  menu a `READY` title, so re-look before assuming it still applies.
+- **The mode colours are settled, and the note about amber still stands.**
+  Assisted jade, Normal amber, Insane coral, read from `--p-jade`, `--accent` and
+  `--p-coral` rather than through `--win`/`--lose`. Amber still doubles as
+  "selected" — `design/DESIGN.md` makes it the site's one selected/active colour
+  everywhere else, so Normal's button and "this is chosen" use the same hue for
+  two different things. Survivable only because selected is a filled button and
+  unselected is an outline; check it again if anything changes what selected
+  looks like.
 - **Real art assets**, which the game has never had — everything is `fillRect`
-  against theme tokens.
+  against theme tokens. The cabinet phase is the frame around the court, not the
+  court's contents: the paddles and ball are still rectangles.
+
+### pong-bolt-core-dead-branch — Decide what `boltCore()` does under a dark-only palette
+
+**Gate: none.**
+
+`boltCore()` picks the bolt's core colour from the board's luminance, which
+existed only because the light theme's board was pure white. The site has been
+dark-only since the redesign, so one branch is now unreachable. Removing it is
+fine and leaving it is fine; deciding by accident is not, and
+`games/pong/DESIGN.md`'s Theme section has to say whichever you choose.
+
+Carried over from `design/TODO.md`'s `redesign-pong` entry when that landed —
+it was the one constraint there that the cabinet phase did not settle.
 
 `games/pong/DESIGN.md` explains why the menu is DOM buttons over the canvas rather
 than shapes painted on it. That reasoning survives an art pass; the styling does
