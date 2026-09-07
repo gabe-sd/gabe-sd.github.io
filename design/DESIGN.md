@@ -431,6 +431,258 @@ type scale this phase carries into `shared.css`:
 | Category label | 0.92rem, letter-spacing 0.22em, lowercase | tinted `var(--cat-accent)` |
 | Footer | 1.02rem | `--dim` |
 
+## The game page
+
+Settled 2026-09-07, built as `game.css`, and drawn around every mock in
+`design/mockups/arcade-chess-pong-directions.html`. It is the hub's machine one
+size down, and it exists because the hub got a machine built around it and the
+game pages did not — which was most of why they read as a different site.
+
+It is a **shared** file, loaded between `shared.css` and the game's own
+stylesheet, so a game can override anything in it and
+`tests/contract.test.js` still sees `shared.css` first:
+
+```html
+<link rel="stylesheet" href="../../shared.css">
+<link rel="stylesheet" href="../../game.css">
+<link rel="stylesheet" href="style.css">
+```
+
+| Element | Value |
+| --- | --- |
+| Frame | `.game-in`, max-width 1120px, padding `1.4rem 1.6rem 2rem` |
+| Wash | `.game-deco`, z-index 0 — amber bloom off the top, vignette into the corners |
+| Scanlines | `.game-crt`, z-index 6 — `rgba(0,0,0,.34)` 1px every 3px |
+| Breadcrumb | `.crumb`, 1.02rem, `--p-dim`, letter-spacing 0.08em; the game's name in it is `--p-pale` |
+| Title | `.game-title`, 2.1rem (1.7rem under 620px), `--p-hot`, `--bloom-lg`, letter-spacing 0.09em |
+| Head rule | 1px `--p-hairline` under the top row |
+| Status strap | `.game-strap`, 1.22rem, `--p-pale`, with the hub's fading block cursor |
+| Stage | `.game-stage`, z-index 7 — the board, lifted clear of the scanlines |
+| Foot | `.game-foot`, 1rem, `--p-dim`, 1px `--p-hairline` above, two columns that stack under 620px |
+
+Three rules under it:
+
+- **Chrome against screen, in z-index terms.** The wash is 0, the scanlines are
+  6, the board is 7 with its own opaque ground. A scanline over a chess hairline
+  or a Sudoku digit is texture bought at the price of reading the game.
+- **The breadcrumb is the contract's link home.** It replaces `.back-link`, and
+  it says where you are as well as where you can go.
+- **Standing instructions go in the foot, never in `#status`.** The contract
+  keeps the status line for game state, and a hint that never changes is not
+  state.
+
+**The strap cursor respects `prefers-reduced-motion`** and settles at 0.75
+opacity rather than stopping mid-blink.
+
+**Chess is the only consumer today.** Five other games need the same frame and
+adopting one is three lines of markup plus the link — see the
+`redesign-game-chrome` entry in `design/TODO.md`. It was built on the chess phase
+rather than as its own because chess needed it and a frame with one consumer is
+cheaper to change than a frame with six.
+
+### Buttons: a terminal key, not a pill
+
+`shared.css`'s `.btn` was the last thing on the site still wearing the
+pre-redesign default stylesheet — `border-radius: 8px`, a filled amber pill with
+white text. It is now square, hairline-edged, and labelled in letterspaced
+uppercase, which is the same "selected" language the hub uses for a tile:
+
+| State | Treatment |
+| --- | --- |
+| `.btn` | filled `--accent`, `--p-ground` text, 14px amber glow |
+| `.btn:hover` | filled `--p-pale`, 18px glow |
+| `.btn.secondary` | transparent, 1px `--cell-border`, `--muted` text, no glow |
+| `.btn.secondary:hover` | border `--p-rule`, text `--p-pale` |
+| `.btn.icon` | tighter padding, no letter-spacing — for a single-glyph label |
+
+The filled/outline pair carries "selected" on its own, with no second signal.
+This is a `shared.css` change, so it reaches every game at once; that is
+deliberate, since a rounded pill under a phosphor board looks like a bug.
+
+## Chess: the vector grid
+
+Chosen by Gabriel on 2026-09-07 from four directions built and shown at board
+size. The mockup is `design/mockups/arcade-chess-pong-directions.html`; the
+values are in `design/mockups/chess-c.reference.css` and
+`design/mockups/chess-pieces.reference.js`, and the built page is
+`games/chess/`.
+
+**The finding that decided it: VT323 has no chess glyphs.** Its two subsets stop
+at Latin Extended, so `U+2654-265F` fell through to whatever face the reader's OS
+served — a soft serif here, something else on the next machine. Two of the four
+directions accepted a second self-hosted typeface on the chess page. This one
+makes the problem disappear without asking the player to read letters as pieces.
+
+### The board
+
+`design/TODO.md` called the two square colours the hardest single visual question
+in the redesign. This answers it by not answering it: **the board is drawn, not
+filled.**
+
+| Part | Value |
+| --- | --- |
+| Ground | `#080503` — a shade under `--p-cell`, because the squares carry no fill and the hairline needs something to sit on |
+| Frame | 1px `--p-rule` |
+| Light square | **no fill at all** |
+| Dark square | `rgba(255, 176, 0, 0.05)` |
+| Square hairline | inset `0.5px` at `rgba(255, 176, 0, 0.13)` |
+| Square size | `--sq`, 54px; 42px under 620px; 36px under 460px |
+| Coordinates | `--p-dim`, 0.9rem; **dropped entirely under 460px** |
+
+Half a pixel, not one: a full-pixel grid reads as a table.
+
+`--sq` lives on `.board-stack`, not on `#board`, because the trays and the file
+letters are siblings of the board and have to match its width. Put it on the
+board and a later change to the square size silently leaves them behind.
+
+### The pieces
+
+Six stroke SVG drawings on the hub's own 48×48 icon grid, at the hub's own
+weight, so the site has one drawing hand.
+
+| Part | Value |
+| --- | --- |
+| Wrapper | `viewBox="0 0 48 48"`, `fill="none"`, `stroke="currentColor"`, `stroke-width="2.2"`, round joins and caps |
+| Size | 78% of the square |
+| White | `--p-pale`, `drop-shadow(0 0 5px rgba(255,214,148,.5))` |
+| Black | `--p-jade`, `drop-shadow(0 0 5px rgba(95,217,160,.4))` |
+
+Colour arrives entirely through `currentColor`, so no piece carries a colour of
+its own — which is what lets the same markup serve the live board and the dimmed
+capture trays.
+
+Jade for Black is not a free choice: strategy is the jade category, and Chess is
+a strategy tile on the hub. The in-game colour inheriting from the hub tile is
+the same answer Pong reached independently.
+
+**Two of the six were judged one against another. Four were not, and are right
+as first drawn** — Gabriel, 2026-09-07: the pieces he did not ask for variations
+of were good the first time.
+
+- **The knight is the angular one** — straight lines only, chosen over three
+  rounder alternatives including a filled silhouette and a pixel version. It is
+  the only piece in the set with no curve in it. What identifies it is the wedge
+  muzzle with the jaw cut back under it, the straight forehead, and the single
+  pointed ear; lose any of those and it stops being a horse.
+- **The king is "Broad"** — a wide dome, a collar band at `M15 28h18` at
+  `stroke-width 1.5`, and the standard base. Chosen after **two entire further
+  sets were rejected**, which is where the transferable finding is:
+
+> **The bad king silhouette is a tall symmetrical shape with a rounded top
+> standing on a plinth.** Square the top and it reads as a tombstone; round it
+> and it reads as something worse. No crown, band or proportion fixes it — the
+> outline is the problem, not the detail.
+
+Carry that into any piece redrawn later. Whether the other five go angular to
+match the knight is **open** and was not decided.
+
+### The marks
+
+`--mark` follows **the side to move**: amber on White's turn, jade on Black's.
+`#board` carries `data-turn`; the stylesheet reads it.
+
+| State | Treatment |
+| --- | --- |
+| Selected | square fills `--p-panel-lit`, plus `inset 0 0 0 2px --p-amber` and a 16px amber glow |
+| Legal move | a **block, not a circle** — 26% of the square, `--mark`, 10px glow at 60% |
+| Capture | four corner brackets inset 6%, 30% long, 2px — a reticle, not a ring |
+| Last move | `rgba(255,176,0,.10)` wash plus a 1px inset at 22%, on **both** squares |
+| Check | `inset 0 0 0 2px --p-coral`, an 18px inner coral glow, and a 10% coral wash |
+
+A circle is what every other chess site draws; a square pixel is what a display
+like this one draws.
+
+**Four of these can land on one square at once** — the king you just moved, into
+check, while it is selected — so each takes a layer of its own: the check wash on
+the square's `background-image`, the last move on `::before`, the selection on
+`::after`, the move marks at z-index 1, the piece at z-index 2. The reference CSS
+put three of them on `::after`, which an element has one of; source order won and
+selecting a checked king silently lost its ring. **Do not put two marks back on
+one pseudo-element.**
+
+### The capture trays
+
+One on each edge of the board, inside the same grid as the squares, so they line
+up with the files and nothing reflows as pieces come off. What Black has taken
+runs along the top, what White has taken along the bottom — each on the side of
+the player who took them.
+
+| Part | Value |
+| --- | --- |
+| Piece size | 26px (22px under 620px, 18px under 460px) |
+| Colour | 42% of its own army's hue mixed toward `--p-hairline`, glow **off** |
+| Order | Q R B N P |
+| Material figure | 1.25rem, tabular numerals, in the leading side's own hue |
+
+A captured piece is spent and must not compete with the live board an inch away.
+
+**One number on the whole board:** the material difference, carried only by the
+side that is ahead, sitting half a space after that side's last captured piece.
+Values are the standard 9/5/3/3/1. Two running totals would be two numbers to
+subtract before learning the only thing a player reads for, and the losing side
+showing nothing is itself the fastest way to say who is losing.
+
+No labels. The pieces are jade or amber, which says whose they were; the edge
+says who took them.
+
+### Rejected, with the reason
+
+- **Two steps of the amber ramp with solid-vs-outline Unicode armies**
+  (direction A), and **near-neutral jade-tinted squares with an amber army
+  against a jade army** (direction B). Both fine; both ship a second typeface.
+- **VT323 letters as pieces** (direction D) — the most on-brand thing built and
+  the least playable. A `N` is not a horse, and casual players read shapes faster.
+- **Filled or pixel pieces.** Both read best of all at 54px. Both are a whole
+  *set*, not one piece — an outlined army cannot carry one filled member.
+- **Six kings built as carved figures on plinths** (crowned, faceted, broad,
+  cross-first, regalia, lobed-crown) and **five built as emblems** (imperial
+  crown, heraldic shield, crowned head in profile, crowned shield, orb and
+  cross). Rejected on silhouette, per the rule above. A throne was drawn and
+  thrown out before the emblems were shown: front-on, a panel with a cross on it
+  is a grave marker.
+- **A move log in a side console.** Direction B's idea; new game behaviour rather
+  than a restyle, and no other game here has a side panel.
+- **Filling the checked king's square with `--lose`**, which is what the page did
+  before. It buried the king it was pointing at.
+
+### Still open on chess
+
+- Whether the other five pieces go angular to match the knight.
+- The board on a phone below 460px, where the coordinates are already dropped.
+
+## Pong: chosen, not yet built
+
+Recorded 2026-09-07 so it survives the session that chose it. Gabriel picked all
+three changes out of
+`design/mockups/arcade-chess-pong-directions.html`, in this order, and then said
+he wants adjustments to them that are not yet specified. **Treat these as agreed
+in principle and unsettled in detail; ask before building.**
+
+1. **The cabinet.** Terminal buttons in place of the rounded pills, the score
+   moved off the court into a scorebar on the bezel with `you` / `ai` beside the
+   digits, and a real bezel — inset panel, corner brackets, the wash behind it —
+   so the court reads as a screen in a machine.
+2. **Rose against coral.** The player is `--p-rose` `#ff7fcb`, the opponent
+   `--p-coral` `#ff6a56`. Rose *is* the arcade tile's colour, so this answers the
+   open question of whether an in-game accent should match its hub tile: it does.
+   The `#ff4dd8` magenta of `design/mockups/pong-lightning-magenta.html` becomes
+   one more value nobody can place. **Half of this has landed** — the player
+   paddle, on `redesign-pong`, with the affected assertion in `tests/pong.test.js`
+   rewritten. The opponent's half has not. The ball and the court furniture stay
+   amber: the ball belongs to the machine, not to either player, and it is the
+   only thing on the court both paddles touch.
+3. **Phosphor persistence.** The serve prompt moves into the court, the score
+   burns into the phosphor behind play at `#2a1c09`, and the ball gets a decaying
+   trail plus a court vignette. **Check the trail against Insane mode** — on a
+   fast ball a trail reads as three balls.
+
+Two things a builder will hit that the mockup does not say. Pong's score is
+painted on the canvas (`games/pong/script.js`), so moving it to a scorebar is a
+script change and makes the hidden `#score-reader` element redundant. And canvas
+text does not wait for a webfont: the burn-in number and the serve prompt want
+VT323, and the first frame can paint in the fallback and never repaint if the
+game is paused.
+
 ## How the tokens are layered
 
 `shared.css` already owns nine token names — `--bg`, `--fg`, `--card-bg`,
