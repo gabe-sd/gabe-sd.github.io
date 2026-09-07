@@ -107,21 +107,28 @@ each assumes the ones above it have landed.
 
 **Branch from:** `redesign`
 
-**Status, 2026-09-06: built, committed, and rejected on sight.** The palette,
-type scale and hub landed in `shared.css`/`hub.css`/`index.html`/`hub.js`/
-`about.html` (commits `4866ab4` and `df0eb91` on `redesign-tokens-hub`, in
-`.claude/worktrees/redesign-tokens-hub`), `npm test` green throughout including
-the required break-and-restore proofs for the four `tests/pong.test.js`
-assertions touched. None of that is in question. The look is: shown a served
-preview, Gabriel's reaction was "why does it look like the cheap mockups" — not
-a request for tweaks, a rejection of the build as delivered.
+**Status, 2026-09-06: built, committed, rejected on sight, then fixed and
+approved.** The palette, type scale and hub first landed in
+`shared.css`/`hub.css`/`index.html`/`hub.js`/`about.html` (commits `4866ab4` and
+`df0eb91` on `redesign-tokens-hub`, in `.claude/worktrees/redesign-tokens-hub`),
+`npm test` green throughout including the required break-and-restore proofs for
+the four `tests/pong.test.js` assertions touched. None of that was in question.
+The look was: shown a served preview, Gabriel's reaction was "why does it look
+like the cheap mockups" — not a request for tweaks, a rejection of the build as
+delivered.
 
-**Do not rebuild any of this until Gabriel approves a direction. He wants to
-discuss first.** The two commits above stand as-is in the meantime — this is a
-record for whoever picks the discussion back up, not a set of instructions to
-go implement.
+**Resolved the same day.** A throwaway preview (built on a copy of the hub
+markup, not the real files, per "ask before starting a phase") addressed all
+four points below by diffing the rejected build directly against
+`design/previews/variants/amberlit.css`. Gabriel's reaction to the preview: "much
+better." Folded into `hub.css`/`index.html`/`about.html` after that approval —
+values and reasoning are in `design/DESIGN.md` under "Category colour," "The CRT
+texture, applied," and the new "Depth and framing" section. `npm test` green
+throughout; nothing here touched a token name, a canvas game, or a
+`pong.test.js` assertion, so no further break-and-restore proof was needed
+beyond the ones already recorded above.
 
-His itemized reaction, verbatim where it matters:
+His itemized reaction, verbatim where it matters — and now closed against each:
 
 - **No depth or framing.** The page reads as flat rectangles on black, not a
   physical machine — no bezel, shadow, or vignette gives it a sense of being

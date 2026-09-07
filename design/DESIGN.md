@@ -261,7 +261,7 @@ keeps the description" — there is no panel left to ask the question of.
 ### Category colour: at rest, all the time
 
 The open question from the previous session is closed: **at rest**, not hover-only.
-All six tiles carry their category's guest hue as a 4px left border plus a
+All six tiles carry their category's guest hue as a glowing left bar plus a
 lowercase category label under the description, visible before any interaction.
 Dropping it for a plainer tile was tried live in the preview and Gabriel reversed
 it immediately — "bring back the green pink and blue game colors" — it read as
@@ -278,17 +278,52 @@ floated as a future idea — not decided, not this phase.** Six live games don't
 need a badge system yet; if it's wanted later it is new work, not an extension of
 category colour.
 
+**The bar itself is a glow, not a flat `border-left`, and the tile gets a real
+hover state.** The first build shipped a flat 4px `border-left` and a hover that
+only swapped the background — Gabriel's reaction was "why does it look like the
+cheap mockups," and checked directly against
+`design/previews/variants/amberlit.css` the gap was exactly this: that file draws
+the edge as a separate `::before` layer with its own `box-shadow` glow, and gives
+hover a lift, a card-wide glow, and a bloomed name and icon. Pulled into `hub.css`
+with one change from that source: amberlit hides the bar until hover, which is the
+hover-only treatment Gabriel already reversed above, so here it stays visible at
+rest and gains a stronger glow on interaction rather than appearing from nothing.
+
+```css
+.tile::before {
+  content: ""; position: absolute; left: -1px; top: -1px; bottom: -1px;
+  width: 4px; background: var(--cat-accent);
+  box-shadow: 0 0 10px 1px color-mix(in srgb, var(--cat-accent) 50%, transparent);
+}
+.tile:hover::before, .tile:focus-visible::before, .tile.selected::before {
+  box-shadow: 0 0 16px 3px color-mix(in srgb, var(--cat-accent) 70%, transparent);
+}
+.tile:hover, .tile:focus-visible {
+  border-color: color-mix(in srgb, var(--cat-accent) 40%, var(--p-hairline));
+  transform: translateY(-2px);
+  box-shadow: 0 0 24px 2px color-mix(in srgb, var(--cat-accent) 30%, transparent);
+}
+```
+
+`.tile.selected`'s pulsing arm glow (above) is untouched by any of this — it is a
+separate, already-tuned state, and hover and selected read as two different
+things on purpose.
+
 ### The CRT texture, applied
 
-Settled at **subtle on the chrome**, the option the preview already ran at.
-Recipe, taken directly from `design/previews/gallery.css`'s own "soft" setting
-rather than reinvented:
+**Bumped from "soft" to "mock" strength** after the first build shipped at soft
+and Gabriel called it invisible on the served page. `design/previews/gallery.css`
+already had four strengths to choose between rather than one recipe to retune by
+guessing; "mock" is one considered step up, not "heavy" — "What the preview phase
+measured" found heavy breaks up a dense board, which does not apply to the hub
+chrome (no board sits under it), but staying one step rather than jumping to the
+top keeps this a decision rather than an overcorrection.
 
 ```css
 .crt {
   position: absolute; inset: 0; z-index: 6; pointer-events: none;
   background: repeating-linear-gradient(to bottom,
-    rgba(0,0,0,0.16) 0 1px, transparent 1px 3px);
+    rgba(0,0,0,0.34) 0 1px, transparent 1px 3px);
 }
 ```
 
@@ -297,6 +332,31 @@ The game grid is lifted out from under it exactly the way "What the preview phas
 measured" already describes doing for a board: `.grid { position: relative;
 z-index: 7; background: var(--bg); }`, which both rises above the texture layer
 and stops it showing through the gaps between tiles.
+
+### Depth and framing: `.deco`
+
+The first build had no framing layer at all — Gabriel's first reaction was "no
+depth or framing... reads as flat rectangles on black." `.deco` is
+`design/previews/variants/amberlit.css`'s wash-and-vignette, ported unchanged: a
+faint amber wash top-centre, a fainter warm wash at the bottom, and a vignette
+darkening the corners. `z-index: 0`, same stacking layer as `.crt`'s 6 but below
+it, so both the texture and the game grid still paint over it correctly with no
+change to either.
+
+```css
+.deco {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(78% 58% at 50% 2%, rgba(255, 176, 0, 0.075), transparent 72%),
+    radial-gradient(60% 45% at 50% 100%, rgba(255, 140, 0, 0.035), transparent 70%),
+    radial-gradient(125% 105% at 50% 45%, transparent 52%, rgba(0, 0, 0, 0.72));
+}
+```
+
+Kept faint on purpose — amberlit.css's own note applies unchanged: any stronger
+and the ground stops being black and starts being brown. `<div class="deco">`
+goes first inside `.hub`, before `.crt`, on every page that shares the hub chrome
+(`index.html` and `about.html` both).
 
 ### Chrome, as built
 
