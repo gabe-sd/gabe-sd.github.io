@@ -650,38 +650,94 @@ says who took them.
 - Whether the other five pieces go angular to match the knight.
 - The board on a phone below 460px, where the coordinates are already dropped.
 
-## Pong: chosen, not yet built
+## Pong: the cabinet
 
-Recorded 2026-09-07 so it survives the session that chose it. Gabriel picked all
-three changes out of
-`design/mockups/arcade-chess-pong-directions.html`, in this order, and then said
-he wants adjustments to them that are not yet specified. **Treat these as agreed
-in principle and unsettled in detail; ask before building.**
+Built 2026-09-07 from `design/mockups/pong-cabinet.html`, which is a revision of
+the Pong half of `arcade-chess-pong-directions.html` — the revision is the one
+column. All three of the mockup's changes landed together.
 
-1. **The cabinet.** Terminal buttons in place of the rounded pills, the score
-   moved off the court into a scorebar on the bezel with `you` / `ai` beside the
-   digits, and a real bezel — inset panel, corner brackets, the wash behind it —
-   so the court reads as a screen in a machine.
-2. **Rose against coral.** The player is `--p-rose` `#ff7fcb`, the opponent
-   `--p-coral` `#ff6a56`. Rose *is* the arcade tile's colour, so this answers the
-   open question of whether an in-game accent should match its hub tile: it does.
-   The `#ff4dd8` magenta of `design/mockups/pong-lightning-magenta.html` becomes
-   one more value nobody can place. **Half of this has landed** — the player
-   paddle, on `redesign-pong`, with the affected assertion in `tests/pong.test.js`
-   rewritten. The opponent's half has not. The ball and the court furniture stay
-   amber: the ball belongs to the machine, not to either player, and it is the
-   only thing on the court both paddles touch.
-3. **Phosphor persistence.** The serve prompt moves into the court, the score
-   burns into the phosphor behind play at `#2a1c09`, and the ball gets a decaying
-   trail plus a court vignette. **Check the trail against Insane mode** — on a
-   fast ball a trail reads as three balls.
+### One column, as wide as the court
 
-Two things a builder will hit that the mockup does not say. Pong's score is
-painted on the canvas (`games/pong/script.js`), so moving it to a scorebar is a
-script change and makes the hidden `#score-reader` element redundant. And canvas
-text does not wait for a webfont: the burn-in number and the serve prompt want
-VT323, and the first frame can paint in the fallback and never repaint if the
-game is paused.
+The strap, scorebar, court, buttons and footer are `min(100%, 626px)` and centre:
+600 court + 12px of bezel padding either side + 1px of border either side. The
+breadcrumb and title above them still span the page. Nothing resizes — the column
+simply stops where the court stops, which is what puts `you` and `ai` over the
+paddles they label instead of hundreds of pixels away on a wide monitor.
+
+Derive every width in that column from the court's, so changing the court size
+changes one number and nothing drifts out of line.
+
+### The bezel and the scorebar
+
+| part | value |
+| --- | --- |
+| bezel | `linear-gradient(#160f08, #0d0905)`, 1px `--p-hairline`, `inset 0 0 40px rgba(0,0,0,.8)`, 12px padding |
+| corner brackets | 14px, 1px `--p-rule`, two sides each, top-left and bottom-right |
+| court | `#0d0905`, 1px `--p-hairline` |
+| labels | `you` / `ai` / `first to N`, 0.9rem, `letter-spacing .2em`, `--p-dim`, lowercase |
+| the digits | 2rem, `--p-rose` and `--p-coral`, each glowing its own colour at 50% |
+| radius | none, anywhere on this page |
+
+Two brackets rather than four: two say "machined panel", four read as a border,
+and there is already a border.
+
+The scorebar's ends are flush with the court's, which is the whole reason the
+column is court-width. A test holds it to within 2px of the canvas's own edges,
+because that alignment is the point of the layout and nothing else would catch it
+drifting.
+
+### What the court draws
+
+The mockup's three inside-the-court touches — the serve prompt, the burn-in
+score, the trail and vignette — all landed. Their values and the reasoning behind
+each are in `games/pong/DESIGN.md`, "The court", which is where a builder will be
+looking. Two of them are worth repeating here because they are about the system
+rather than about Pong:
+
+**Chrome against screen cuts both ways.** Nothing overlays the canvas — the page's
+wash and scanlines stop at the bezel — so an effect that belongs *on* the court
+has to be drawn by the game. That is why the `charge` label is canvas text rather
+than a positioned `<span>` like the mockup's: the canvas scales with the viewport
+and an HTML overlay pinned at `left: 14px` drifts off the meter it labels the
+moment it does.
+
+**A vignette has to go over play to exist at all.** Under the paddles it is
+invisible, because darkening a near-black court does nothing. Pong's is weaker
+than the mockup's for that reason — the corners keep their 50%, the paddles lose
+about 13% instead of 22%.
+
+### Rose against coral, all the way down
+
+The player is `--p-rose` `#ff7fcb` and the opponent `--p-coral` `#ff6a56`, read
+straight from the palette rather than through `--win`/`--lose`. Rose *is* the
+arcade tile's colour, which answers the open question of whether an in-game accent
+should match its hub tile: it does. The `#ff4dd8` magenta of
+`design/mockups/pong-lightning-magenta.html` is now one more value nobody can
+place.
+
+The ball and the court furniture stay amber. The ball belongs to the machine, not
+to either player, and it is the only thing on the court both paddles touch.
+
+**What this cost, and the general lesson.** Both paddles used to be `--fg`, and
+Pong's ability system says a tell is "your colour" or "the opponent's". Giving the
+paddles those colours at rest deletes any tell that was only a tint — which is
+exactly what Expand was. It now burns `--p-hot` instead.
+
+The lesson generalises past Pong: **a resting colour and a state colour cannot be
+the same colour.** Before handing a game's furniture the hue its states already
+use, find out what that hue was saying.
+
+### Rejected
+
+- **A glow on the resting paddles**, which the mockup draws. Light past a paddle's
+  own edge is how the game says a charge is in hand; lighting every paddle all the
+  time spends that signal on nothing.
+- **`Rally · 2 – 1` in the status strap**, which the mockup shows. The score is
+  already on the bezel and burned into the court behind play; a third copy is
+  clutter, and it is the only one that would need words.
+- **Dropping the `?` panel** in favour of the footer hint, which the mockup does.
+  The page contract keeps standing instructions in a collapsible panel. The footer
+  carries the hint as well — that is cheap, and it is what the mockup got right.
 
 ## How the tokens are layered
 
@@ -698,11 +754,17 @@ palette values underneath them:
 ```
 
 This is not tidiness. `games/pong/script.js` and `games/flappy-bird/script.js`
-read `--fg`, `--accent`, `--cell-border`, `--win`, `--lose` and `--cell-bg` **by
-name at runtime**, and each lookup falls back to a hardcoded hex of the *old*
-palette when the name is missing. So renaming a token breaks nothing loudly: the
-canvas quietly carries on painting the design that was replaced, every test still
-passes, and nobody finds out until they look at Pong.
+read tokens **by name at runtime**, and each lookup falls back to a hardcoded hex
+of the *old* palette when the name is missing. So renaming a token breaks nothing
+loudly: the canvas quietly carries on painting the design that was replaced,
+every test still passes, and nobody finds out until they look at the game.
+
+Flappy Bird reads `--fg`, `--accent`, `--win`, `--lose` and `--cell-bg`. Pong
+reads `--fg`, `--accent`, `--cell-border` and `--muted`, plus four raw palette
+values it takes directly — `--p-rose`, `--p-coral`, `--p-hot` and `--p-rule`.
+That second list is the "what a game may vary" rule below in practice: a paddle
+is not an outcome, so it does not read an outcome token, and the price is that
+those four names are load-bearing for a canvas as well as for a stylesheet.
 
 Change a name only by changing that script in the same commit, fallback included.
 
