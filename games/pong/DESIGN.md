@@ -802,8 +802,8 @@ paddle joins that function rather than writing the field.
 Two things follow from the same idea. Expand cannot *arm* while Squeeze is active
 — `blockedBy` says so, with `""` as its off value — because being handed a bigger
 paddle mid-attack reads as the attack having failed. And a blocked move does not
-draw its tell either: a green paddle that is also small claims a gift you are not
-getting.
+draw its tell either: a paddle tinted hero's colour that is also small claims a
+gift you are not getting.
 
 Each paddle carries its own `h`, eased towards `hTarget` over `resizeTicks` about
 its own centre. It is animated because an instant resize reads as a rendering
@@ -891,6 +891,15 @@ worth knowing if something else forces that area open.
 A canvas cannot read CSS custom properties, so the theme tokens are copied into a
 plain object and re-copied from a `prefers-color-scheme` change listener. Only the
 background is re-read per frame.
+
+**The player's colour is Pong's own, read from `--p-rose` rather than `--win`.**
+This is the player half of "Pong owns its player and opponent colours locally"
+(`design/DESIGN.md`, settled before the first phase) — the hub's arcade-category
+accent, so the paddle you move matches the colour its own tile shows on the hub.
+Only `hero` moved; `villain` still reads the outcome token `--lose` (coral), and
+the rest of that settled decision — the opponent's own colour, the scorebar, the
+menu, `boltCore()`'s dead branch below — is still `redesign-pong`'s to do, not
+done by this narrower change.
 
 **The site is dark-only since the redesign** (`design/DESIGN.md`, "Dark only"):
 `shared.css` no longer varies its token values with the OS theme, so this

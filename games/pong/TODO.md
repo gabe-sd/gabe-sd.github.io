@@ -269,7 +269,7 @@ player's paddle to mark it.
 - Read the same base-size fraction the close-call check itself uses; do not
   recompute an independent one. `syncPaddleSize()` is still the only thing that
   writes a paddle's live height, and this entry should not need to touch it.
-- Pick a colour that is not already claimed: green is Expand's and red is
+- Pick a colour that is not already claimed: rose is Expand's and red is
   reserved for "the opponent is doing something to you" per DESIGN.md's "Three
   wind-ups, one colour." The tip tint needs its own colour, or it will misread as
   one of those two.
@@ -290,7 +290,7 @@ a beginner, which is the only audience that matters here.
 The `?` panel lists the controls and the win score and nothing else. It has never
 mentioned the difficulty modes, and it is silently missing the half of the game
 that is hardest to work out by looking at it: a three-pip meter fills, a paddle
-turns green and grows, the opponent teleports, throws lightning that leaves your
+turns rose and grows, the opponent teleports, throws lightning that leaves your
 paddle shrunken and crackling, and fires a shot well above the speed the ball
 otherwise reaches. None of it is named anywhere in the game.
 
