@@ -67,9 +67,14 @@ const takenByBlackEl = document.getElementById("taken-by-black");
 // Colour arrives through currentColor from .piece-w / .piece-b, so a piece
 // never carries a colour of its own — which is what lets the same markup serve
 // the live board and the dimmed capture trays.
+// data-piece is what the drawing *is*, in one attribute. Without it the only
+// way to tell a rook from a bishop in the DOM is to compare serialised path
+// markup, and the browser rewrites `<path/>` as `<path></path>` — so a test
+// that did that would be measuring the serialiser, not the piece.
 function pieceSVG(piece) {
   const cls = color(piece) === "w" ? "piece-w" : "piece-b";
-  return '<svg class="' + cls + '" viewBox="0 0 48 48" fill="none" ' +
+  return '<svg class="' + cls + '" data-piece="' + piece + '" ' +
+    'viewBox="0 0 48 48" fill="none" ' +
     'stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" ' +
     'stroke-linecap="round" aria-hidden="true">' +
     PIECE_PATHS[type(piece)] + "</svg>";
