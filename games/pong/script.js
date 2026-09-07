@@ -1573,11 +1573,22 @@ function drawBurnIn() {
 // rectangle. Elliptical, via a scaled circle, because the court is 3:2 and a
 // round vignette on it pinches the top and bottom before it reaches the sides.
 //
-// Drawn *over* play, as the mockup has it: under it the effect is invisible,
-// since darkening a near-black ground does nothing. It is deliberately weaker
-// than the mockup's - the corners keep their 50%, but the inner stop is pushed
-// out so the paddles, which live at the horizontal extremes, lose about 13%
-// rather than 22%. The vignette is chrome and the paddles are the game.
+// Over the court's *texture* — the ground, the burned-in score, the centre
+// line — and under everything that is played with. Elliptical, via a scaled
+// circle, because the court is 3:2 and a round vignette on it pinches the top
+// and bottom before it reaches the sides.
+//
+// It shipped over play, the way the mockup draws it, and that was the bug
+// Gabriel reported as the game being invisible. A vignette darkens the corners,
+// and the corners of a Pong court are exactly where the paddles live: a paddle
+// at the top or bottom of its travel lost a third of its brightness, on a 10px
+// sliver against a near-black ground. Weakening it only made it cost less
+// while still costing something.
+//
+// Under the play layer it costs nothing and still does the work, because the
+// things it shades are the burn-in and the centre line rather than the court
+// itself — darkening a near-black ground does nothing, which is why the first
+// version was drawn on top in the first place.
 function drawVignette() {
   const r = WIDTH * 0.72;
   ctx.save();
@@ -1652,6 +1663,9 @@ function draw() {
   ctx.restore();
   ctx.setLineDash([]);
 
+  // Shades the texture drawn so far and nothing after it — see drawVignette.
+  drawVignette();
+
   // Ghosts first, so the paddle itself lands on top of its own trail.
   if (aiGhosts.length > 0) {
     ctx.save();
@@ -1678,9 +1692,7 @@ function draw() {
   ctx.fillStyle = colors.accent;
   ctx.fillRect(ball.x, ball.y, BALL_SIZE, BALL_SIZE);
 
-  // The tube's own curvature goes over play; the two things a player reads off
-  // the court rather than out of it go over the tube.
-  drawVignette();
+  // The two things a player reads off the court rather than out of it.
   drawClutchMeter();
   drawServePrompt();
 }

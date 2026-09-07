@@ -3,12 +3,14 @@
 
 /* ---------- one column, as wide as the court ---------- */
 
-/* 600 court + 12px bezel padding either side + 1px border either side. Every
-   value in the column is derived from that, so a change to the court size
-   changes one number here and nothing else moves out of line. */
+/* Everything is derived from --court, so changing the court size changes one
+   number and nothing else drifts out of line:
+   court + the canvas's own 1px border + 12px of bezel padding + the bezel's
+   own 1px border, each doubled. */
 .cabinet,
 .game-page .game-foot {
-  width: min(100%, 626px);
+  --court: 600px;
+  width: min(100%, calc(var(--court) + 28px));
   margin-inline: auto;
 }
 
@@ -18,8 +20,20 @@
   display: block;
 }
 
+/* Pong opts out of the frame's centring. The cabinet is already a centred
+   column exactly as wide as the court, so the strap, the buttons and the ?
+   panel line up with the court's left edge rather than with each other. */
 .cabinet .game-strap {
   margin: 0.2rem 0 0.9rem;
+  text-align: left;
+}
+
+.game-page .controls {
+  justify-content: flex-start;
+}
+
+.cabinet .instructions {
+  margin-inline: 0;
 }
 
 /* ---------- the bezel ---------- */
@@ -105,9 +119,23 @@
   line-height: 0; /* no descender gap under the canvas for the menu to sit in */
 }
 
+/* content-box, deliberately, against shared.css's global border-box.
+ *
+ * The canvas has a 600x400 backing store and a 1px border. Under border-box a
+ * width of 600 is the *border* box, so the content box becomes 598 x 398.67 —
+ * a fractional, non-integer scale. The browser then resamples every row and
+ * column, and on a near-black court a resampled 1px line or 10px paddle is
+ * smeared across two pixels at half brightness. It reads as the game being
+ * invisible rather than as the game being blurry, which is how it shipped.
+ *
+ * Under content-box the 600 is the drawing surface itself: one canvas pixel to
+ * one CSS pixel, no resampling. max-width keeps a narrow window working, where
+ * scaling is unavoidable and the ratio is what matters. */
 #board {
   display: block;
-  width: 100%;
+  box-sizing: content-box;
+  width: var(--court);
+  max-width: 100%;
   height: auto;
   background: #0d0905;
   border: 1px solid var(--p-hairline);

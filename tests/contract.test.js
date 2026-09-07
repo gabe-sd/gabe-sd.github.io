@@ -148,6 +148,34 @@ async function describe(button) {
       bare.length ? `missing: ${bare.join(", ")}` : JSON.stringify(frame));
     check(`${game}: the breadcrumb is the link home`,
       frame.crumb === "../../index.html", frame.crumb);
+    // A canvas game draws at its backing-store resolution. If CSS renders it at
+    // any other size the browser resamples every pixel, and on a dark board a
+    // resampled 1px line or 10px paddle is smeared across two pixels at half
+    // brightness — which reads as the game being invisible rather than blurry.
+    // Pong shipped that way: shared.css sets box-sizing: border-box globally,
+    // so `width: 100%` on a canvas with a 1px border made the *content* box
+    // 598 x 398.67 for a 600 x 400 surface.
+    const canvasFit = await page.evaluate(() => {
+      const c = document.getElementById("board");
+      if (c.tagName !== "CANVAS") return null;
+      const st = getComputedStyle(c);
+      // The content box, which is what the backing store is painted into.
+      const w = parseFloat(st.width);
+      const h = parseFloat(st.height);
+      const inner = st.boxSizing === "border-box"
+        ? { w: w - parseFloat(st.borderLeftWidth) - parseFloat(st.borderRightWidth)
+               - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight),
+            h: h - parseFloat(st.borderTopWidth) - parseFloat(st.borderBottomWidth)
+               - parseFloat(st.paddingTop) - parseFloat(st.paddingBottom) }
+        : { w, h };
+      return { store: [c.width, c.height], css: [inner.w, inner.h] };
+    });
+    if (canvasFit) {
+      check(`${game}: the canvas is drawn 1:1, not resampled`,
+        canvasFit.css[0] === canvasFit.store[0] && canvasFit.css[1] === canvasFit.store[1],
+        `${canvasFit.store.join("x")} surface rendered at ${canvasFit.css.join("x")}`);
+    }
+
     check(`${game}: the title is the game's name in caps`,
       typeof frame.title === "string" && frame.title === frame.title.toUpperCase()
         && frame.title.length > 0,
