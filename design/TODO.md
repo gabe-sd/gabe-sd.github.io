@@ -193,13 +193,26 @@ Constraints beyond the settled list:
   info-panel structure this supersedes.
 - **The dim accent variants are borderline for text.** Check contrast before using
   one for anything a reader has to read; borders are a different matter.
-- **Nothing under `tests/` is touched by the preview stage of this phase**, and no
-  assertion has been rewritten. `ART-DIRECTOR.md` requires every rewritten test to
-  be named at handover with its break-and-restore proof, so record it here: the
-  answer so far is *none*. The branch changes `assets/fonts/` and `design/` only,
-  which is also why a green suite says so little about it. That changes the moment
-  the chosen direction reaches `shared.css` — `tests/pong.test.js` case 13 is the
-  first assertion that has to be rewritten, and the constraint below says why.
+- **The build stage touched four assertions in `tests/pong.test.js`, all named at
+  handover with their break-and-restore proof** (`ART-DIRECTOR.md` requires it):
+  case 13 (the OS-theme palette check, now asserting the palette does *not*
+  change) and case 28's `["light", "dark"]` loop (collapsed to the one board that
+  exists) were expected — the constraint below says why. Two were not, and both
+  are the same lesson: a check built against the old palette's specific *values*,
+  not just against there being two themes.
+  `redIn()` counted "red-dominant" pixels by raw channel magnitude
+  (`r > g + 40 && r > b + 40`); Amber Arcade's ordinary paddle and ball colour
+  (`colors.fg`, `colors.accent`) clears that bar too, being warm, so every
+  "nothing is red yet" baseline in cases 28 and 29 started failing. Rebased on
+  hue instead of magnitude — amber sits at 37-41°, `colors.villain` (the actual
+  attack colour this exists to find) at 6-7°, and hue survives alpha-blending
+  toward the near-black board where magnitude does not, which is what a first,
+  tighter-magnitude-threshold attempt at this fix got wrong: it stopped seeing a
+  real attack glow wherever the glow was faint rather than solid. Separately,
+  test 26's `paddleGlows()` compared a sampled pixel against a hardcoded
+  `"255,255,255"` — the old light theme's board colour — so it read as
+  permanently "glowing" once the board stopped ever being white; fixed to compare
+  against the board's own computed colour instead.
 
 - **The directions built for this phase are in `design/previews/`**, with a
   start page saying what has to be decided and a reference sheet giving every

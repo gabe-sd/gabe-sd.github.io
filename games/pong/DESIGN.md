@@ -892,14 +892,27 @@ A canvas cannot read CSS custom properties, so the theme tokens are copied into 
 plain object and re-copied from a `prefers-color-scheme` change listener. Only the
 background is re-read per frame.
 
+**The site is dark-only since the redesign** (`design/DESIGN.md`, "Dark only"):
+`shared.css` no longer varies its token values with the OS theme, so this
+listener still fires but the colours it re-reads never actually change. Left in
+place rather than removed — that is `redesign-pong`'s decision, not this phase's,
+since ripping it out means deciding what (if anything) replaces it.
+
 **A colour that is not a token has to earn it, and white did not.** Effects are
 drawn with a bright core over a coloured glow — the paddle flash, the meter pop,
 the squeeze bolt. White works for the first two because they are drawn *on a
-paddle*, which is dark in the light theme. The bolt crosses the empty board, and
-the light theme's board is pure `#ffffff`, so its core was invisible in exactly
-the place it mattered: the effect read as a red outline of a bolt rather than as
-a bolt. `boltCore()` picks it from the board's own luminance instead, and the
-light theme gained about half again as much visible bolt.
+paddle*, which was dark in the old light theme. The bolt crosses the empty board,
+and the old light theme's board was pure `#ffffff`, so its core was invisible in
+exactly the place it mattered: the effect read as a red outline of a bolt rather
+than as a bolt. `boltCore()` picks it from the board's own luminance instead of a
+fixed white, and the light theme gained about half again as much visible bolt.
+
+**One of `boltCore()`'s two branches is now dead.** It exists to pick a bright
+core against whichever board it is drawn on, and there is only one board now.
+`redesign-pong` decides whether the light-theme branch comes out or stays as
+harmless dead code — `design/TODO.md` has the constraint. Whichever it chooses
+makes half of this section's history-of-the-bug framing read oddly; that is
+expected, not a sign this section drifted.
 
 Testing it is harder than it looks. A check that counts pixels unlike the board
 passes with the fixed white core still in, because the red glow alone clears any
