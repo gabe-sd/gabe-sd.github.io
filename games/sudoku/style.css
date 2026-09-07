@@ -51,8 +51,10 @@
 
 #number-pad {
   /* The pad sits directly under the board in the stack, so it owns the gap
-     between them - nothing else is between the two. */
-  margin-top: 0.6rem;
+     between them - nothing else is between the two. It is narrower than the
+     board, so it centres under it rather than hanging off the left edge. */
+  margin: 0.6rem auto 0;
+  width: max-content;
   display: grid;
   grid-template-columns: repeat(5, 42px);
   gap: 4px;
