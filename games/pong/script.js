@@ -384,9 +384,12 @@ function readColors() {
     fg: style.getPropertyValue("--fg").trim() || "#1c1c1e",
     accent: style.getPropertyValue("--accent").trim() || "#3b82f6",
     border: style.getPropertyValue("--cell-border").trim() || "#c7c7cc",
-    // Whose move it is: the villain's red, yours green.
+    // Whose move it is: the villain's red, yours rose. The player's colour is
+    // Pong's own — the hub's arcade-category accent (`--p-rose` in
+    // shared.css) — rather than the outcome token `--win`, which stays jade
+    // for a solved Sudoku or a cleared Minesweeper board.
     villain: style.getPropertyValue("--lose").trim() || "#ef4444",
-    hero: style.getPropertyValue("--win").trim() || "#22c55e",
+    hero: style.getPropertyValue("--p-rose").trim() || "#ff7fcb",
   };
 }
 
@@ -1221,7 +1224,7 @@ function onScore(scorer) {
 }
 
 // Which moves show on which paddle, in order of precedence. The colour says whose
-// move it is rather than what it does: red is the villain acting, green is yours.
+// move it is rather than what it does: red is the villain acting, rose is yours.
 // Clutch first: its pulse is the only thing that says a charge is in hand, while
 // expand's tell is the paddle's own size and shows whatever is drawn over it.
 // Squeeze is listed on the *opponent's* paddle even though it lands on yours:
@@ -1254,8 +1257,8 @@ function drawPaddle(p, x, tells) {
     // A move whose effect lands somewhere else only tells while it is winding up.
     if (spec.tellWhile && st.phase !== spec.tellWhile) continue;
     // ...and one that is outranked says nothing at all. Expand can already be
-    // running when the lightning lands; a green paddle that is also small claims
-    // a gift you are not getting.
+    // running when the lightning lands; a paddle tinted hero's colour that is
+    // also small claims a gift you are not getting.
     if (spec.blockedBy && moveActive(spec.blockedBy)) continue;
     tint = colors[who];
     if (spec.tell === "tint") break;   // the colour is the whole tell
@@ -1314,7 +1317,7 @@ function drawPaddle(p, x, tells) {
 const METER = { x: 14, y: HEIGHT - 18, w: 20, h: 7, gap: 4 };
 
 // One segment. A popping pip throws a ring outward, swells past its own size and
-// burns white at the core before settling back to green.
+// burns white at the core before settling back to rose.
 function drawPip(i, lit, charged) {
   const P = ABILITY.pop;
   const x = METER.x + i * (METER.w + METER.gap);

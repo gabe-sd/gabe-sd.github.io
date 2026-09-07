@@ -2842,11 +2842,22 @@ const { check, report } = makeChecks();
         phase = "play";
         player.y = HEIGHT / 2 - player.h / 2;
       };
+      // Named for the gift's original colour, but the gift is `colors.hero` -
+      // Pong's own player colour now, not literally green - so this counts
+      // pixels close to whatever colors.hero currently is rather than
+      // assuming a hue. A channel-magnitude test like the old green-only one
+      // would silently read 0 forever the day hero stops being green.
       window.greenOnPlayer = () => {
+        const hex = colors.hero.replace("#", "");
+        const hr = parseInt(hex.slice(0, 2), 16);
+        const hg = parseInt(hex.slice(2, 4), 16);
+        const hb = parseInt(hex.slice(4, 6), 16);
         const d = ctx.getImageData(0, 0, PADDLE_WIDTH, HEIGHT).data;
         let n = 0;
         for (let i = 0; i < d.length; i += 4) {
-          if (d[i + 1] > d[i] + 30 && d[i + 1] > d[i + 2] + 30 && d[i + 3] > 0) n++;
+          if (d[i + 3] === 0) continue;
+          if (Math.abs(d[i] - hr) < 10 && Math.abs(d[i + 1] - hg) < 10 &&
+              Math.abs(d[i + 2] - hb) < 10) n++;
         }
         return n;
       };
@@ -2910,7 +2921,8 @@ const { check, report } = makeChecks();
     check("and can again once it lets go", locked.allowed === true,
       locked.allowed);
 
-    // A green paddle that is also small claims a gift you are not getting.
+    // A paddle tinted hero's colour that is also small claims a gift you are
+    // not getting.
     const tint = await page.evaluate(() => {
       stage();
       startMove("expand");
@@ -2923,7 +2935,7 @@ const { check, report } = makeChecks();
       draw();
       return { gift, attacked, restored: greenOnPlayer() };
     });
-    check("the bigger paddle shows green", tint.gift > 0, tint.gift);
+    check("the bigger paddle shows hero's tint", tint.gift > 0, tint.gift);
     check("but says nothing while the lightning outranks it",
       tint.attacked === 0, tint.attacked);
     check("and speaks again once the lightning ends", tint.restored > 0,
