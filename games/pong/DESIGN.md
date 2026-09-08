@@ -11,9 +11,8 @@ time one is tuned.
 
 ## Invariants
 
-**Pong** (`games/pong/script.js`) keeps its model, its measurements and its
-rejected alternatives in `games/pong/DESIGN.md` — read that before changing how it
-plays. Six things will bite you without it:
+Six things in `games/pong/script.js` will bite you if you change how the game plays
+without reading the rest of this file:
 
 - The loop only *paces*: `advance()` drains real time into whole `TICK_MS` ticks
   and calls `update()` once per tick, so every speed constant is per tick. Nothing
@@ -259,13 +258,9 @@ overshoots by a few pixels and has to correct. **The overshoot is not bolted on*
 it falls out of not being able to stop instantly, the same way a hand does not. It
 lunges above its normal speed when badly out of position.
 
-### Everything is switchable
-
-Every knob in the `AI` object documents the value that turns its feature off, and
-`tests/pong.test.js` asserts that **turning them all off reproduces the old direct
-mover exactly**. Backing out or isolating any single part of this is a number, not
-an edit. That guarantee is worth keeping: all of this is tuned by feel, and feel
-changes.
+Backing out or isolating any single part of this is a number, not an edit — every
+knob names its own off value, and a test holds the whole `AI` object to it. See
+"Invariants".
 
 ### Difficulty
 
@@ -851,12 +846,8 @@ picking Insane and then a gentler mode left you playing the gentler one with
 Insane's short paddle — the same class of bug as a preset leaking through `AI`,
 and invisible until somebody wonders why the easy mode felt wrong.
 
-### Everything is switchable
-
-Same contract as the `AI` object: every knob in `ABILITY` names the value that
-turns its feature off, `modes: []` disables a move outright, and a test asserts
-that with all of them off the game is the plain one — no move ever fires and no
-paddle ever changes size. All of this is tuned by feel, and feel changes.
+Same contract as the `AI` object, per "Invariants": every knob in `ABILITY` names
+its off value, and `modes: []` disables a move outright.
 
 ## The win score
 
@@ -1014,8 +1005,7 @@ shows on the hub.
 **The site is dark-only since the redesign** (`design/DESIGN.md`, "Dark only"):
 `shared.css` no longer varies its token values with the OS theme, so this
 listener still fires but the colours it re-reads never actually change. Left in
-place rather than removed — that is `redesign-pong`'s decision, not this phase's,
-since ripping it out means deciding what (if anything) replaces it.
+place rather than removed, since ripping it out means deciding what replaces it.
 
 **A colour that is not a token has to earn it, and white did not.** Effects are
 drawn with a bright core over a coloured glow — the paddle flash, the meter pop,
@@ -1028,10 +1018,8 @@ fixed white, and the light theme gained about half again as much visible bolt.
 
 **One of `boltCore()`'s two branches is now dead.** It exists to pick a bright
 core against whichever board it is drawn on, and there is only one board now.
-`redesign-pong` decides whether the light-theme branch comes out or stays as
-harmless dead code — `design/TODO.md` has the constraint. Whichever it chooses
-makes half of this section's history-of-the-bug framing read oddly; that is
-expected, not a sign this section drifted.
+Whether the light-theme branch comes out or stays as harmless dead code is open —
+`pong-bolt-core-dead-branch` in `games/pong/TODO.md`.
 
 Testing it is harder than it looks. A check that counts pixels unlike the board
 passes with the fixed white core still in, because the red glow alone clears any

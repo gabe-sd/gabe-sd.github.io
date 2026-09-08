@@ -1,15 +1,5 @@
 # Flappy Bird: what a reader must not break
 
-The invariants for Flappy Bird, kept in its own folder so that changing this game
-touches no file another game's agent is editing. `CLAUDE.md` holds only what
-every game shares — the page contract, the theme, the testing rules.
-
-A design doc is only worth having if it is true, so **changing how a game plays
-means updating this file in the same commit**, including whatever was tried and
-rejected along the way. Rejected alternatives are the most valuable thing here and
-the easiest to lose. Keep values out of it; those live in the code as named
-constants, and a doc that repeats them is wrong the first time one is tuned.
-
 **Flappy Bird** (`games/flappy-bird/script.js`) borrows Pong's pacing and for the
 same reasons: `advance()` drains real time into whole `TICK_MS` ticks, so every
 constant in it is per tick rather than per frame, `update()` returns before

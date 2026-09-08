@@ -1,15 +1,5 @@
 # Minesweeper: what a reader must not break
 
-The invariants for Minesweeper, kept in its own folder so that changing this game
-touches no file another game's agent is editing. `CLAUDE.md` holds only what
-every game shares — the page contract, the theme, the testing rules.
-
-A design doc is only worth having if it is true, so **changing how a game plays
-means updating this file in the same commit**, including whatever was tried and
-rejected along the way. Rejected alternatives are the most valuable thing here and
-the easiest to lose. Keep values out of it; those live in the code as named
-constants, and a doc that repeats them is wrong the first time one is tuned.
-
 **Minesweeper** (`games/minesweeper/script.js`) places mines lazily on the first
 reveal, excluding the 3x3 around that cell, so the first click is always safe —
 `grid` is empty until then. `floodReveal` recurses through zero-adjacency cells.

@@ -149,35 +149,22 @@ what to do about it — and it is a feel question, not a bug.** Whatever is chos
 then needs a playtest of its own.
 
 The worry was that on Insane the ball moves fast enough that the player's own
-paddle cannot get to it. Measured with `REACH=1 node tests/ai-sweep.js`, which
-was added for this and is now the standing ruler for it. What it does: fires the
-worst shot a mode can produce — top speed, dead straight so it spends the fewest
-ticks in flight, at the corner furthest from the paddle — at a paddle driven
-perfectly, and finds the ball speed at which that stops being reachable.
-
-| mode | cap it plays | worst shot reachable to | while squeezed |
-| --- | --- | --- | --- |
-| Assisted | 6.5 | 17.3 | 14.2 |
-| Normal | 10 | 15.0 | 13.6 |
-| Insane | 14 | **14.2** | **13.0** |
-
-**It is not tunnelling**, which was the other candidate and would have been a
-correctness fix rather than a feel decision. A paddle pinned on the intercept
-saves every shot at every mode's cap and still does at twice Insane's; the first
-misses appear around four times it. `crossingY()` needs no continuous collision
-detection at any setting the modes can reach. That half of the entry is closed.
+paddle cannot get to it. Measured with `REACH=1 node tests/ai-sweep.js`, which was
+added for this and is now the standing ruler. **The measurement, the reach table
+and the finding that it is not tunnelling are all in `games/pong/DESIGN.md`,
+"Whether you could have reached it"** — read that first; the numbers are not
+repeated here. Tunnelling would have made this a correctness fix rather than a feel
+decision, and it is ruled out, so that half of the entry is closed.
 
 What is left is real but narrow, and it is two separate calls:
 
 - **Insane sits ~2% under the limit on a clean paddle** (cap 14, limit 14.2).
-  Playable, but there is nothing left in it: any raise to `BALL_SPEED_MAX`, or
-  any cut to `PLAYER_PADDLE_SCALE` or `PADDLE_SPEED`, puts the worst shot out of
-  reach. Mostly this is a thing to know before tuning, not something to fix.
+  Playable, but there is nothing left in it. Mostly a thing to know before tuning,
+  not something to fix.
 - **Under Squeeze, Insane is already past the limit** (13.0 against a cap of 14).
-  A shrunken paddle starts further away and arrives with less of itself, and both
-  push the same way. So a shot exists that no keyboard input can save. It needs a
-  rally long enough to reach the cap — 15 contacts from Insane's start speed —
-  with a Squeeze live at the time, so it is rare rather than routine.
+  So a shot exists that no keyboard input can save. It needs a rally long enough to
+  reach the cap — 15 contacts from Insane's start speed — with a Squeeze live at
+  the time, so it is rare rather than routine.
 
 **The decision is whether that second one is a bug or the mode's character.**
 `games/pong/DESIGN.md` says Insane's brutality is deliberate and that a fast
@@ -207,11 +194,9 @@ the expected answer. Measured, at Insane's cap of 14:
   section explains it is set where it is against *Normal's* geometry on purpose.
   Changing it to fix Insane would move Normal's whole positional game.
 
-**A mouse is not affected by any of this** — pointer control is deliberately not
-rate limited, so it covers any distance in one tick. Whatever is decided, it
-changes Insane only for keyboard players, which is itself worth knowing: the mode
-is meaningfully harder on the keys than with a mouse, and that was not a
-deliberate choice anyone made.
+**A mouse is not affected by any of this**, so whatever is decided changes Insane
+only for keyboard players — a mode meaningfully harder on the keys than with a
+mouse, which nobody chose deliberately.
 
 Do not batch this playtest with `pong-normal-rebalance` or `pong-longer-volleys`.
 
@@ -505,11 +490,9 @@ in `draw()`.
   `makeBolt`/`strokePath` will draw a jagged glowing path between any two points.
   Extend those rather than building parallel machinery beside them — the knobs
   live in `ABILITY.afterimages`, `ABILITY.pop` and `ABILITY.squeeze`.
-- Read the Theme section of `games/pong/DESIGN.md` first. It explains why
-  `boltCore()` picks a colour from the board's own luminance rather than using a
-  fixed white — that reasoning predates the redesign's dark-only board and one of
-  its two branches is now dead code; decide what (if anything) still needs a
-  luminance pick before copying the pattern for a new effect.
+- Read the Theme section of `games/pong/DESIGN.md` first, and settle
+  `pong-bolt-core-dead-branch` before copying `boltCore()`'s luminance pick for a
+  new effect.
 - Anything that flashes has to be driven by the tick count rather than by wall
   time, or it will run at different speeds on different monitors.
 
