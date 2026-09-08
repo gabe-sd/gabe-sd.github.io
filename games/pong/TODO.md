@@ -98,7 +98,6 @@ from 86.4% to 88.4% saves, and every move in the game now fires here.
   the ball. Overdrive and Squeeze make the ball harder for *you* and do not move
   that number at all, so softening them will read as having done nothing. Say
   which half you changed.
-- One change per playtest.
 - `pong-longer-volleys` below tunes these same ai levers for a different reason
   — rally length rather than difficulty. Land this entry first: loosening the
   ai's read to extend rallies on top of a "too hard" complaint that is still open
@@ -138,9 +137,6 @@ the vines-or-laser decision gating `pong-vine-attack` below.
   `pong-normal-rebalance` just set for a different reason. Land that entry first,
   and say explicitly which half (difficulty vs. rally length) a given change is
   answering, same as that entry already asks.
-- One change per playtest, per the house rule — this cannot share a session with
-  `pong-normal-rebalance` or `pong-insane-ball-speed` below; all three touch
-  ai/ball tuning and a single playtest cannot tell them apart.
 
 ### pong-insane-ball-speed — Insane leaves the keyboard no room, and none at all under Squeeze
 
@@ -198,8 +194,6 @@ the expected answer. Measured, at Insane's cap of 14:
 only for keyboard players — a mode meaningfully harder on the keys than with a
 mouse, which nobody chose deliberately.
 
-Do not batch this playtest with `pong-normal-rebalance` or `pong-longer-volleys`.
-
 ### pong-feel-pass — Tune what just shipped, now that it can be played
 
 **Gate: playtest, and it is the whole entry.** Nothing here is a bug; every item
@@ -228,8 +222,7 @@ Three specific things were flagged during that work and never decided:
   which means rallies rather than a scoreline. Worth confirming it still does.
 
 `node tests/ai-sweep.js` and `node tests/volley-sweep.js` are the two rulers, and
-`games/pong/DESIGN.md` records what every figure in them means. Change one thing
-at a time — a playtest cannot tell two feel changes apart.
+`games/pong/DESIGN.md` records what every figure in them means.
 
 ### pong-charge-hitbox-tell — Color the paddle tips to show the Clutch hitbox
 
@@ -305,8 +298,8 @@ paddle gets bigger" it will be wrong in one of them.
   a doc does — and here the player sees the wrong version, not just the next
   developer.
 - The same panel already lies to a touch device, listing keys a phone does not
-  have — see "On a phone" in `games/pong/DESIGN.md`. Mobile is deferred, but it is
-  the same panel and worth reading before rewriting it.
+  have — see `pong-mobile-support` below. Mobile is deferred, but it is the same
+  panel and worth reading before rewriting it.
 
 ### pong-vine-attack — Vines that wrap the opponent's paddle and slow it
 
@@ -462,8 +455,7 @@ two-player.
 
 ### pong-sound — Paddle, wall and score tones
 
-**Gate: playtest, its own.** Tones are pure feel and cannot share a session with
-another feel change.
+**Gate: playtest, its own.** Tones are pure feel.
 
 Classic Pong is its blip. A WebAudio oscillator gives paddle, wall and score tones
 with no asset files and no dependency, which is what keeps it compatible with the
@@ -512,7 +504,21 @@ time: one namespaced key, every access wrapped in try/catch.
 
 **Gate: none — deferred by decision, not by difficulty.**
 
-Not designing for mobile at present. What an emulated phone actually did with the
-game is written up under "On a phone" in `games/pong/DESIGN.md` — it mostly works,
-and the three things that do not are described there. Read that before starting;
-it is the only reason this entry is not simply deleted.
+Not designing for mobile at present. An emulated phone with real touch events was
+driven through a game, and the finding was not what anyone expected: **it already
+works** — tapping serves, dragging moves the paddle, `touch-action: none` stops
+the page scrolling under the drag, nothing overflows and nothing errors. Three
+things do not:
+
+- **No way to pause.** Escape and `p` are the only manual bindings, so you can get
+  out of an auto-pause but never into one. The one functional hole rather than
+  polish.
+- **The `?` panel lists W/S, the arrows and Space**, none of which a phone has,
+  and never mentions dragging. Showing the right controls without sniffing the
+  user agent is what a pointer media query is for.
+- **Your finger covers the paddle**, which sits on the left edge exactly where you
+  drag. Only moving the control fixes that, and that is a design question.
+
+Touch also **teleports** the paddle, because pointer control is deliberately not
+rate-limited — see "Controls" in `games/pong/DESIGN.md`. A curiosity on a mouse;
+on touch, putting a finger down somewhere else is the normal way to move.

@@ -812,12 +812,6 @@ the measurement kept, because the claim worth protecting survives the decision:
 the core stays visible against whatever the board now is. `colorScheme` appears
 nowhere outside that file, so those two were the whole of it.
 
-That pair is worth remembering as a shape rather than as history. Removing an
-axis a suite varies over does not remove the loop that varied over it, and the
-loop goes on passing — the most literal form of `CLAUDE.md`'s "a test that has
-never failed has not been shown to test anything". That loop had never failed,
-and after the decision it never could.
-
 **Still open:** `boltCore()` in `games/pong/script.js` picks the lightning bolt's
 core colour from the board's luminance, which existed only because the light
 theme's board was pure white. One branch of it is now dead, and what replaces it
@@ -900,14 +894,6 @@ the colour actually buys: with six guest hues plus the home hue plus one
 neutral, Amber Arcade's eight numbers need no mark at all, and the two rarest
 digits stop costing the player a decode. That is the clearest single difference
 between the coloured and monochrome readings of the same direction.
-
-**A region can be lifted out from under the CRT texture, but only if the screen
-gives up its stacking context.** `gallery.css` puts `.screen` at `z-index: 2`
-and the texture layer at `6`; while the screen is a stacking context, nothing
-inside it can rise above the texture, so no part of the page can be exempted.
-Setting `.screen { z-index: auto }` and giving the board strip `z-index: 7` plus
-an opaque background does it — the opaque background is not decoration, since
-the texture otherwise shows straight through the gaps between cells.
 
 Measured rather than eyeballed, because at *as mocked* the texture is too subtle
 to judge from a screenshot: a scanline makes a column of pixels oscillate row to

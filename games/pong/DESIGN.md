@@ -188,33 +188,6 @@ chase carry the paddle past the edge in the first place. Decided this way rather
 than surveyed with a playtest because it restores an existing invariant — the
 brushed-mouse guard predates this entry — rather than setting a new one.
 
-## On a phone
-
-Not designed for, but measured. An emulated phone with real touch events was
-driven through a game, and the result is worth keeping because it is not what
-anyone expected: **it already works.** Tapping the board serves, dragging moves
-the paddle, `touch-action: none` stops the page scrolling under the drag, the
-layout does not overflow and nothing errors. Three things are genuinely wrong.
-
-**There is no way to pause.** Escape and `p` are the only manual bindings and a
-phone has no keyboard. Auto-pause on a hidden tab still fires and tapping the
-board resumes, so you can get out of a pause but never into one. That is a
-functional hole rather than polish.
-
-**The `?` panel lies to a touch device.** It lists W/S, the arrow keys and Space,
-none of which exist on a phone, and never mentions dragging. Fixing it means
-showing the right controls to the right device without sniffing the user agent; a
-pointer media query is the usual answer.
-
-**Your finger covers the paddle.** The player's paddle sits on the left edge,
-exactly where you drag. Nothing fixes that except moving the control somewhere
-else, which is a design question and not a bug.
-
-One consequence of a decision made for the mouse: touch **teleports** the paddle,
-because pointer control is not rate-limited (see Controls above). On a mouse that
-is a curiosity. On touch, lifting a finger and putting it down elsewhere is the
-normal way to move, so it happens constantly.
-
 ## The AI
 
 The AI predicts where the ball will reach its side of the board and is then
@@ -365,12 +338,10 @@ supposed to return the ball; the help is the player's paddle and the slow ball,
 neither of which this number can see. Normal landing where Medium did is
 deliberate: it is the mode that replaced it.
 
-**These are three separate readings, not a ranking.** While Easy, Medium and Hard
-existed they all played one ball, so their figures could be set against each
-other. Nothing does now — every surviving mode changes the ball, the paddles or
-both — so each number answers "how often does *this* mode's ai save *this* mode's
-ball" and nothing else. The harness never asks how hard the ball is for the
-**player**, which is most of what separates the three.
+**These are three separate readings, not a ranking.** Every mode changes the
+ball, the paddles or both, so each number answers "how often does *this* mode's
+ai save *this* mode's ball" and nothing else. The harness never asks how hard the
+ball is for the **player**, which is most of what separates the three.
 
 The number understates every mode with moves in it, and it is worth knowing why
 rather than trusting it. Only one of the opponent's three moves changes whether
@@ -984,9 +955,6 @@ to `WIDTH / 2` puts it a full half-width to the right of the centre line, which 
 drawn at exactly `WIDTH / 2`. That shipped for a while and is obvious once seen.
 
 `bounce()` and `predictInterceptY()` both carry the same half-width correction.
-Switching to a centre-based position would remove all of them, at the cost of
-touching every collision and the prediction at once — not worth doing on its own,
-worth knowing if something else forces that area open.
 
 ## Theme
 
@@ -1039,11 +1007,8 @@ The last two are the same number in two places — `applyWinScore` rewrites both
 whenever the chosen win score changes, and filling either in only at load left
 it confidently wrong the moment the choice could change.
 
-There was also a `#score-reader`, a clipped live region holding the score as
-text because `draw()` painted it on the canvas and canvas pixels reach no screen
-reader. The scorebar is real text with the live region on it, so one element now
-does both jobs and the hidden copy is gone. A second copy would have announced
-every point twice.
+**Do not add a hidden copy of the score.** The scorebar is real text carrying the
+live region — see "Reading the game without seeing it".
 
 ## Stored data
 

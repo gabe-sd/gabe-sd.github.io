@@ -174,10 +174,8 @@ back.
 
 ## What is untested about this seat
 
-`CLAUDE.md` says the split as a whole is provisional and asks you to propose a better
-rule rather than working around one that bites. Specific to this seat: the worktree
-was described here as somewhere a worker already was, never as a step anyone had to
-take, because every agent who wrote the rule had been launched into one by the
+The worktree was described here as somewhere a worker already was, never as a step
+anyone had to take, because every agent who wrote the rule had been launched into one by the
 harness. A worker read the file, did exactly what the only start-of-work rule said —
 took a branch — and took it in the integrator's checkout. That is why this file leads
 with the worktree.

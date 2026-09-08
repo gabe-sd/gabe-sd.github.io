@@ -15,10 +15,9 @@ game's visual gaps belong here rather than in `games/<name>/TODO.md`, because th
 is one system and fixing it a game at a time is what produced the look being replaced.
 Appending an entry is allowed and wanted; taking one is not.
 
-Each entry names the branch it is cut from. Read that line rather than assuming
-`main`: visual work sometimes runs on an integration branch, and `INTEGRATOR.md`
-describes how that works. Everything below is off `main` — the redesign's integration
-branch merged and the ref is gone.
+Everything below is cut from `main` — the redesign's integration branch merged and the
+ref is gone. An entry cut from anything else says so on its own line: visual work
+sometimes runs on an integration branch, and `INTEGRATOR.md` describes how that works.
 
 ```markdown
 ### <slug> — <one line saying what changes>
@@ -64,16 +63,12 @@ and the shared `#instructions` panel are in place and covered by
 
 ### redesign-flappy-bird — Flappy Bird
 
-**Branch from:** `main`
-
 The other canvas game, and much simpler than Pong. `readColors()` in
 `games/flappy-bird/script.js` maps `--win` to the pipes and `--lose` to the beak,
 which is decoration borrowing outcome colours — decide whether that survives the new
 palette or whether Flappy takes its own.
 
 ### redesign-minesweeper — Minesweeper
-
-**Branch from:** `main`
 
 Mostly `style.css`. The one real piece of work is `.n1` through `.n8`, eight hardcoded
 number colours that are the only place in the site with a palette of their own.
@@ -90,22 +85,16 @@ rest of the site uses for ordinary text.
 
 ### redesign-sudoku — Sudoku
 
-**Branch from:** `main`
-
 `style.css` only. The grid's box borders are drawn with `--fg` and the selected cell
 with `color-mix()` on `--accent`; both want checking against the new values rather than
 assuming they carry over.
 
 ### redesign-tic-tac-toe — Tic Tac Toe
 
-**Branch from:** `main`
-
 The smallest stylesheet on the site, 32 lines, all tokens already. Last because it is
 nearly free once everything above has settled.
 
 ### redesign-emoji-glyphs — The emoji, which are the last off-palette thing
-
-**Branch from:** `main`
 
 Colour emoji are rendered by the OS font, not by ours, so they ignore the palette
 entirely and are the most visible remaining break in the look. Counted on `main` at
@@ -151,8 +140,6 @@ If the four game phases run, each can take its own game's share and this shrinks
 whatever is left. If they do not, this is worth doing on its own.
 
 ### redesign-category-accents — Decide whether colour by category stays
-
-**Branch from:** `main`
 
 Not work yet — a decision to take with Gabriel once the hub and every game have been
 seen in the new palette. The broader palette is wanted; assigning a fixed colour per
