@@ -204,9 +204,22 @@ npm test
 ```
 
 `--no-ff` always, explicitly. A branch that has just absorbed `main` would
-otherwise fast-forward and leave no merge commit — and `tests/docs-check.js` greps
-for `Merge branch '<slug>'` to tell what work has landed, so a fast-forward makes
-a landed entry invisible to it.
+otherwise fast-forward and leave no merge commit — and `tests/docs-check.js` reads
+merge subjects to tell what work has landed, so a fast-forward makes a landed
+entry invisible to it.
+
+**The slug has to be in the merge subject, closed.** Check 5 accepts either
+`Merge branch '<slug>'` — what the command above writes — or
+`Merge <slug>: <what landed>`, which says more and is worth using on a merge
+somebody will read later. What it cannot accept is a subject where the slug runs
+into other words, because then `pong-mobile-support` matches the merge of
+`pong-mobile-support-entry`: the closing quote or the colon is what stops that.
+The second shape is accepted *because* of what happened without it: every phase
+merge of the redesign was worded that way, the check only knew the first, so it
+matched none of them and spent the whole project reporting that nothing had
+landed — with a landed entry sitting in `design/TODO.md` the entire time. A check
+whose protection depends on remembering a message format is a check that stops
+working the first time somebody writes a better message.
 
 Merge one branch at a time and run the suite after each. Git catches conflicting
 *text* for free. What it cannot catch is two changes that each apply cleanly and
@@ -278,7 +291,8 @@ checked `main` out to do something else entirely. The entries belong on the
 integration branch; `main` carries the conventions and nothing else.
 
 **Never give an entry the integration branch's own name.** The final
-`Merge branch '<integration-branch>'` would land every slug that matches it.
+`Merge branch '<integration-branch>'` would land every slug that matches it — and
+so would `Merge <integration-branch>: <what landed>`, since check 5 accepts both.
 
 One cost to accept going in: the final merge is a diff nobody can review in one
 sitting. That is survivable only because each phase was reviewed as it landed —
