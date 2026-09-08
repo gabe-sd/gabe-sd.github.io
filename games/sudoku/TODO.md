@@ -3,6 +3,52 @@
 Known gaps and unscheduled work for this game. Not a changelog — delete
 entries as they land. See the root `TODO.md` for the naming rules.
 
+### sudoku-conflict-highlight-one-sided — Only the last-typed cell of a clash turns red
+
+`placeDigit()` (`games/sudoku/script.js`) re-renders the cell just typed into and
+nothing else:
+
+```js
+grid[r][c] = digit;
+renderCell(r, c);        // the typed cell only
+```
+
+`renderCell()` decides `.wrong` from `conflicts(r, c)`, which is symmetric — both
+members of a duplicate pair return true. But the *other* member is never
+re-rendered, so it keeps whatever class it last had. Type 4 into an empty cell,
+then 4 into another empty cell in the same row: the second turns red, the first
+stays plain, even though both are equally part of the clash. Reversing the order
+reverses which one is marked — it is always the last one typed, not the wrong one.
+
+Reproduced headless on 2026-09-07 at both cells of a row pair, reading the class
+and the predicate together:
+
+```
+conflicts(0,0) = true   class = "cell"
+conflicts(0,1) = true   class = "cell wrong"
+```
+
+`DESIGN.md` promises a conflicting digit is marked "live as it's typed", and half
+of every conflict is unmarked, so a player clearing the red cell can be left with
+a board that looks clean and is not. Winning is unaffected — `checkWin()` rescans
+the grid and ignores the stale classes — which is why the suite never caught it.
+
+The fix is to re-render the affected peers as well; `peers(r, c)` is already
+defined in the same file and is what `conflicts()` uses. Clearing a cell has the
+same gap in reverse: emptying one half of a pair should un-mark the other, which
+also needs the peers re-rendered.
+
+**Not caused by the redesign.** `placeDigit()` is byte-identical on `main` —
+`git diff main..redesign -- games/sudoku/script.js` is empty — so this has been
+here as long as the live-conflict check has. Found during the pre-merge review of
+the redesign and filed rather than fixed, because a game's area belongs to its
+own branch.
+
+`tests/sudoku.test.js` asserts only that the newly-typed duplicate is marked, so
+whatever fixes this needs a case asserting the *older* cell of the pair is marked
+too — that assertion fails today, which is the proof it is testing the right
+thing.
+
 ### sudoku-famous-puzzles-mode — A mode built on curated, named puzzles
 
 The bundled set in `games/sudoku/script.js` — 23 puzzles as of writing — is
