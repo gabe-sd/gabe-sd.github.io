@@ -109,6 +109,14 @@ again.** If one does, this line and the `Branch from:` line in every entry below
 are the two places the base is written down, and both go stale the day the branch
 is cut — not the day it lands.
 
+**Whether these four still run is Gabriel's to say, and nobody has asked him.**
+The overhaul landed on `main` on 2026-09-07 with the hub, the shell, chess and
+Pong redesigned and the other four games framed but not restyled inside. That is
+a coherent place to stop — a framed page with a pre-redesign interior was always
+the expected halfway state, not a defect. So the question is live rather than
+rhetorical: finish the four, or call the redesign done and let each game's
+interior wait for a reason of its own. Ask before starting one.
+
 ### redesign-flappy-bird — Flappy Bird
 
 **Branch from:** `main`
@@ -174,6 +182,42 @@ this entry is for.
 
 The smallest stylesheet on the site, 32 lines, all tokens already. Last because it
 is nearly free once everything above has settled.
+
+### redesign-emoji-glyphs — The emoji, which are the last off-palette thing
+
+**Branch from:** `main`
+
+Colour emoji are rendered by the OS font, not by ours, so they ignore the
+palette entirely and are the most visible remaining break in the look. Counted on
+`main` at 1487988, and it is four games rather than the two first reported:
+
+| Game | Where | Glyphs |
+| --- | --- | --- |
+| minesweeper | HUD, and the board itself | `🚩` `⏱` `🏆`, and `💣` `🚩` as cell content |
+| flappy-bird | HUD | `🐦` `🏆` |
+| sudoku | status line | `🎉` |
+| pong | status line and the menu | `🎉` |
+
+Chess, Tic Tac Toe and the hub have none.
+
+Three different problems wearing one costume, and they do not have one answer:
+
+- **The HUD glyphs** are labels — flags left, time, best. VT323 has no icons, so
+  replacing them means a word, an abbreviation or a drawn glyph.
+- **Minesweeper's `💣` and `🚩` are the game's content**, not decoration. They are
+  what a cell *is*. Chess solved the same problem by drawing its pieces rather
+  than typing them, which is the precedent worth reading first —
+  `games/chess/DESIGN.md`.
+- **The two `🎉`** are a tone choice in a win message, not a palette problem.
+  Deleting them is a one-character diff; whether the site wants to sound like
+  that is Gabriel's call, and they are in `#status` text, which is prose he owns.
+
+**Pong is the one to notice.** It went through a full redesign phase and kept its
+`🎉`, which says a game's own phase will not necessarily catch these — nobody was
+looking for them. Hence one entry across all four rather than a line in each.
+
+If the four game phases above run, each can take its own game's share and this
+entry shrinks to whatever is left. If they do not, this is worth doing on its own.
 
 ### redesign-category-accents — Decide whether colour by category stays
 
