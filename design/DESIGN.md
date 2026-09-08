@@ -13,25 +13,15 @@ to the next.
 
 ## How this file is written
 
-**As decisions are made, not afterwards.** A session takes its reasoning with it
-when it closes, so a value that only exists in a conversation is a value nobody
-can defend or reproduce next week.
+As decisions are made, prescriptively, with the rejected alternatives kept —
+`ART-DIRECTOR.md` says why each of those matters. Exact hex values and hard rules,
+never "a warm amber": descriptive prose cannot stop drift, a value can.
 
-**Prescriptively.** Exact hex values, the exact scale, the rules that hold it
-together — not "a warm amber" but the number, and the rule about where it may and
-may not be used. Descriptive prose cannot stop drift; a value can.
-
-**With the rejected alternatives kept.** What was tried and thrown out, and what
-was wrong with it. A dead end nobody records gets explored again by the next
-session, which is the same reason every game's `DESIGN.md` carries one.
-
-## What goes in it
-
-The palette and what each colour is for. The type scale and the typefaces, with
-where they come from. Spacing, borders, radii. Motion, and what respects
-`prefers-reduced-motion`. Any rule that keeps the system coherent — which colours
-may carry text, which are structural only, what a game may vary and what it may
-not. The tokens in `shared.css` and what each one means.
+What goes in it: the palette and what each colour is for; the type scale and the
+typefaces; spacing, borders, radii; motion and what respects
+`prefers-reduced-motion`; the tokens in `shared.css` and what each one means; and
+any rule that keeps the system coherent — which colours may carry text, which are
+structural only, what a game may vary.
 
 ---
 
@@ -44,25 +34,21 @@ or found so far. The open questions, and which phase closes each, are in
 **Gabriel chose Amber Arcade on 2026-09-06.** That is settled; a later session
 that wants to reopen it asks him rather than deciding.
 
-How it got there. He picked **Amber Monitor** from the first eleven, and in the
-same breath asked for the one thing that direction was recorded as unable to
-do — the accent colour Cold Terminal and Vector Neon put into the game boards.
-He also asked to see the art director's written recommendation *built* rather
-than argued. Two more directions were built:
+How it got there: he picked **Amber Monitor** from the first eleven and in the same
+breath asked for the one thing that direction was recorded as unable to do — the
+accent colour Cold Terminal and Vector Neon put into the game boards. Two more were
+built:
 
 - **Amber Arcade** (`design/previews/variants/amberlit.css`) — **chosen.** Amber
-  Monitor's shell, type and spacing unchanged, with six guest hues admitted to
-  the boards and one category accent per tile.
+  Monitor's shell, type and spacing unchanged, with six guest hues admitted to the
+  boards and one category accent per tile.
 - **Cold Terminal Mk II** (`design/previews/variants/coldmk2.css`) — not chosen.
-  The recommendation as built: Cold Terminal plus Amber's roominess and larger
-  type, Vector's per-element glow, and the texture capped at *as mocked* and
-  lifted off the boards. Kept in the archive; its reading-tint and glow-scale
-  ideas are worth stealing even though the direction was not taken.
+  Cold Terminal plus Amber's roominess and larger type, Vector's per-element glow,
+  and the texture capped at *as mocked* and lifted off the boards. Kept in the
+  archive; its reading-tint and glow-scale ideas are worth stealing.
 
-**Built.** The palette, the type scale and the hub are in `shared.css`, `hub.css`
-and `index.html` as of the `redesign-tokens-hub` phase. The three questions listed
-in `design/TODO.md` closed first, against the preview, before any of it landed —
-see "The hub" below for what they settled.
+**Built** in `shared.css`, `hub.css` and `index.html` as of the
+`redesign-tokens-hub` phase.
 
 ### What choosing it commits us to
 
@@ -280,14 +266,13 @@ category colour.
 
 **The bar itself is a glow, not a flat `border-left`, and the tile gets a real
 hover state.** The first build shipped a flat 4px `border-left` and a hover that
-only swapped the background — Gabriel's reaction was "why does it look like the
-cheap mockups," and checked directly against
-`design/previews/variants/amberlit.css` the gap was exactly this: that file draws
-the edge as a separate `::before` layer with its own `box-shadow` glow, and gives
-hover a lift, a card-wide glow, and a bloomed name and icon. Pulled into `hub.css`
-with one change from that source: amberlit hides the bar until hover, which is the
-hover-only treatment Gabriel already reversed above, so here it stays visible at
-rest and gains a stronger glow on interaction rather than appearing from nothing.
+only swapped the background; Gabriel's reaction was "why does it look like the
+cheap mockups". Checked against `design/previews/variants/amberlit.css`, the gap
+was exactly that: it draws the edge as a separate `::before` layer with its own
+`box-shadow` glow, and gives hover a lift, a card-wide glow, and a bloomed name and
+icon. Pulled into `hub.css` with one change — amberlit hides the bar until hover,
+which is the hover-only treatment reversed above, so here it stays visible at rest
+and gains a stronger glow on interaction.
 
 ```css
 .tile::before {
@@ -329,18 +314,15 @@ things on purpose.
 
 ### Icons
 
-**Ported from `design/previews/gallery.js`'s `LINE_ICONS`**, at Gabriel's request
-after he pointed at a screenshot of the Amber Arcade preview gallery and asked for
-that icon style back — the first build had kept the six emoji from the
-pre-redesign hub, which is what the "look like the cheap mockups" reaction was
-partly about. Six hand-drawn stroke icons on one 48x48 grid at a single weight
-(`stroke-width` 2.4–3.2 depending on the glyph), coloured entirely through
-`currentColor` so a game's icon never needs its own colour rule. Inlined directly
-in `index.html` as `<svg class="ico" viewBox="0 0 48 48">` inside each tile's
-`.tico` span — copied verbatim from `LINE_ICONS`, one exception: the mine icon's
-punched highlight hole was `fill="var(--icon-hole, #040604)"` in the gallery
-(a token that only exists there); repointed to `fill="var(--bg)"`, the real
-token for this page's ground.
+**Ported from `design/previews/gallery.js`'s `LINE_ICONS`**, at Gabriel's request —
+the first build had kept the six emoji from the pre-redesign hub, which is part of
+what the "cheap mockups" reaction was about. Six hand-drawn stroke icons on one
+48x48 grid at a single weight (`stroke-width` 2.4–3.2 depending on the glyph),
+coloured entirely through `currentColor` so a game's icon never needs its own colour
+rule. Inlined in `index.html` as `<svg class="ico" viewBox="0 0 48 48">` inside each
+tile's `.tico` span, verbatim from `LINE_ICONS` with one exception: the mine icon's
+punched highlight hole was `fill="var(--icon-hole, #040604)"`, a token that only
+exists in the gallery; repointed to `fill="var(--bg)"`.
 
 `.tico` carries the colour: `--p-dim` at rest, `--p-amber` on
 hover/focus-visible, so the icon reads as chrome (one hue, not category-tinted)
@@ -362,13 +344,11 @@ the whole direction is the calm reading of the idea. Respects
 
 ### The CRT texture, applied
 
-**Bumped from "soft" to "mock" strength** after the first build shipped at soft
-and Gabriel called it invisible on the served page. `design/previews/gallery.css`
-already had four strengths to choose between rather than one recipe to retune by
-guessing; "mock" is one considered step up, not "heavy" — "What the preview phase
-measured" found heavy breaks up a dense board, which does not apply to the hub
-chrome (no board sits under it), but staying one step rather than jumping to the
-top keeps this a decision rather than an overcorrection.
+**Bumped from "soft" to "mock" strength** after the first build shipped at soft and
+Gabriel called it invisible on the served page. Not "heavy": "What the preview
+phase measured" found heavy breaks up a dense board. That does not apply to the hub
+chrome, since no board sits under it, but one step rather than a jump to the top
+keeps this a decision rather than an overcorrection.
 
 ```css
 .crt {
@@ -386,15 +366,13 @@ and stops it showing through the gaps between tiles.
 
 ### Depth and framing: `.deco`
 
-The first build had no framing layer at all — Gabriel's first reaction was "no
-depth or framing... reads as flat rectangles on black." `.deco` started as
+The first build had no framing layer at all — Gabriel's reaction was "no depth or
+framing... reads as flat rectangles on black." `.deco` started as
 `design/previews/variants/amberlit.css`'s wash-and-vignette ported unchanged, then
-Gabriel asked for more amber glow than that source itself carries — checked
-directly against the archive, amberlit.css's own values were already what had
-shipped, so this is a deliberate departure from the previewed direction rather
-than a fix to a mis-port. `z-index: 0`, same stacking layer as `.crt`'s 6 but
-below it, so both the texture and the game grid still paint over it correctly
-with no change to either.
+he asked for more amber glow than that source carries. Checked against the archive,
+amberlit's own values were already what had shipped, so this is a deliberate
+departure from the previewed direction rather than a fix to a mis-port. `z-index: 0`,
+below `.crt`'s 6, so both the texture and the game grid still paint over it.
 
 ```css
 .deco {
@@ -943,69 +921,49 @@ figure is what proves the probe detects texture where texture exists.
 
 `design/archive/2026-09-04-retro-interface-directions.html` is the **thirteen**
 directions built for the first phase, as **one self-contained file**: every
-stylesheet and the gallery inlined, so it opens in a browser from anywhere with
-no server and no repo around it. It starts on a reference sheet giving each
-direction's palette as hexes with the role of every value, its typefaces and
-scale, and its eight-number solution; the built compositions are a click away.
+stylesheet, the gallery and all twenty-nine typefaces embedded as base64, so it
+makes no network request and needs nothing beside it. Hand the single path to
+anyone, offline, and they see what is described here. That is why it is 880K.
+It opens on a reference sheet giving each direction's palette, typefaces, scale
+and eight-number solution.
 
-**The filename keeps the 2026-09-04 date even though two of the thirteen were
-built on the 6th.** The date names the round, not the last edit, and Gabriel was
-given that path to keep — renaming it breaks the one thing the file was made
-for. A genuinely new round of directions gets a new date and a new file.
+The filename keeps the 2026-09-04 date even though two of the thirteen were built
+on the 6th: the date names the round, and Gabriel was given that path to keep.
 
-**Settled 2026-09-07: the archive is append-only.** Gabriel's rule — do not
-modify a file that is already in `design/archive/`. So this one is frozen as the
-record of the exploration rather than rebuilt when the redesign finishes, and if
-the finished look is worth keeping it goes in a **new** dated file beside it.
-That also settles the rebuild question: a rebuild is for correcting a file that
-was generated wrong, not for bringing an old round up to date.
+**Settled 2026-09-07: the archive is append-only.** Gabriel's rule — do not modify
+a file already in `design/archive/`. A finished look worth keeping goes in a
+**new** dated file beside it. So a rebuild is only ever for correcting a file that
+was generated wrong.
 
-**It is generated from `design/previews/`, not maintained by hand.** Every byte
-of it — gallery, stylesheets, markup, script — is an inline of those sources in
-the order `index.html` links them, with the two `@font-face` `url()`s rewritten
-to the CDN and `window.__START__` set so it opens on the reference sheet. So a
-change to a preview does not reach the archive until it is rebuilt, and editing
-the archive directly puts the two permanently out of step. The generator was
-kept out of the repo deliberately: `design/previews/` is scheduled for deletion
-and would leave it with nothing to read. Rebuilding is mechanical enough to
-redo from this paragraph, and the check that it was done right is that
-regenerating from *unchanged* sources reproduces the existing file byte for
-byte.
-
-`design/archive/` is deliberately separate from `design/previews/`. The previews
-are the working source and are throwaway — they get deleted once a direction is
-built. The archive does not, because a palette is reusable long after the project
-that produced it, and Gabriel asked for these kept for other work.
-
-**It is fully standalone: every typeface is embedded as a base64 data URI.**
-Twenty-nine faces, latin and latin-ext only — the eight Google families the
-other directions use, plus the repo's own VT323, which is byte-identical to
-Google's copy. So the file makes no network request at all and needs nothing
-beside it: hand the single path to anyone, on any machine, offline, and they see
-what is described here. That is what it is for, and it is why it is 880K rather
-than 330K.
+**The generator was deliberately not committed, so this sentence is the only copy
+of it:** inline `design/previews/` — gallery, stylesheets, markup, script — in the
+order `index.html` links them, rewrite the two `@font-face` `url()`s to the CDN,
+and set `window.__START__` so it opens on the reference sheet. The check that a
+rebuild was done right is that regenerating from *unchanged* sources reproduces
+the existing file byte for byte.
 
 Two things a rebuild must not lose:
 
-- **`<meta charset="utf-8">` on the first line, and it is load-bearing.** With
-  no charset the browser sniffs the first ~1KB. The earlier CDN build got UTF-8
-  by luck, because a comment full of em dashes sat up there; embedding the fonts
-  pushes every non-ASCII byte past the sniff window, the sniffer sees nothing but
-  base64 ASCII, falls back to windows-1252, and every `·` `—` `★` `▶` in the file
-  becomes mojibake. It showed up as Full Cabinet's wordmark rendering 15px wide
-  of `GABEÂ·SD ARCADE`, and as nothing else — one visible symptom for a fault
-  affecting the whole file.
+- **`<meta charset="utf-8">` on the first line, and it is load-bearing.** With no
+  charset the browser sniffs the first ~1KB. The earlier CDN build got UTF-8 by
+  luck, from a comment full of em dashes; embedding the fonts pushes every
+  non-ASCII byte past the sniff window, the sniffer sees only base64 ASCII, falls
+  back to windows-1252, and every `·` `—` `★` `▶` becomes mojibake. It showed up
+  as one wordmark rendering `GABEÂ·SD ARCADE` and as nothing else — one visible
+  symptom for a fault affecting the whole file.
 - **Parity is checked on text metrics, not on screenshots.** PNG bytes are not
   pixels and several directions animate a cursor or a glare band, so image
   equality is the wrong bar and will never hold. Measure the wordmark, a tile
   name, the strap and the selected name in all thirteen: a swapped typeface moves
-  every one of those, a blinking cursor moves none. All thirteen match the CDN
-  build exactly.
+  every one, a blinking cursor moves none.
 
-The site itself still self-hosts from `assets/fonts/` and embeds nothing — a
-data URI in `shared.css` would put 400K of base64 in front of first paint on
-every page. The embedding is the archive's alone, and it is the price of the
-file being portable.
+`design/archive/` is deliberately separate from `design/previews/`, which is
+throwaway working source. The archive is not, because a palette is reusable long
+after the project that produced it.
+
+The site itself self-hosts from `assets/fonts/` and embeds nothing — a data URI in
+`shared.css` would put 400K of base64 in front of first paint on every page. The
+embedding is the archive's alone.
 
 ## How the look gets checked
 

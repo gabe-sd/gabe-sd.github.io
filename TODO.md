@@ -69,10 +69,10 @@ panel rather than a hint line. The design mockups under `design/` do use `.page`
 and `.hint`, but they are self-contained and define their own — deleting these
 rules cannot touch them.
 
-Left in place deliberately for now. The contract in `CLAUDE.md` was the thing
-actively misleading readers and it has been corrected; the rules themselves cost
-nothing but the bytes, and `shared.css` is the art director's while the redesign
-is in flight. Worth sweeping once it lands.
+The contract in `CLAUDE.md` was the thing actively misleading readers and it has
+been corrected; the rules themselves cost nothing but the bytes. They were left
+alone while the redesign held `shared.css`. That landed on 2026-09-07, so the
+sweep is available now.
 
 ### site-favicon — The site has no favicon
 
@@ -113,34 +113,21 @@ puts an entry here in the first place.
 
 Gabriel's decision, 2026-09-03: every Claude instance keeps its files under the
 project folder, for security. A worktree at `.claude/worktrees/<slug>` satisfies
-that — it is gitignored, and `tests/docs-check.js` deliberately refuses to walk
-into hidden directories so a worktree's `TODO.md` is never read as this branch's.
-A sibling directory outside the repo does not.
+that — it is gitignored, and `tests/docs-check.js` refuses to walk into hidden
+directories so a worktree's `TODO.md` is never read as this branch's. A sibling
+directory outside the repo does not.
 
-It happened once, on `sudoku-puzzle-quality`. That worker had been spawned before
-`WORKER.md` existed, so its instructions never mentioned a worktree at all; when
-it was told mid-task to create one, it ran `git worktree add` by hand and put the
-tree at `/home/g/git/gabe-sd.github.io.worktrees/<slug>`. That is the ordinary git
-convention — most guides put worktrees outside the repo, because inside needs a
-gitignore entry — so it was a reasonable choice made in the absence of any
-instruction. Nothing in the repo said otherwise where a worker would look: the
-location was recorded only in `tests/README.md` and a comment in
-`tests/docs-check.js`, both harness files a game fix has no reason to open.
-
-Nothing is being changed for it. `WORKER.md` now gives the path in the command
-itself, which is the fix for exactly this case — an agent that was going to run
-the command by hand now has the path in front of it. This entry exists to record
-the decision and to set the trigger:
+It happened once, on a worker spawned before `WORKER.md` existed, whose
+instructions never mentioned a worktree at all. Nothing is being changed for it:
+`WORKER.md` now carries the path inside the command, which is the fix for exactly
+that case. This entry exists to set the trigger:
 
 **If a worker that has read `WORKER.md` still puts a tree outside the project
 folder, the doc is not enough and something structural is needed.** What that
-should be is not decided, and is Gabriel's call before anyone builds it. Note that
-the obvious candidate — a check that fails when `git worktree list` names a path
-outside the repo — is weaker than it sounds: a test runs after the tree already
-exists, so it reports rather than prevents. The cheapest thing that could work is
-already in place, which is the path sitting inside the command in `WORKER.md`.
-One instance with a known cause is not evidence a rule needs machinery behind
-it.
+should be is Gabriel's call before anyone builds it. The obvious candidate — a
+check that fails when `git worktree list` names a path outside the repo — is
+weaker than it sounds, because a test runs after the tree exists and so reports
+rather than prevents.
 
 ### workflow-cleared-worker-findings — "Report, never fix" assumes a live worker
 

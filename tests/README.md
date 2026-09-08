@@ -63,13 +63,10 @@ BASE_URL=http://localhost:3000 CHROME=/usr/bin/chromium node tests/chording.test
 
   And the shared frame: that every game wears it, that the breadcrumb is the
   link home, and — for a game whose `#board` is a canvas — that the rendered
-  content box equals the backing store exactly. That last one is not fussiness.
-  Pong shipped with a 600x400 surface rendered into 598 x 398.67, because
-  `shared.css` is `border-box` and the canvas had `width: 100%` plus a 1px
-  border. Every row was resampled, and on a near-black court a smeared 1px line
-  or 10px paddle is drawn across two pixels at half brightness. It does not read
-  as blurry, it reads as **absent** — the game was reported as broken, not as
-  soft.
+  content box equals the backing store exactly. That last one is not fussiness:
+  Pong shipped a 600x400 surface rendered into 598 x 398.67 and the resampling
+  made the paddles read as **absent** rather than soft. `games/pong/DESIGN.md`,
+  "The canvas is drawn 1:1", has the cause.
   It is the one suite that asserts about games it does not own, which is why it
   only ever tests the contract and never how a game plays.
 
@@ -194,14 +191,12 @@ every volley-sweep figure move a few percent run to run, and comparing two of th
 proves nothing on its own. Neither sweep's output says which is which, so a reader
 handed one row cannot tell.
 
-`REACH=1` answers the question the saves figure cannot, and which
-`games/pong/DESIGN.md` calls this harness's blind spot: it only ever asks whether
-the *ai* got a paddle to the ball. The reach columns fire the shot the other way
-at a perfectly driven paddle, and report the ball speed at which the worst shot
-a mode can produce stops being reachable at `PADDLE_SPEED` — a limit rather than
-a pass rate, because every mode saves 100% of ordinary shots and that number
-moves for nothing. A separate column says whether the ball ever beat a paddle
-pinned exactly on the intercept, which would be tunnelling and a bug.
+`REACH=1` answers the question the saves figure cannot — whether *you* could have
+reached the ball, rather than whether the ai did. It reports a limit rather than a
+pass rate, and a separate column says whether the ball ever beat a paddle pinned
+exactly on the intercept, which would be tunnelling and a bug. What the columns
+mean and what they measured is in `games/pong/DESIGN.md`, "Whether you could have
+reached it".
 
 Change this rather than writing a second one. A figure produced by a differently
 shaped harness cannot be compared with the ones already recorded, and comparing
