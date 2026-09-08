@@ -189,32 +189,49 @@ is nearly free once everything above has settled.
 
 Colour emoji are rendered by the OS font, not by ours, so they ignore the
 palette entirely and are the most visible remaining break in the look. Counted on
-`main` at 1487988, and it is four games rather than the two first reported:
+`main` at 946f476 by sweeping every served page and script for non-ASCII, which
+is the only method that finds a glyph living in a string that has not fired yet:
 
 | Game | Where | Glyphs |
 | --- | --- | --- |
-| minesweeper | HUD, and the board itself | `🚩` `⏱` `🏆`, and `💣` `🚩` as cell content |
+| minesweeper | HUD, board, settings button, win message | `🚩` `⏱` `🏆`, `💣` `🚩` as cell content, `⚙` on the settings button, `🎉` ×3 |
 | flappy-bird | HUD | `🐦` `🏆` |
+| pong | status line and the menu | `🎉` ×2 |
 | sudoku | status line | `🎉` |
-| pong | status line and the menu | `🎉` |
 
 Chess, Tic Tac Toe and the hub have none.
 
-Three different problems wearing one costume, and they do not have one answer:
+Four problems wearing one costume, and they do not have one answer:
 
 - **The HUD glyphs** are labels — flags left, time, best. VT323 has no icons, so
   replacing them means a word, an abbreviation or a drawn glyph.
+- **`⚙` is a control's icon**, which is neither of the above. The frame already
+  does this job without an emoji: Pong and Flappy Bird label How to play with a
+  plain `?`. So the cheap answer may be a character rather than a drawing.
 - **Minesweeper's `💣` and `🚩` are the game's content**, not decoration. They are
   what a cell *is*. Chess solved the same problem by drawing its pieces rather
   than typing them, which is the precedent worth reading first —
   `games/chess/DESIGN.md`.
-- **The two `🎉`** are a tone choice in a win message, not a palette problem.
-  Deleting them is a one-character diff; whether the site wants to sound like
-  that is Gabriel's call, and they are in `#status` text, which is prose he owns.
+- **The six `🎉`** are a tone choice in a win message, not a palette problem.
+  Deleting them is a one-character diff each; whether the site wants to sound
+  like that is Gabriel's call, and they are in `#status` text, which is prose he
+  owns.
 
-**Pong is the one to notice.** It went through a full redesign phase and kept its
+**Not in this entry, and worth a look while someone is in here:** `⌫` in Sudoku
+and `↑` `↓` `▶` in Pong and Flappy Bird. They are monochrome symbols that render
+in the page font rather than colour emoji, so they may be fine exactly as they
+are — but nobody has checked them against the phosphor palette.
+
+**Pong is the one to notice.** It went through a full redesign phase and kept two
 `🎉`, which says a game's own phase will not necessarily catch these — nobody was
 looking for them. Hence one entry across all four rather than a line in each.
+
+**This entry was wrong once already, in the direction that matters.** It first
+listed three of the five kinds and read as complete, because the count behind it
+came from screenshots and a narrow grep — and a screenshot cannot show a win
+message that has not fired, or a string that only exists in a script. If the list
+is edited again, sweep for non-ASCII across pages *and* scripts rather than
+grepping for the glyphs already known about.
 
 If the four game phases above run, each can take its own game's share and this
 entry shrinks to whatever is left. If they do not, this is worth doing on its own.
