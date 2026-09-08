@@ -70,26 +70,19 @@ It is the front page of a public repo, but it reads like the internal docs besid
 it. Review with Gabriel before rewriting — what a visitor should get from it is
 his call.
 
-### site-page-contract-stale — `CLAUDE.md`'s page contract describes the pre-frame page
+### site-dead-shared-rules — Three rules in `shared.css` are used by nothing
 
-Two lines in "The page contract" stopped being true when all six games took the
-shared frame, and neither is an agent's to change — `CLAUDE.md` is Gabriel's, and
-`ART-DIRECTOR.md` says propose rather than touch. Recorded here so the correction
-is not lost with the session that found it.
+`.page`, `.hint` and `.back-link` are styled in `shared.css` and applied by no
+page on the site. The frame replaced all three: a game page is `.game-page`, its
+link home is the breadcrumb, and standing instructions live in the collapsible
+panel rather than a hint line. The design mockups under `design/` do use `.page`
+and `.hint`, but they are self-contained and define their own — deleting these
+rules cannot touch them.
 
-- It says a game "links `../../shared.css` **first**, then its own `style.css`".
-  There are three sheets now: `shared.css`, then `game.css`, then the game's own,
-  in that order. The order is load-bearing — the game's sheet loads last so it can
-  override the frame — and `tests/contract.test.js` asserts it. A worker adding a
-  game from the contract alone would not know `game.css` is allowed, let alone
-  required.
-- It lists `.back-link` among what `shared.css` styles for a game page. No game
-  uses it: the frame's breadcrumb is the contract's link home. The rule in
-  `shared.css` is dead but harmless, and deleting it before the contract is
-  corrected would leave the two disagreeing the other way round.
-
-Both are one-line edits. Neither is urgent; both mislead the next person to read
-the contract, which is the one document a new game is built from.
+Left in place deliberately for now. The contract in `CLAUDE.md` was the thing
+actively misleading readers and it has been corrected; the rules themselves cost
+nothing but the bytes, and `shared.css` is the art director's while the redesign
+is in flight. Worth sweeping once it lands.
 
 ### site-favicon — The site has no favicon
 

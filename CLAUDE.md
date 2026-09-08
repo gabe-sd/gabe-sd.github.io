@@ -293,10 +293,16 @@ from a list anyone has to extend.
 
 Each game page follows a contract that `shared.css` depends on:
 
-- Links `../../shared.css` **first**, then its own `style.css`.
+- Links three stylesheets, in this order: `../../shared.css`, then
+  `../../game.css`, then its own `style.css`. The order is load-bearing — the
+  game's own sheet loads last so it can override the frame — and
+  `tests/contract.test.js` asserts it. `shared.css` carries the tokens and the
+  controls; `game.css` is the frame every game page wears (`.game-page`,
+  `.crumb`, `.game-title`, `.game-strap`, `.game-stage`, `.hud`, `.instructions`,
+  `.game-foot`).
 - Uses the ids `#board`, `#status`, `#restart`. Game scripts look these up by id,
-  and `shared.css` styles `.page`, `.status`, `.hint`, `.btn` (with `.secondary`
-  and `.icon`), `.controls`, `.back-link` for them.
+  and `shared.css` styles `.status`, `.btn` (with `.secondary` and `.icon`) and
+  `.controls` for them.
 - **May add ids of its own, and writes them down in its own `DESIGN.md`.**
   `tests/docs-check.js` holds every id in a game page against that game's doc, so
   an id added to a page and never written down fails the check — which is the
@@ -329,9 +335,11 @@ are both read from the folder and the script rather than from a list, so a new
 game is covered the day its folder exists.
 
 `shared.css` owns the theme as CSS custom properties (`--bg`, `--fg`, `--card-bg`,
-`--cell-bg`, `--cell-border`, `--accent`, `--win`, `--lose`, `--muted`) which flip
-under `prefers-color-scheme: dark`. Per-game stylesheets should consume these
-tokens rather than hardcoding colours, so a game restyles with the theme for free.
+`--cell-bg`, `--cell-border`, `--accent`, `--win`, `--lose`, `--muted`). The
+palette is **dark only** — there is no `prefers-color-scheme` rule anywhere in
+the site's CSS, so a token has one value and nothing flips. Per-game stylesheets
+should consume these tokens rather than hardcoding colours, so a game restyles
+with the theme for free. `game.css` styles the frame those pages share, and
 `hub.css` applies only to the root page.
 
 ### Scripts are classic, not modules
