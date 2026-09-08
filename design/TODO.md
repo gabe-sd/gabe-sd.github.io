@@ -135,7 +135,20 @@ this entry is for.
 Mostly `style.css`. The one real piece of work is `.n1` through `.n8`, eight
 hardcoded number colours that are the only place in the site with a palette of
 their own. They have to stay distinguishable from each other *and* legible on the
-phosphor ground, which the current eight will not be.
+phosphor ground.
+
+**Corrected 2026-09-07, and this entry used to say the opposite.** It claimed the
+current eight "will not be" legible on the phosphor ground. That was written
+before the palette existed and was never checked. It has been now — all eight
+forced onto a real board and read, once the redesign was live — and they are
+legible. What is wrong with them is that they are the *old* palette, not that
+they cannot be seen.
+
+So this is a recolour to fit the new look rather than a legibility rescue, and it
+is a smaller job than the entry implied. Distinguishable-from-each-other is still
+the constraint that makes it non-trivial: eight hues that stay apart from one
+another on a near-black ground, without any of them reading as the amber the rest
+of the site uses for ordinary text.
 
 ### redesign-sudoku — Sudoku
 
