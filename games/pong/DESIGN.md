@@ -240,13 +240,8 @@ knob names its own off value, and a test holds the whole `AI` object to it. See
 Three modes, each a character rather than a notch on a scale.
 
 There used to be five. Easy, Medium and Hard differed in `AI` settings alone and
-were the only modes *without* powerups, which is precisely what killed them: once
-every mode had powerups the thing that distinguished the middle three was gone,
-and five names described three real differences. They are worth remembering for
-what they cost — while they existed, the middle three all played an identical
-ball, which was the only reason the share of shots the ai saves compared honestly
-between them. Nothing does now. Every mode is measured against its own game, and
-`tests/ai-sweep.js` is a reading of one mode, not a ranking across them.
+were the only modes *without* powerups, which is exactly what killed them: once
+every mode had powerups, five names described three real differences.
 
 **Normal is the one you are meant to play.** It is the only mode with no `game`
 half at all: stock ball, stock paddles, no handicap on either side. Its ai sits
@@ -326,17 +321,13 @@ and re-running it is how any new preset gets a comparable figure:
 
 | version | saves |
 | --- | --- |
-| original chasing AI | 88% |
-| first predictive AI | 91% |
 | after the human-feel work, before tuning | **100%** |
 | untuned defaults | ~92% |
-| Easy / Medium / Hard, while they existed | ~72% / ~86% / ~96% |
 | Assisted / Normal / Insane, each against its own game | ~82% / ~88% / ~99% |
 
-Assisted's ai saving more than Easy's did is not a mistake — see above. It is
-supposed to return the ball; the help is the player's paddle and the slow ball,
-neither of which this number can see. Normal landing where Medium did is
-deliberate: it is the mode that replaced it.
+**Assisted's ai is the strongest of the three relative to what it faces**, and
+that is not a mistake — see above. It is supposed to return the ball; the help is
+the player's paddle and the slow ball, neither of which this number can see.
 
 **These are three separate readings, not a ranking.** Every mode changes the
 ball, the paddles or both, so each number answers "how often does *this* mode's

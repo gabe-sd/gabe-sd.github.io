@@ -860,19 +860,6 @@ a real phosphor does. That works on a ten-cell sample and cannot work on a
 texture is a question of degree rather than of yes or no, and the ceiling is set
 by Minesweeper rather than by taste.
 
-**Eight distinguishable numbers do not exist inside one hue.** Five independent
-attempts converged on the same answer from different directions: a single-hue
-palette gets five or six steps, and the remaining two or three need a *second
-device* rather than another colour. The devices that worked were an underline
-under the glyph, an inverted cell, a dithered field, a border, and a weight
-change. Two of them also observed that splitting the eight into two visibly
-different halves — dark-on-light against light-on-dark — is worth more when
-actually reading a board than any single pair being maximally separated.
-
-That is a rule for `redesign-minesweeper` whichever palette wins: **do not spend
-the whole problem on hue.** A monochrome direction should plan on roughly six
-colours and two marks.
-
 **Chrome and other transparent-fill text takes `filter: drop-shadow`, never
 `text-shadow`.** With `-webkit-text-fill-color: transparent` a text shadow is
 drawn *through* the glyph rather than behind it, and a gradient fill turns to
@@ -887,21 +874,20 @@ red and green and a step lighter — `#6fdcf2`, `#5fd9a0`, `#ff7fcb`. The rule
 generalises past this palette: **an accent borrowed from a direction with a
 different ground is a starting point, not a value.**
 
-**Eight hues remove the need for a second device entirely.** The finding above
-says a single-hue palette gets five or six steps and the rest need an underline,
-an inverted cell or a border. The converse is worth stating because it is what
-the colour actually buys: with six guest hues plus the home hue plus one
-neutral, Amber Arcade's eight numbers need no mark at all, and the two rarest
-digits stop costing the player a decode. That is the clearest single difference
-between the coloured and monochrome readings of the same direction.
+**Eight hues remove the need for a second device.** A single-hue palette gets
+five or six distinguishable steps and the remaining two or three need a mark
+rather than another colour — an underline, an inverted cell, a border; five
+independent attempts converged on that. With six guest hues plus the home hue
+plus one neutral, Amber Arcade's eight numbers need no mark at all, and the two
+rarest digits stop costing the player a decode. That is the clearest single thing
+the colour buys, and it is what makes `redesign-minesweeper` a recolour rather
+than a hue-plus-marks problem.
 
 Measured rather than eyeballed, because at *as mocked* the texture is too subtle
 to judge from a screenshot: a scanline makes a column of pixels oscillate row to
 row, so the mean absolute row-to-row difference down one column separates
-textured from flat. Cold Terminal reads 11.33 through a hub tile and 5.31
-through a board panel; Cold Terminal Mk II reads the identical 11.33 through the
-tile and **0** through the board panel. Cold is the control — its non-zero board
-figure is what proves the probe detects texture where texture exists.
+textured from flat. Probe a region known to be textured as a control, or a zero
+reading cannot be told from a broken probe.
 
 ## Where the exploration is kept
 

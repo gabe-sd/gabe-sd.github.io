@@ -19,15 +19,6 @@ Everything below is cut from `main` — the redesign's integration branch merged
 ref is gone. An entry cut from anything else says so on its own line: visual work
 sometimes runs on an integration branch, and `INTEGRATOR.md` describes how that works.
 
-```markdown
-### <slug> — <one line saying what changes>
-
-**Branch from:** <base branch>
-
-What it covers, what it must not break, and anything already ruled out. Long
-enough to start on without rediscovering the constraints.
-```
-
 ---
 
 # The redesign
@@ -49,13 +40,11 @@ live rather than history:
 
 ## Phases
 
-Each is one session, one branch, one merge. **Whether these four still run is
-Gabriel's to say, and nobody has asked him.** The overhaul landed on `main` on
-2026-09-07 with the hub, the shell, chess and Pong redesigned and the other four games
-framed but not restyled inside. That is a coherent place to stop — a framed page with
-a pre-redesign interior was always the expected halfway state, not a defect. So the
-question is live rather than rhetorical: finish the four, or call the redesign done
-and let each game's interior wait for a reason of its own. Ask before starting one.
+Each is one session, one branch, one merge. **Gabriel confirmed on 2026-09-08 that all
+four run.** His words: the redesign is playable and about 90% done, but not finished —
+each of the four remaining games still needs its visual pass. The overhaul landed on
+`main` on 2026-09-07 with the hub, the shell, chess and Pong redesigned and the other
+four framed but not restyled inside.
 
 **For all four: the frame has landed** — breadcrumb, title, strap, scanlines, footer
 and the shared `#instructions` panel are in place and covered by
@@ -73,15 +62,11 @@ palette or whether Flappy takes its own.
 Mostly `style.css`. The one real piece of work is `.n1` through `.n8`, eight hardcoded
 number colours that are the only place in the site with a palette of their own.
 
-**Corrected 2026-09-07, and this entry used to say the opposite.** It claimed the
-current eight "will not be" legible on the phosphor ground — written before the palette
-existed and never checked. It has been now: all eight were forced onto a real board and
-read, and they are legible. What is wrong with them is that they are the *old* palette.
-
-So this is a recolour rather than a legibility rescue, and smaller than the entry
-implied. Distinguishable-from-each-other is still what makes it non-trivial: eight hues
-that stay apart on a near-black ground, without any of them reading as the amber the
-rest of the site uses for ordinary text.
+All eight were forced onto a real board and read: they are legible on the phosphor
+ground, and the only thing wrong with them is that they are the *old* palette. So this
+is a recolour, not a legibility rescue. What makes it non-trivial is keeping the eight
+apart from **each other** on a near-black ground, without any of them reading as the
+amber the rest of the site uses for ordinary text.
 
 ### redesign-sudoku — Sudoku
 
@@ -130,14 +115,12 @@ page font, so they may be fine — but nobody has checked them against the palet
 `🎉`, which says a game's own phase will not necessarily catch these. Hence one entry
 across all four rather than a line in each.
 
-**This entry was wrong once already, in the direction that matters.** It first listed
-three of the five kinds and read as complete, because the count came from screenshots
-and a narrow grep — and a screenshot cannot show a win message that has not fired. If
-the list is edited again, sweep for non-ASCII across pages *and* scripts rather than
-grepping for the glyphs already known about.
+**If the list is edited, sweep for non-ASCII across pages *and* scripts** rather than
+grepping for the glyphs already known about. It was counted the narrow way once and
+came out three kinds short: a screenshot cannot show a win message that has not fired.
 
-If the four game phases run, each can take its own game's share and this shrinks to
-whatever is left. If they do not, this is worth doing on its own.
+The four game phases run, so each takes its own game's share and this shrinks to
+whatever is left over.
 
 ### redesign-category-accents — Decide whether colour by category stays
 

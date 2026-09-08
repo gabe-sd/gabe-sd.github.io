@@ -29,11 +29,12 @@ engineering the stylesheet. What is still open, and what has to be asked before
 ## This folder is temporary; the archive is not
 
 It stays while it is in use — it serves the preview and the build reads its
-values — and is **deleted once the redesign is finished**. At that point it is
-thirteen directions of a decision already made, and nothing is lost: the archive
-carries all of them and git history carries the source. See `design/TODO.md`
-under `redesign-tokens-hub` for the full reasoning, including why deleting it
-would have been wrong before the archive's fonts were embedded.
+values — and is **deleted once the redesign is finished**. Gabriel confirmed on
+2026-09-08 that it is not: the four remaining game phases in `design/TODO.md`
+still run, so this folder stays until they have. At that point it is thirteen
+directions of a decision already made, and nothing is lost — the archive carries
+all of them and git history carries the source. Deleting it before the archive's
+fonts were embedded would have been wrong, which is why it outlived the choice.
 
 A later round of directions builds a new gallery and a new dated archive rather
 than resurrecting this one.
@@ -45,9 +46,8 @@ than resurrecting this one.
 identical markup and identical copy — only its stylesheet differs, which is the
 point: what is being compared is the design, not the words.
 
-Two things in `gallery.js` are worth knowing before editing it. The order
-`index.html` links the variants is the only place the gallery's order is written
-down, and the archive build reads it from there. And a variant's `crt` field is
-its *current* texture setting, which the caption buttons write to — whether a
-direction has texture at all is `hasCrt`, captured once from the authored value.
-Gating anything on `crt` instead is what made choosing "none" delete the control.
+Two things to know before editing `gallery.js`. The order `index.html` links the
+variants is the only place the gallery's order is written down, and the archive
+build reads it from there. And a variant's `crt` field is its *current* texture
+setting, which the caption buttons write to; whether a direction has texture at
+all is `hasCrt`.

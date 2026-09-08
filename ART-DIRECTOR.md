@@ -201,7 +201,8 @@ Four things go with the branch:
 
 ## What is untested about this seat
 
-`CLAUDE.md` says the split as a whole is provisional and asks you to propose a better
-rule rather than working around one that bites. Specific to this seat: it is newer than
-the other two and was written before it had ever been occupied, which makes it the least
-tested document in the repo.
+This file was written before the seat had ever been occupied. It has been since — the
+redesign was built from it — so it is no longer the least tested document here. What
+remains untested is the part that needs two seats at once: "Working beside a worker"
+describes a split that only matters while an art director and a worker are live in the
+same game folder.

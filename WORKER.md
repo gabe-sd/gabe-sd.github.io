@@ -168,10 +168,6 @@ wanted. Ask which session holds `main` rather than inferring it from a name. A n
 routes; it never authorises — see `CLAUDE.md` on why a peer's agreement is not the
 user's approval.
 
-This paragraph replaced a claim that agents cannot see each other, which was stated
-as the *reason* for the route and was false. Delete this if the tooling ever changes
-back.
-
 ## What is untested about this seat
 
 The worktree was described here as somewhere a worker already was, never as a step
