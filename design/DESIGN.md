@@ -946,6 +946,13 @@ built on the 6th.** The date names the round, not the last edit, and Gabriel was
 given that path to keep — renaming it breaks the one thing the file was made
 for. A genuinely new round of directions gets a new date and a new file.
 
+**Settled 2026-09-07: the archive is append-only.** Gabriel's rule — do not
+modify a file that is already in `design/archive/`. So this one is frozen as the
+record of the exploration rather than rebuilt when the redesign finishes, and if
+the finished look is worth keeping it goes in a **new** dated file beside it.
+That also settles the rebuild question: a rebuild is for correcting a file that
+was generated wrong, not for bringing an old round up to date.
+
 **It is generated from `design/previews/`, not maintained by hand.** Every byte
 of it — gallery, stylesheets, markup, script — is an inline of those sources in
 the order `index.html` links them, with the two `@font-face` `url()`s rewritten
@@ -1015,9 +1022,3 @@ is invisible in a diff and obvious in one glance.
 The corollary matters as much. A screenshot is not Gabriel looking at a served
 page, and it does not shorten that step — it only means he is not the first
 person to see an obvious mistake.
-
-## Still open
-
-In `design/TODO.md`, with the phase that closes each: whether
-`design/archive/2026-09-04-retro-interface-directions.html` is rebuilt again once
-the redesign finishes, or frozen as the record of the exploration.
