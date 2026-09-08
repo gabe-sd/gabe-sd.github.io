@@ -1,71 +1,278 @@
-#board {
+/* Chess: the vector grid.
+ *
+ * The board is *drawn*, not filled — a hairline around every square and a 5%
+ * amber wash on the dark ones, with the light squares carrying no fill at all.
+ * That is the answer to the two-square-colour question design/TODO.md called
+ * the hardest one in the redesign, and it answers it by not answering it: a
+ * board made of lines reads as a vector display rather than as a chess set
+ * photographed at night. See design/DESIGN.md, "Chess: the vector grid", for
+ * the three directions this was chosen over.
+ *
+ * The pieces are stroke SVG on the hub's own 48x48 icon grid at the hub's own
+ * weight, so the site has one drawing hand. They replaced Unicode chess glyphs,
+ * which VT323 does not contain — every one of them was being served by whatever
+ * face the reader's OS happened to fall back to.
+ */
+
+.board-stack {
+  /* Owned here rather than on #board because the trays and the file letters
+     are siblings of the board and have to match its width. Put it on #board
+     and a later change to the square size silently leaves them behind. */
+  --sq: 54px;
+
+  /* The move marks follow the side to move: amber while White is thinking,
+     jade while Black is. #board carries data-turn; the script sets it. */
+  --mark: var(--p-amber);
+
   display: grid;
-  grid-template-columns: repeat(8, minmax(38px, 60px));
-  grid-template-rows: repeat(8, minmax(38px, 60px));
-  border: 3px solid var(--cell-border);
-  border-radius: 6px;
-  overflow: hidden;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto auto auto;
+  gap: 0.35rem 0.5rem;
+  align-items: center;
+}
+
+/* ---------- the coordinates ---------- */
+
+.ranks {
+  grid-row: 2;
+  grid-column: 1;
+  display: grid;
+  grid-template-rows: repeat(8, var(--sq));
+  align-items: center;
+  justify-items: center;
+  color: var(--p-dim);
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+}
+
+.files {
+  grid-row: 4;
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: repeat(8, var(--sq));
+  justify-items: center;
+  color: var(--p-dim);
+  font-size: 0.9rem;
+  letter-spacing: 0.14em;
+}
+
+/* ---------- the board ---------- */
+
+/* The ground is a shade under --cell-bg because the squares themselves carry
+   no fill and the hairline needs something to sit on. */
+#board {
+  grid-row: 2;
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: repeat(8, var(--sq));
+  grid-template-rows: repeat(8, var(--sq));
+  background: #080503;
+  border: 1px solid var(--p-rule);
+  border-radius: 0;
 }
 
 .square {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
   cursor: pointer;
-  position: relative;
   user-select: none;
+  /* The grid itself. Half a pixel, because a full one reads as a table. */
+  box-shadow: inset 0 0 0 0.5px rgba(255, 176, 0, 0.13);
 }
 
-.square.light {
-  background: #eeeed2;
-}
+/* A light square is *nothing*. The dark one is a 5% amber wash. */
+.square.light { background-color: transparent; }
+.square.dark { background-color: rgba(255, 176, 0, 0.05); }
 
-.square.dark {
-  background: #769656;
-}
+/* ---------- the pieces ---------- */
 
-@media (prefers-color-scheme: dark) {
-  .square.light {
-    background: #b9bfc9;
-  }
-  .square.dark {
-    background: #3f4a3d;
-  }
-}
-
-.square.selected {
-  outline: 3px solid var(--accent);
-  outline-offset: -3px;
-}
-
-.square.check {
-  background: var(--lose);
+/* Colour arrives entirely through currentColor, so no piece needs a rule of
+   its own — which is what lets the same markup serve the board and the dimmed
+   capture trays. See PIECE_PATHS in script.js. */
+#board svg {
+  width: 78%;
+  height: 78%;
+  position: relative;
+  z-index: 2;
 }
 
 .piece-w {
-  color: #fbfbfb;
-  text-shadow: 0 0 2px #000, 0 0 1px #000, 0 1px 1px #000;
+  color: var(--p-pale);
+  filter: drop-shadow(0 0 5px rgba(255, 214, 148, 0.5));
 }
 
 .piece-b {
-  color: #14141a;
-  text-shadow: 0 0 2px #fff, 0 0 1px #fff;
+  color: var(--p-jade);
+  filter: drop-shadow(0 0 5px rgba(95, 217, 160, 0.4));
 }
 
+/* ---------- the marks ---------- */
+
+/* Four of these can land on one square at once — the king you just moved, into
+   check, while it is selected — so each takes a layer of its own rather than
+   sharing ::after. An element has one ::after, and the reference CSS this was
+   built from put `last`, `selected` and `check` all on it: source order won and
+   selecting a checked king silently lost its ring. Layers, low to high:
+   background-image (check wash), ::before (last move), ::after (selection),
+   .dot/.ring at z-index 1, the piece itself at z-index 2. */
+
+/* Last move, on both squares. Faint on purpose: it is history, not a prompt. */
+.square.last::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 176, 0, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 176, 0, 0.22);
+}
+
+/* Selected: the lit-cell value plus a hard amber inset. The fill matters as
+   much as the outline — an outline alone disappears against the piece standing
+   inside it. */
+.square.selected { background-color: var(--p-panel-lit); }
+
+.square.selected::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 2px var(--p-amber), 0 0 16px rgba(255, 176, 0, 0.35);
+}
+
+/* Legal move: a block, not a circle. A circle is what every other chess site
+   draws; a square pixel is what a display like this one draws. */
 .square .dot {
   position: absolute;
-  width: 22%;
-  height: 22%;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.35);
+  width: 26%;
+  height: 26%;
+  border-radius: 0;
+  background: var(--mark);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--mark) 60%, transparent);
+  opacity: 0.9;
   pointer-events: none;
+  z-index: 1;
 }
 
+/* Capture: four corner brackets, a targeting reticle. Eight background
+   gradients rather than four elements, so it stays one span. */
 .square .ring {
   position: absolute;
-  inset: 8%;
-  border: 4px solid rgba(0, 0, 0, 0.35);
-  border-radius: 50%;
+  inset: 6%;
+  border: 0;
+  border-radius: 0;
   pointer-events: none;
+  z-index: 1;
+  background:
+    linear-gradient(var(--mark) 0 0) 0 0 / 30% 2px no-repeat,
+    linear-gradient(var(--mark) 0 0) 0 0 / 2px 30% no-repeat,
+    linear-gradient(var(--mark) 0 0) 100% 0 / 30% 2px no-repeat,
+    linear-gradient(var(--mark) 0 0) 100% 0 / 2px 30% no-repeat,
+    linear-gradient(var(--mark) 0 0) 0 100% / 30% 2px no-repeat,
+    linear-gradient(var(--mark) 0 0) 0 100% / 2px 30% no-repeat,
+    linear-gradient(var(--mark) 0 0) 100% 100% / 30% 2px no-repeat,
+    linear-gradient(var(--mark) 0 0) 100% 100% / 2px 30% no-repeat;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--mark) 55%, transparent));
+}
+
+/* Check is the one mark that is not amber, and the only place coral appears on
+   this board. It rides on the square's own background-image and box-shadow so
+   it composes with a selection ring and a last-move wash instead of replacing
+   one. It replaces an older rule that filled the whole square with --lose,
+   which buried the king it was pointing at. */
+.square.check {
+  background-image: linear-gradient(rgba(255, 106, 86, 0.1) 0 0);
+  box-shadow:
+    inset 0 0 0 2px var(--p-coral),
+    inset 0 0 18px rgba(255, 106, 86, 0.45),
+    inset 0 0 0 0.5px rgba(255, 176, 0, 0.13);
+}
+
+/* Black to move: every move mark flips to Black's own hue. One colour means
+   one side, which is the same reading rule the pieces follow. */
+#board[data-turn="b"] { --mark: var(--p-jade); }
+
+/* ---------- the capture trays ---------- */
+
+/* One on each edge, width-matched to the board so they line up with the files.
+   Black's sits on Black's edge, White's on White's: the edge says who took
+   them, and the piece's own hue says whose they were, so neither needs a label. */
+.tray {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 34px;
+  padding: 0.1rem 0;
+  width: calc(var(--sq) * 8);
+}
+
+#taken-by-black { grid-row: 1; }
+#taken-by-white { grid-row: 3; }
+
+.tray .pcs {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  min-height: 26px;
+}
+
+.tray .pcs svg {
+  width: 26px;
+  height: 26px;
+  display: block;
+}
+
+/* A captured piece keeps its own side's hue, dimmed and unbloomed: it is spent,
+   not in play, and must not compete with the live board an inch away. */
+.tray .pcs svg.piece-w {
+  color: color-mix(in srgb, var(--p-pale) 42%, var(--p-hairline));
+  filter: none;
+}
+
+.tray .pcs svg.piece-b {
+  color: color-mix(in srgb, var(--p-jade) 42%, var(--p-hairline));
+  filter: none;
+}
+
+/* One number on the whole board: the material difference, carried only by the
+   side that is ahead, sitting half a space after its last captured piece. */
+.tray .adv {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+#taken-by-black .adv {
+  color: var(--p-jade);
+  text-shadow: 0 0 10px rgba(95, 217, 160, 0.4);
+}
+
+#taken-by-white .adv {
+  color: var(--p-pale);
+  text-shadow: var(--bloom);
+}
+
+/* ---------- the strap ---------- */
+
+/* The side named in the status line wears its own army's colour, so the
+   sentence and the board agree without being read twice. The class carries it
+   rather than the turn does, because at checkmate the side named is the winner
+   and the side to move is the one that lost. */
+.game-strap .who.w { color: var(--p-pale); }
+.game-strap .who.b { color: var(--p-jade); }
+
+/* ---------- smaller screens ---------- */
+
+/* Eight 54px squares plus the coordinate gutter do not fit a phone. The square
+   comes down first; the coordinates are the first thing to drop after that,
+   because a board you can read beats a board you can name squares on. */
+@media (max-width: 620px) {
+  .board-stack { --sq: 42px; }
+  .tray .pcs svg { width: 22px; height: 22px; }
+}
+
+@media (max-width: 460px) {
+  .board-stack { --sq: 36px; }
+  .ranks, .files { display: none; }
+  .tray .pcs svg { width: 18px; height: 18px; }
+  .tray { min-height: 26px; }
 }

@@ -1,0 +1,730 @@
+/* 10 — Neon Cabinet
+ *
+ * The arcade, not the terminal. Not the screen you played on — the room you
+ * played in: a dark violet room, glass tube signage, chrome on the marquee,
+ * and a floor grid running off to a horizon.
+ *
+ * Two decisions carry this variant, and both are answers to the obvious ways
+ * it fails.
+ *
+ * 1. CYAN LEADS, MAGENTA HAS ONE JOB. Two equally-weighted accents is a page
+ *    with no hierarchy. So cyan is the working colour — structure, hairlines,
+ *    labels, the unlit state of everything — and magenta means exactly one
+ *    thing: *the item you have singled out*. The selected tile, the active nav
+ *    link, the CTA belonging to that tile, the flag you planted, the paddle
+ *    that is not yours. At most one magenta object is on screen at a time and
+ *    it is always the answer to "which one?". That is why hovering a tile is
+ *    what turns it magenta rather than merely brightening its cyan.
+ *
+ * 2. THE LAYOUT SURVIVES THE GLOW BEING SWITCHED OFF. Tested by setting every
+ *    text-shadow and box-shadow to none: what is left is a 3-up grid of glass
+ *    panels with an icon well, a hairline top rule, a left-barred info slab and
+ *    a sample strip on the same 1px grid. The glow is lighting on a built set,
+ *    not a substitute for building one.
+ *
+ * Tube glow is layered, never one flat shadow: a white-hot core, a tight
+ * saturated ring, a wide bloom and a very wide faint one. A single
+ * `text-shadow: 0 0 8px magenta` is the tell of a CSS demo and it was the
+ * first thing tried and thrown out here.
+ */
+
+#v-neon {
+  /* The dark has a colour. This is the whole difference between this variant
+   * and the phosphor ones — #0d0618 is a violet-black room, not a black one. */
+  --room: #0d0618;
+  --room-deep: #070311;
+  --panel: #170e2b;
+  --panel-lit: #241541;
+  --well: #0a0518;
+
+  --cyan: #00e5ff;
+  --cyan-soft: #8fd8e8;
+  --magenta: #ff2d95;
+
+  --txt: #ece7f8;         /* body copy: near-white, faintly violet */
+  --txt-dim: #b0a4cc;     /* labels and meta. 7.4:1 on --room; the floor for
+                           * anything with words in it. Nothing readable is
+                           * allowed below this. */
+  --hair: rgba(0, 229, 255, 0.22);
+  --hair-soft: rgba(160, 200, 255, 0.13);
+
+  /* The mine icon punches its highlight with this; the default near-black
+   * would read as a hole cut in a lit tile rather than in the panel. */
+  --icon-hole: #170e2b;
+
+  /* The tube. Four layers, in order: white core, saturated tight ring, bloom,
+   * far falloff. Applied to text via text-shadow; boxes get their own stacks. */
+  --tube-c: 0 0 1px rgba(255, 255, 255, 0.95), 0 0 4px rgba(190, 245, 255, 0.8),
+            0 0 12px rgba(0, 229, 255, 0.7), 0 0 34px rgba(0, 170, 255, 0.35);
+  --tube-m: 0 0 1px rgba(255, 255, 255, 0.9), 0 0 4px rgba(255, 200, 230, 0.75),
+            0 0 13px rgba(255, 45, 149, 0.7), 0 0 36px rgba(255, 45, 149, 0.32);
+
+  background: var(--room);
+  color: var(--txt);
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------------ room */
+
+/* The floor. A plane of gradient lines laid down in real perspective —
+ * rotateX around its own top edge, so the top edge *is* the horizon and the
+ * verticals converge to a point above it. Faked with a stack of ever-thinner
+ * repeating gradients it never converges properly and reads as corrugation;
+ * the transform is worth the one extra pseudo-element.
+ *
+ * The band is a fixed 300px, NOT a percentage of the section. As a percentage
+ * it scales with the page: on this content it grew to a 900px floor that ran
+ * straight through the info panel and laid a stray magenta rule across it. A
+ * room has one floor of one size however tall the wall above it is.
+ *
+ * Masked to nothing at the horizon and at the near edge: this is atmosphere.
+ * If you notice it before you notice the games it is too strong. */
+#v-neon .deco {
+  background:
+    /* the sign's own light, bouncing off the back wall */
+    radial-gradient(78% 46% at 50% 4%, rgba(255, 45, 149, 0.16), transparent 68%),
+    radial-gradient(120% 60% at 50% 56%, rgba(0, 120, 200, 0.13), transparent 72%),
+    linear-gradient(180deg, var(--room) 0%, #100822 52%, var(--room-deep) 100%);
+}
+
+#v-neon .deco::before {
+  content: "";
+  position: absolute;
+  left: -50%;
+  right: -50%;
+  bottom: 0;
+  height: 300px;
+  background:
+    repeating-linear-gradient(to right,
+      rgba(0, 229, 255, 0.55) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(to bottom,
+      rgba(0, 229, 255, 0.45) 0 1px, transparent 1px 30px);
+  transform: perspective(190px) rotateX(63deg);
+  transform-origin: 50% 0;
+  opacity: 0.2;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 34%, #000 76%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 34%, #000 76%, transparent 100%);
+}
+
+/* The horizon: a bloom, with no line in it at all.
+ *
+ * This started as a crisp 1px magenta rule, which is what every synthwave
+ * grid has, and it was the single worst element on the page — the floor is a
+ * fixed height so the rule lands at an arbitrary point in the content, and
+ * twice it came down straight across a panel and read as a stray divider
+ * somebody had left behind. A haze has no edge to land badly. The floor's own
+ * mask already fades the grid out at the far end, so nothing is lost. */
+#v-neon .deco::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 250px;
+  height: 130px;
+  background: radial-gradient(58% 100% at 50% 100%,
+    rgba(255, 45, 149, 0.2), rgba(190, 45, 180, 0.07) 55%, transparent 78%);
+}
+
+#v-neon .screen {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2.1rem 1.5rem 3.4rem;
+}
+
+/* ---------------------------------------------------------------- marquee */
+
+#v-neon .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--hair);
+  box-shadow: 0 1px 12px rgba(0, 229, 255, 0.12);
+}
+
+/* Chrome, the way an arcade marquee does it: a vertical gradient with a hard
+ * break at the middle (the horizon reflected in polished metal), cool white
+ * above, warm gold below. Orbitron finally earns its keep here — a wide techno
+ * face is right for exactly one word on a sign and wrong for everything else,
+ * so it appears in precisely four places on this page and never in body copy.
+ *
+ * The bloom is a filter and not a text-shadow: with -webkit-text-fill-color
+ * transparent a text-shadow shows *through* the glyph and turns the chrome to
+ * mud. drop-shadow works on the composited result instead. */
+#v-neon .brand {
+  font-family: 'Orbitron', 'Space Grotesk', sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.5rem, 4.4vw, 2.35rem);
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  background: linear-gradient(180deg,
+    #ffffff 0%, #d9ecf7 22%, #8496ad 46%, #2f3b4e 50%,
+    #93a8bd 55%, #ffeec4 74%, #e2ab53 89%, #7d5a25 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter:
+    drop-shadow(0 1px 0 rgba(0, 0, 0, 0.75))
+    drop-shadow(0 0 14px rgba(0, 229, 255, 0.3))
+    drop-shadow(0 0 40px rgba(255, 45, 149, 0.22));
+}
+
+#v-neon .nav {
+  display: flex;
+  gap: 1.4rem;
+  padding-bottom: 0.2rem;
+}
+
+#v-neon .nav a {
+  position: relative;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  color: var(--txt-dim);
+  text-decoration: none;
+  padding-bottom: 0.3rem;
+  transition: color 0.15s ease, text-shadow 0.15s ease;
+}
+
+#v-neon .nav a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--magenta);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+#v-neon .nav a:hover { color: var(--cyan); text-shadow: var(--tube-c); }
+
+/* Magenta = the one you are on. Underlined as well as coloured, so the state
+ * is not carried by hue alone. */
+#v-neon .nav a.active { color: #ffd6e9; text-shadow: var(--tube-m); }
+#v-neon .nav a.active::after {
+  opacity: 1;
+  box-shadow: 0 0 8px var(--magenta), 0 0 20px rgba(255, 45, 149, 0.5);
+}
+
+#v-neon .strap {
+  margin: 0.85rem 0 1.7rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--cyan-soft);
+  text-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+}
+
+/* ------------------------------------------------------------------ grid */
+
+#v-neon .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.85rem;
+}
+
+/* Dark glass: a panel barely lighter than the room, a top-edge highlight where
+ * the light catches the bevel, and one hairline outline. Everything that makes
+ * this readable — the icon well, the three-column split, the rule — is
+ * geometry, and survives the tubes being switched off. */
+#v-neon .tile {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "ico name num"
+    "ico desc desc"
+    "ico cat  cat";
+  column-gap: 0.9rem;
+  align-items: start;
+  padding: 0.95rem 1rem 0.9rem;
+  border-radius: 4px;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.008) 60%),
+    var(--panel);
+  box-shadow:
+    inset 0 0 0 1px var(--hair),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  color: var(--txt);
+  text-decoration: none;
+  transition: transform 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+/* The tube along the top edge of the tile. Dark until the tile is chosen —
+ * this is the "warming up", and it is the main non-colour selection signal. */
+#v-neon .tile::before {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  top: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(0, 229, 255, 0.18);
+  transition: background 0.16s ease, box-shadow 0.16s ease, left 0.16s ease, right 0.16s ease;
+}
+
+#v-neon .tico {
+  grid-area: ico;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 3px;
+  background: var(--well);
+  box-shadow: inset 0 0 0 1px var(--hair-soft);
+  color: var(--cyan-soft);
+  transition: color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+#v-neon .ico { width: 32px; height: 32px; }
+
+#v-neon .tname {
+  grid-area: name;
+  font-size: 0.96rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fdfbff;
+  align-self: center;
+}
+
+/* Kept, not hidden. The tiles are big enough to carry a line of real copy, and
+ * a page of nothing but tracked caps is a page you cannot actually read. */
+#v-neon .tdesc {
+  grid-area: desc;
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.79rem;
+  line-height: 1.4;
+  color: var(--txt-dim);
+}
+
+#v-neon .tcat {
+  grid-area: cat;
+  margin-top: 0.5rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--cyan-soft);
+}
+
+/* Space Grotesk, not Orbitron: Orbitron's zero is slashed, so "01" came out
+ * "Ø1" six times down the grid and read as a glitch rather than a catalogue
+ * number. Orbitron keeps the slash where it belongs — the Pong score. */
+#v-neon .tnum {
+  grid-area: num;
+  display: block;
+  font-weight: 700;
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  color: rgba(190, 178, 218, 0.88);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.16s ease;
+}
+
+/* Lit. Hover, focus and selection are one state here, because the gallery
+ * selects on hover — so there is a single "chosen" look and it is
+ * unmistakable: the tube strikes, the glass lifts and lightens, the outline
+ * goes magenta and the icon well warms. Four signals, one of them colour. */
+#v-neon .tile:hover,
+#v-neon .tile:focus-visible,
+#v-neon .tile.is-selected {
+  outline: none;
+  transform: translateY(-2px);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.09), rgba(255, 45, 149, 0.05) 70%),
+    var(--panel-lit);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 45, 149, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 0 22px rgba(255, 45, 149, 0.12),
+    0 0 16px rgba(255, 45, 149, 0.32),
+    0 0 44px rgba(255, 45, 149, 0.16);
+}
+
+#v-neon .tile:hover::before,
+#v-neon .tile:focus-visible::before,
+#v-neon .tile.is-selected::before {
+  left: 0.35rem;
+  right: 0.35rem;
+  background: #ffd9ec;
+  box-shadow: 0 0 6px var(--magenta), 0 0 16px rgba(255, 45, 149, 0.7),
+              0 0 38px rgba(255, 45, 149, 0.35);
+}
+
+#v-neon .tile:hover .tico,
+#v-neon .tile:focus-visible .tico,
+#v-neon .tile.is-selected .tico {
+  color: #ffffff;
+  background: #1d0f2c;
+  box-shadow: inset 0 0 0 1px rgba(255, 45, 149, 0.5), inset 0 0 18px rgba(255, 45, 149, 0.2);
+}
+
+#v-neon .tile:hover .tnum,
+#v-neon .tile:focus-visible .tnum,
+#v-neon .tile.is-selected .tnum { color: #ffc9e2; }
+
+#v-neon .tile:hover .tcat,
+#v-neon .tile:focus-visible .tcat,
+#v-neon .tile.is-selected .tcat { color: #ff8ec2; opacity: 1; }
+
+/* ------------------------------------------------------------ info panel */
+
+#v-neon .info {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "label cta"
+    "name  cta"
+    "meta  cta"
+    "desc  cta";
+  align-items: start;
+  column-gap: 1.5rem;
+  margin-top: 1.6rem;
+  padding: 1.05rem 1.3rem 1.1rem 1.5rem;
+  border-radius: 4px;
+  background:
+    linear-gradient(170deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.01) 65%),
+    var(--panel);
+  box-shadow: inset 0 0 0 1px var(--hair), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+/* The lit bar down the left edge: this panel is the continuation of whichever
+ * tile is chosen, so it carries the same magenta. */
+#v-neon .info::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.6rem;
+  bottom: 0.6rem;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--magenta);
+  box-shadow: 0 0 10px rgba(255, 45, 149, 0.7), 0 0 30px rgba(255, 45, 149, 0.3);
+}
+
+#v-neon .ilabel {
+  grid-area: label;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  color: var(--cyan);
+}
+
+#v-neon .inm {
+  grid-area: name;
+  margin-top: 0.25rem;
+  font-family: 'Orbitron', 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: clamp(1.25rem, 3.2vw, 1.75rem);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #f4fdff;
+  text-shadow: var(--tube-c);
+}
+
+#v-neon .imeta {
+  grid-area: meta;
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--cyan-soft);
+}
+
+#v-neon .idesc {
+  grid-area: desc;
+  margin-top: 0.35rem;
+  font-size: 0.92rem;
+  color: var(--txt);
+}
+
+#v-neon .icta {
+  grid-area: cta;
+  align-self: center;
+  padding: 0.6rem 1.15rem;
+  border-radius: 3px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  white-space: nowrap;
+  color: #ffe2f0;
+  /* 0.14 rather than the 0.09 this started at. With every shadow switched off
+   * the CTA was the one element that vanished — its edge was entirely an inset
+   * box-shadow — so the fill has to be enough to read as a button on its own. */
+  background: rgba(255, 45, 149, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 45, 149, 0.8), 0 0 14px rgba(255, 45, 149, 0.28);
+  text-shadow: var(--tube-m);
+}
+
+/* A tube striking: two failed attempts, then it holds. */
+#v-neon .info.is-launching .icta { animation: neon-strike 0.7s steps(1, end) 1; }
+
+@keyframes neon-strike {
+  0%, 8%    { background: rgba(255, 45, 149, 0.92); color: #1a0410; text-shadow: none; }
+  9%, 20%   { background: rgba(255, 45, 149, 0.04); color: #6b3350; text-shadow: none; }
+  21%, 30%  { background: rgba(255, 45, 149, 0.92); color: #1a0410; text-shadow: none; }
+  31%, 38%  { background: rgba(255, 45, 149, 0.04); color: #6b3350; text-shadow: none; }
+  39%, 100% { background: rgba(255, 45, 149, 0.95); color: #1a0410; text-shadow: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #v-neon .tile { transition: none; }
+  #v-neon .info.is-launching .icta {
+    animation: none;
+    background: rgba(255, 45, 149, 0.95);
+    color: #1a0410;
+    text-shadow: none;
+  }
+}
+
+/* ---------------------------------------------------------- game samples */
+
+#v-neon .sample { margin-top: 2.4rem; }
+
+#v-neon .sample-h {
+  margin: 0 0 0.8rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--txt-dim);
+}
+
+#v-neon .sample-row { display: flex; flex-wrap: wrap; gap: 0.85rem; align-items: flex-start; }
+
+#v-neon .sbox {
+  flex: 0 0 auto;
+  padding: 0.8rem 0.9rem 0.95rem;
+  border-radius: 4px;
+  background:
+    linear-gradient(170deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.008) 65%),
+    var(--panel);
+  box-shadow: inset 0 0 0 1px var(--hair-soft), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+#v-neon .sbox-h {
+  display: block;
+  margin-bottom: 0.6rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+
+/* Sudoku. The board sits in a well cut into the glass — darker than the panel,
+ * so the numbers have their own ground and the panel's sheen is not behind
+ * them. */
+/* max-content on both boards: the cell tracks are fixed, but the container is
+ * a block, so once the .sbox went full-width under 700px the grid's own
+ * background — the cyan gap colour — painted the whole remaining row as a slab
+ * with the board huddled at one end. */
+#v-neon .sgrid {
+  display: grid;
+  width: max-content;
+  grid-template-columns: repeat(3, 32px);
+  gap: 1px;
+  background: rgba(0, 229, 255, 0.2);
+  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.2);
+}
+
+#v-neon .scell {
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: var(--well);
+  font-family: 'Orbitron', monospace;
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: var(--txt);
+}
+
+#v-neon .scell.given { color: #ffffff; }
+#v-neon .scell.entered { color: var(--cyan); text-shadow: 0 0 8px rgba(0, 229, 255, 0.6); }
+
+/* The cursor is magenta because it is the singled-out cell — the same rule as
+ * the selected tile. Boxed as well as coloured. */
+#v-neon .scell.sel {
+  background: #23092a;
+  box-shadow: inset 0 0 0 1px var(--magenta), inset 0 0 10px rgba(255, 45, 149, 0.3);
+}
+
+#v-neon .mgrid {
+  display: flex;
+  width: max-content;
+  gap: 1px;
+  background: rgba(0, 229, 255, 0.2);
+  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.2);
+}
+
+#v-neon .mcell {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: var(--well);
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* Eight numbers on a violet-black ground.
+ *
+ * Hue first, brightness second: eight steps of brightness alone collapse the
+ * moment two of them are adjacent, so these are eight *hues* spaced round the
+ * wheel, with lightness varied only to keep neighbours apart. They are drawn
+ * from colours real gas tubes come in — cyan, argon green, gold, ice, orange,
+ * white, lavender, ruby — which is what keeps the set feeling like one sign
+ * rather than a swatch library.
+ *
+ * WHICH ONES GLOW: only 5–8. On a real board 1 and 2 are most of what is on
+ * screen, and four hundred glowing 1s is a smear, not a board — that is the
+ * failure this variant is most exposed to. So the common numbers are flat and
+ * sharp, and only the rare high ones are lit, which is also useful: the number
+ * that means "you are in trouble" is the one that catches the eye. The glow on
+ * those is a single tight ring, not the full four-layer tube. */
+#v-neon .n1 { color: #00e5ff; }                       /* cyan */
+#v-neon .n2 { color: #4dff9e; }                       /* argon green */
+#v-neon .n3 { color: #ffd23f; }                       /* gold */
+#v-neon .n4 { color: #8fb0e8; }                       /* ice — paler and greyer
+                                                       * than n1 on purpose, so
+                                                       * the two blues do not
+                                                       * read as one colour */
+#v-neon .n5 { color: #ff7a3d; text-shadow: 0 0 7px rgba(255, 122, 61, 0.55); }
+#v-neon .n6 { color: #ffffff; text-shadow: 0 0 7px rgba(200, 230, 255, 0.6); }
+#v-neon .n7 { color: #c9a0ff; text-shadow: 0 0 7px rgba(201, 160, 255, 0.6); }
+#v-neon .n8 { color: #ff3b5c; text-shadow: 0 0 8px rgba(255, 59, 92, 0.7); }
+
+/* Magenta again, and for the same reason: a flag is a cell you have singled
+ * out. Nothing else on a Minesweeper board is allowed this colour. */
+#v-neon .mcell.flag { color: var(--magenta); text-shadow: var(--tube-m); }
+
+#v-neon .mcell.hidden-cell {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.01)),
+    var(--panel-lit);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 0 0 1px rgba(0, 229, 255, 0.14);
+}
+
+/* Pong. */
+#v-neon .pbar {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+#v-neon .pscore {
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: 0.04em;
+  color: #f2fdff;
+  text-shadow: var(--tube-c);
+}
+
+#v-neon .plabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--txt-dim);
+}
+
+#v-neon .pdiv {
+  flex: 0 0 30px;
+  height: 1px;
+  background: var(--hair);
+}
+
+#v-neon .pcourt {
+  position: relative;
+  height: 58px;
+  margin-top: 0.65rem;
+  border-radius: 3px;
+  background: var(--well);
+  box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.22), inset 0 0 20px rgba(0, 0, 0, 0.6);
+}
+
+#v-neon .pcourt::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 5px;
+  bottom: 5px;
+  width: 1px;
+  background: repeating-linear-gradient(to bottom,
+    rgba(0, 229, 255, 0.55) 0 4px, transparent 4px 9px);
+}
+
+#v-neon .ppad {
+  position: absolute;
+  width: 4px;
+  height: 24px;
+  border-radius: 2px;
+}
+
+#v-neon .ppad.l {
+  left: 8px;
+  top: 12px;
+  background: var(--cyan);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.8), 0 0 22px rgba(0, 229, 255, 0.4);
+}
+
+/* The opponent is the singled-out object on this court, so it takes the
+ * magenta and you keep the house cyan. */
+#v-neon .ppad.r {
+  right: 8px;
+  top: 24px;
+  background: var(--magenta);
+  box-shadow: 0 0 8px rgba(255, 45, 149, 0.8), 0 0 22px rgba(255, 45, 149, 0.4);
+}
+
+#v-neon .pball {
+  position: absolute;
+  left: 63%;
+  top: 25px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 7px rgba(255, 255, 255, 0.9), 0 0 20px rgba(150, 220, 255, 0.6);
+}
+
+/* ------------------------------------------------------------------ foot */
+
+#v-neon .foot {
+  margin-top: 2.6rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--hair-soft);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  color: var(--txt-dim);
+}
+
+/* ---------------------------------------------------------------- narrow */
+
+@media (max-width: 700px) {
+  #v-neon .screen { padding: 1.5rem 1rem 2.6rem; }
+  #v-neon .top { align-items: baseline; }
+  #v-neon .grid { grid-template-columns: 1fr; }
+  #v-neon .info {
+    grid-template-columns: 1fr;
+    grid-template-areas: "label" "name" "meta" "desc" "cta";
+  }
+  #v-neon .icta { justify-self: start; margin-top: 0.85rem; }
+  /* The sample boxes keep their natural width and wrap. Stretching them to
+   * 100% left each board huddled at one end of a wide empty panel. */
+  #v-neon .deco::before { height: 200px; }
+  #v-neon .deco::after { bottom: 160px; }
+}

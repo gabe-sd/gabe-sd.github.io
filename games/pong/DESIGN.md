@@ -545,10 +545,17 @@ does.
 
 #### Three wind-ups, one colour
 
-Red means *the opponent is doing something to you*, and all three of its moves
-are red. That was fine while only two of them lived on its paddle; moving
-Squeeze's tell across made three identical wind-ups, and the reported symptom was
-exactly that — "what is it doing?".
+Coral means *the opponent*, and all three of its moves are coral. That was fine
+while only two of them lived on its paddle; moving Squeeze's tell across made
+three identical wind-ups, and the reported symptom was exactly that — "what is it
+doing?".
+
+It used to mean more than that. While a resting paddle was `--fg`, coral on the
+opponent's paddle also meant *something is happening* — a colour and an event at
+once. The opponent's paddle is coral all the time now, so the event half moved to
+where it always really lived: the **glow and the motion**. A quiet paddle is a
+flat block; a winding-up one throws light past its own edge and moves. The three
+still differ in behaviour and not in hue.
 
 They stay one colour and differ in **behaviour**, which `windUp` names.
 **Overdrive swells**: one long steady build, the slowest and largest of the
@@ -802,8 +809,15 @@ paddle joins that function rather than writing the field.
 Two things follow from the same idea. Expand cannot *arm* while Squeeze is active
 — `blockedBy` says so, with `""` as its off value — because being handed a bigger
 paddle mid-attack reads as the attack having failed. And a blocked move does not
-draw its tell either: a green paddle that is also small claims a gift you are not
-getting.
+draw its tell either: a paddle burning white-hot that is also small claims a gift
+you are not getting.
+
+**Expand tints `--p-hot`, not `hero`.** It used to paint the paddle rose, which
+worked while a resting paddle was `--fg`. Both paddles now rest in their own
+side's colour — see "The court" — so tinting yours rose would have been rose on
+rose, a tell that says nothing. White-hot reads as the same paddle turned up
+rather than as somebody else's, and `tintAs` on the ability spec is the one place
+that override lives.
 
 Each paddle carries its own `h`, eased towards `hTarget` over `resizeTicks` about
 its own centre. It is animated because an instant resize reads as a rendering
@@ -856,22 +870,119 @@ rather than hardcoding it. That was correct while the value could not change, an
 became a lie the moment it could: filling the element in once at load leaves it
 confidently wrong. It is refreshed wherever the win score is set, not at startup.
 
+## The court
+
+Everything drawn inside the 600x400 board, in the order `draw()` paints it. The
+split it obeys is `design/DESIGN.md`'s **chrome against screen**: the page's wash,
+bloom and scanlines stop at the bezel and nothing overlays the canvas, so anything
+that belongs *on* the court has to be drawn by the game rather than laid over it.
+
+| what | where | value |
+| --- | --- | --- |
+| burned-in score | behind everything, y 150 | `#2a1c09`, 120px VT323, ±72px of centre |
+| centre line | over it | `--p-rule`, 2px, dash `2 10`, round caps, 50% |
+| paddles | at rest | yours `--p-rose`, the opponent's `--p-coral` |
+| ball + trail | over play | `--accent`, three ghosts at 50 / 28 / 14% |
+| vignette | over the texture, under play | elliptical, 60% at the corners |
+| charge meter | over the vignette | `charge` in `--muted`, then three 14x9 pips |
+| serve prompt | over the vignette | `--muted`, 26px, letterspaced, y 300 |
+
+**The paddles wear their own colours at rest.** Both used to be `--fg`, which made
+the two players the same object and left no colour on the court at all until an
+ability went off. What it costs is that a *tell* can no longer be "your colour" —
+see Expand above.
+
+**No glow on a resting paddle.** The mockup gives them one, and it was left out:
+light past a paddle's own edge is how this game says a charge is in hand, and
+lighting every paddle all the time spends that signal on nothing.
+
+**The burned-in score can be as faint as it likes** because it is texture. The
+number anyone actually reads is on the bezel, in daylight, with the word for whose
+it is beside it. `#2a1c09` is the court's own ground lifted a few steps — a burn
+tone, not a palette colour, and used nowhere else.
+
+**The vignette goes over the court's texture and under everything played with.**
+It shipped over play, the way the mockup draws it, and that was half of the bug
+Gabriel reported as the game being invisible. A vignette darkens the corners, and
+the corners of a Pong court are exactly where the paddles live — a paddle at the
+top or bottom of its travel lost a third of its brightness, on a 10px sliver
+against a near-black ground.
+
+Weakening it only made it cost less while still costing something, so it moved
+instead. Underneath, it costs nothing and still does its work: what it shades is
+the burned-in score and the centre line, not the court, and darkening a near-black
+ground does nothing — which is the very reason it was drawn on top to begin with.
+
+The general form: **chrome that dims is chrome that has to sit under the game.**
+
+### The canvas is drawn 1:1, and CSS has to be told twice
+
+`#board` is `box-sizing: content-box`, against the global `border-box` in
+`shared.css`, and its width is `--court` rather than `100%`. Both are load-bearing
+and neither is obvious.
+
+The canvas has a 600x400 backing store and a 1px border. Under `border-box` a
+width of 600 is the *border* box, so the content box — the surface the backing
+store is painted into — becomes 598 x 398.67. The browser resamples every row and
+column to fit, and on a near-black court a resampled 1px line or 10px paddle is
+smeared across two pixels at half brightness. It does not read as blurry. It reads
+as **not being there**, which is how it shipped and how it was reported.
+
+`tests/contract.test.js` now holds every canvas game to it: the rendered content
+box has to equal the backing store exactly. The cabinet's width is derived from
+`--court` for the same reason — court, plus the canvas's own border, plus the
+bezel's padding and border, so one number moves them all together.
+
+### The ball trail is spaced by distance, not by ticks
+
+Three decaying copies of the ball, one every `TRAIL_GAP` pixels of **travel**
+along the path actually taken. Two things follow, and both are the point.
+
+Spacing by tick — draw the position from 3, 6 and 9 ticks ago — is the obvious
+version and it is wrong. A faster ball puts its ghosts further apart, so Insane's
+trail would be as much longer than Normal's as its ball is faster, and at wide
+enough spacing the ghosts stop reading as one object and start reading as three
+balls. That is the failure a ball trail has, and the handoff that asked for this
+flagged it before it was built. `tests/pong.test.js` case 32 measures the trail's
+reach at 5px/tick and at 13px/tick: **49px against 48px**. Reverting to tick
+spacing turns that into 44px against 100px, which is how the check was proved.
+
+Recording the path in `update()` rather than extrapolating backwards along the
+velocity in `draw()` is the second half. Extrapolation is cheaper and needs no
+history, and it puts the ghosts through the wall for a few frames after a bounce.
+Recording per tick also keeps the spacing independent of the frame rate, like
+everything else in the simulation.
+
+`TRAIL_GAP` is deliberately above the speed cap, so a single tick can never span
+two ghosts and stack them on one spot. The trail is cleared wherever the ball is
+repositioned — `serve`, `onScore`, `resetMatch` — or the ghosts of the shot that
+just scored hang across the court through the whole serve countdown, pointing at
+a ball that is no longer there.
+
 ## Reading the game without seeing it
 
-`#status` carries game state only — the serve prompt, the countdown, the pause
-message, the result. Standing instructions live in the `?` panel, per the page
-contract in `CLAUDE.md`.
+`#status` carries game state only — the countdown, the pause message, the result.
+Standing instructions live in the `?` panel, per the page contract in `CLAUDE.md`.
+It is deliberately **empty during a rally and at the menu**: the menu heading
+speaks for one and the court speaks for the other, and `game.css` hides the
+strap's cursor while the text is empty so a lone blinking block does not sit out
+in the middle of the page.
 
-The score is **not** in the status line, because `draw()` already paints it across
-the top of the canvas and repeating it is the same information twice. But canvas
-pixels are unreadable to a screen reader, which made the status line the only
-place the score existed as text — so deleting it outright would have been an
-accessibility regression. It moved to a visually hidden live region instead, which
-announces it exactly when it changes.
+**The serve prompt is on the court, not in the strap.** `PRESS SPACE TO SERVE` is
+drawn by `drawServePrompt` in the lower half of the board. It used to sit in the
+status line above the board — which is where the eye is not, while the court sat
+empty saying nothing.
 
-That region is **clipped, not `display: none`**. `display: none` would take it out
-of the accessibility tree as well and defeat the entire point. It looks like dead
-markup; it is not.
+The score is **not** in the status line either, but for a different reason than it
+once was: it has a bar of its own on the bezel, in text, and repeating it would be
+the same information twice. That bar is the live region — `aria-live="polite"`,
+`aria-atomic="true"` so a point reads as "you 2 first to 5 ai 1" rather than as a
+lone digit with nothing to attach it to.
+
+That replaced a clipped `#score-reader` holding the same numbers, which existed
+only because `draw()` painted the score on the canvas and canvas pixels reach no
+screen reader. Now that the visible score is real text, one element does both jobs
+and the hidden copy is gone — keeping it would have announced every point twice.
 
 ## Geometry
 
@@ -892,14 +1003,35 @@ A canvas cannot read CSS custom properties, so the theme tokens are copied into 
 plain object and re-copied from a `prefers-color-scheme` change listener. Only the
 background is re-read per frame.
 
+**Both players' colours are Pong's own, read straight from the palette.** `hero`
+is `--p-rose` and `villain` is `--p-coral` — not `--win` and `--lose`, which are
+*outcome* colours: jade for a solved Sudoku, coral for a lost game. `villain` is
+the same pixels `--lose` gave it; the point is that a later decision about what
+losing looks like can no longer repaint the opponent. Rose is the hub's
+arcade-category accent, so the paddle you move matches the colour its own tile
+shows on the hub.
+
+**The site is dark-only since the redesign** (`design/DESIGN.md`, "Dark only"):
+`shared.css` no longer varies its token values with the OS theme, so this
+listener still fires but the colours it re-reads never actually change. Left in
+place rather than removed — that is `redesign-pong`'s decision, not this phase's,
+since ripping it out means deciding what (if anything) replaces it.
+
 **A colour that is not a token has to earn it, and white did not.** Effects are
 drawn with a bright core over a coloured glow — the paddle flash, the meter pop,
 the squeeze bolt. White works for the first two because they are drawn *on a
-paddle*, which is dark in the light theme. The bolt crosses the empty board, and
-the light theme's board is pure `#ffffff`, so its core was invisible in exactly
-the place it mattered: the effect read as a red outline of a bolt rather than as
-a bolt. `boltCore()` picks it from the board's own luminance instead, and the
-light theme gained about half again as much visible bolt.
+paddle*, which was dark in the old light theme. The bolt crosses the empty board,
+and the old light theme's board was pure `#ffffff`, so its core was invisible in
+exactly the place it mattered: the effect read as a red outline of a bolt rather
+than as a bolt. `boltCore()` picks it from the board's own luminance instead of a
+fixed white, and the light theme gained about half again as much visible bolt.
+
+**One of `boltCore()`'s two branches is now dead.** It exists to pick a bright
+core against whichever board it is drawn on, and there is only one board now.
+`redesign-pong` decides whether the light-theme branch comes out or stays as
+harmless dead code — `design/TODO.md` has the constraint. Whichever it chooses
+makes half of this section's history-of-the-bug framing read oddly; that is
+expected, not a sign this section drifted.
 
 Testing it is harder than it looks. A check that counts pixels unlike the board
 passes with the fixed white core still in, because the red glow alone clears any
@@ -913,9 +1045,17 @@ On top of the shared `#board`, `#status` and `#restart` from `CLAUDE.md`'s page
 contract: `#help-toggle` and `#instructions`, plus a `#menu` over the board
 holding `#menu-heading`, a `#difficulty` radiogroup labelled by
 `#difficulty-label`, a `#win-score-choice` radiogroup labelled by
-`#win-score-label`, and `#play`; a hidden `#score-reader`; and `#win-score`
-inside the instructions panel, which the script rewrites whenever the chosen win
-score changes.
+`#win-score-label`, and `#play`; `#score-you`, `#score-ai` and `#win-score-bar`
+in the scorebar on the bezel; and `#win-score` inside the instructions panel.
+The last two are the same number in two places — `applyWinScore` rewrites both
+whenever the chosen win score changes, and filling either in only at load left
+it confidently wrong the moment the choice could change.
+
+There was also a `#score-reader`, a clipped live region holding the score as
+text because `draw()` painted it on the canvas and canvas pixels reach no screen
+reader. The scorebar is real text with the live region on it, so one element now
+does both jobs and the hidden copy is gone. A second copy would have announced
+every point twice.
 
 ## Stored data
 

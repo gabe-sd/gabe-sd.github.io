@@ -1,0 +1,610 @@
+/* 04 — Quiet Phosphor
+ *
+ * The phosphor palette with the costume taken off: no scanlines, no glow, no
+ * vignette, no blinking cursor, no upper case everywhere. What is left has to
+ * hold the page on typography, rhythm and restraint, so every decision below is
+ * about structure rather than effect.
+ *
+ * Three rules run through the whole file:
+ *
+ *  1. The accent (#33ff66) means "the player did this" and nothing else — the
+ *     selected row, the call to action, your own Sudoku entry, your Pong
+ *     paddle. It is never decoration and never a border. On the hub itself it
+ *     appears exactly twice, which is what keeps it worth something.
+ *  2. Rules are hairlines that establish a grid rather than borders that box
+ *     things in. Outside the game boards — a board is a box, and pretending
+ *     otherwise would be a pose — there is not one closed rectangle here: the
+ *     list is separated by horizontal rules, the sections by a rule and space,
+ *     and the left edge is a single vertical rule the height of the content.
+ *  3. Vertical rhythm is a 4px sub-grid with 24px as the text line. Every
+ *     line-height and every margin below is a multiple of 4, and the reading
+ *     sizes (15px and 17px) both sit on 24. Misaligned baselines are what makes
+ *     a restrained page look cheap rather than quiet.
+ *
+ * The layout is editorial: an index of six games on the left, the detail panel
+ * beside it, ragged right, and a hard left edge. The six tiles are rows in a
+ * contents page, not cabinet buttons — which is what buys the room to show each
+ * game's description in the tile, the only variant that has it.
+ */
+
+#v-quiet {
+  /* Ground and ink. The ground is a near-black with a green bias rather than a
+   * neutral one — it is the only place the phosphor idea survives untouched. */
+  --bg: #0b0d0b;
+  --panel: #10140f;      /* the one raised surface: hovered row, board cell */
+  --panel-lit: #1f2620;  /* covered Minesweeper cell — reads as "not yet dug" */
+
+  /* Three weights of text, all checked against --bg:
+   *   --fg        #cfe3d5  13.9:1  body
+   *   --fg-strong #eaf3ec  16.9:1  names, headings
+   *   --muted     #8fa697   6.8:1  secondary text (.tcat, .imeta, .foot)
+   *   --faint     #74877b   4.7:1  the dimmest text used anywhere, at 11px only
+   * Nothing on this page is set in a colour below 4.5:1. The dim green that a
+   * phosphor variant usually reaches for is a border colour here, not an ink. */
+  --fg: #cfe3d5;
+  --fg-strong: #eaf3ec;
+  --muted: #8fa697;
+  --faint: #74877b;
+
+  --rule: #1e2620;       /* hairline. 1.4:1 — a grid you feel, not one you read */
+  --rule-lit: #2e3a32;   /* the one rule allowed to be seen: dividers in play */
+
+  --accent: #33ff66;
+  --accent-dim: #1f8f3f; /* the accent's underline at rest; never used for text */
+
+  /* The mine icon punches its highlight with this. Dark ground, so it matches
+   * the row rather than the gallery default near-black. */
+  --icon-hole: #0b0d0b;
+
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+  font-size: 15px;
+  line-height: 24px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The only thing in the background layer. Not a vignette — a vignette is the
+ * effect this variant exists to remove — but a barely-there lift from the top
+ * left so the ground is not perfectly flat under a very large window. At 4%
+ * it is below the threshold where you would call it a gradient. */
+#v-quiet .deco {
+  background: radial-gradient(120% 90% at 18% -15%, rgba(120, 200, 150, 0.045), transparent 62%);
+}
+
+/* -------------------------------------------------------------- the page */
+
+/* Asymmetric two-column grid. The index gets the width, the detail panel gets
+ * a fixed 296px measure — wide enough for the description at 15px and narrow
+ * enough that it reads as a margin note rather than a second column of equals.
+ *
+ * The strap sits in column one with nothing beside it, so the detail panel's
+ * top rule lands on the index's top rule. That alignment is the whole reason
+ * for the empty cell; without it the right column floats. */
+#v-quiet .screen {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 64px 40px 80px 56px;
+  border-left: 1px solid var(--rule);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 296px;
+  grid-template-areas:
+    "top    top"
+    "strap  ."
+    "list   info"
+    "sample sample"
+    "foot   foot";
+  column-gap: 72px;
+}
+
+/* ------------------------------------------------------------------- top */
+
+#v-quiet .top {
+  grid-area: top;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* VT323 only earns its place in two roles: the wordmark and numerals. Here it
+ * is an accent face rather than the page's voice, which is the difference
+ * between a deliberate pixel note and a costume. 44px because VT323's x-height
+ * is small — it sets about the size of 26px Plex Mono. */
+#v-quiet .brand {
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 54px;
+  line-height: 48px;
+  letter-spacing: 0.015em;
+  color: var(--fg-strong);
+}
+
+#v-quiet .nav {
+  display: flex;
+  gap: 28px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+#v-quiet .nav a {
+  color: var(--muted);
+  text-decoration: none;
+  padding-bottom: 4px;
+  border-bottom: 1px solid transparent;
+  transition: color 0.14s ease, border-color 0.14s ease;
+}
+
+/* The active nav item is marked with ink weight and a rule, not with the
+ * accent. Spending the accent on navigation would leave nothing for the two
+ * places it actually has to mean something. */
+#v-quiet .nav a:hover { color: var(--fg); border-bottom-color: var(--rule-lit); }
+#v-quiet .nav a.active { color: var(--fg-strong); border-bottom-color: var(--fg-strong); }
+
+#v-quiet .strap {
+  grid-area: strap;
+  margin: 28px 0 48px;
+  max-width: 54ch;
+  font-size: 17px;
+  line-height: 24px;
+  color: var(--fg);
+  text-wrap: balance;
+}
+
+/* ----------------------------------------------------------- the index */
+
+#v-quiet .grid {
+  grid-area: list;
+  display: block;   /* gallery.css defaults this to a card grid */
+  gap: 0;
+  border-top: 1px solid var(--rule);
+}
+
+/* Each game is a row in a contents page: number, mark, title, description,
+ * section. The columns are fixed widths rather than content-sized so that the
+ * six numbers, the six icons and the six categories each form a true vertical
+ * line — an index whose columns do not line up is just a list. */
+#v-quiet .tile {
+  display: grid;
+  grid-template-columns: 46px 46px minmax(0, 1fr) 96px 22px;
+  grid-template-areas:
+    "num ico name cat arrow"
+    "num ico desc cat arrow";
+  align-items: center;
+  gap: 0;
+  padding: 16px 0 16px 14px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--fg);
+  text-decoration: none;
+  transition: background-color 0.14s ease, box-shadow 0.14s ease, color 0.14s ease;
+}
+
+#v-quiet .tnum {
+  grid-area: num;
+  display: block;          /* gallery.css hides it */
+  align-self: center;
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 22px;
+  line-height: 24px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.14s ease;
+}
+
+#v-quiet .tico { grid-area: ico; align-self: center; color: var(--muted); transition: color 0.14s ease; }
+#v-quiet .ico { width: 30px; height: 30px; }
+
+#v-quiet .tname {
+  grid-area: name;
+  align-self: end;
+  font-size: 17px;
+  line-height: 24px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--fg-strong);
+}
+
+/* The description stays in the tile. Every other variant sends it to the info
+ * panel to buy density; this one has the room and an index is more useful with
+ * it than without. */
+#v-quiet .tdesc {
+  grid-area: desc;
+  align-self: start;
+  padding-top: 2px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--muted);
+}
+
+#v-quiet .tcat {
+  grid-area: cat;
+  align-self: center;
+  justify-self: end;
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.18em;
+  color: var(--faint);
+  transition: color 0.14s ease;
+}
+
+/* The row marker. An inset shadow rather than a border so the row does not
+ * move by 2px when it lights up — a list that shifts under the pointer is the
+ * fastest way to make a quiet page feel cheap. */
+#v-quiet .tile::after {
+  content: "\2192";
+  grid-area: arrow;
+  justify-self: end;
+  align-self: center;
+  font-size: 15px;
+  line-height: 24px;
+  color: var(--accent);
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+#v-quiet .tile:hover,
+#v-quiet .tile:focus-visible,
+#v-quiet .tile.is-selected {
+  background: var(--panel);
+  box-shadow: inset 2px 0 0 var(--accent);
+  outline: none;
+}
+
+/* Three signals at once, only one of which is colour: the bar appears on the
+ * left edge, the arrow arrives on the right, and the row gains a fill. */
+#v-quiet .tile:hover::after,
+#v-quiet .tile:focus-visible::after,
+#v-quiet .tile.is-selected::after { opacity: 1; transform: translateX(0); }
+
+#v-quiet .tile:hover .tnum,
+#v-quiet .tile:focus-visible .tnum,
+#v-quiet .tile.is-selected .tnum { color: var(--fg-strong); }
+
+#v-quiet .tile:hover .tcat,
+#v-quiet .tile:focus-visible .tcat,
+#v-quiet .tile.is-selected .tcat { color: var(--muted); }
+
+#v-quiet .tile:hover .tico,
+#v-quiet .tile:focus-visible .tico,
+#v-quiet .tile.is-selected .tico { color: var(--fg-strong); }
+
+/* Keyboard focus needs to be visible even on the already-selected row, where
+ * the states above are already spent. */
+#v-quiet .tile:focus-visible { outline: 1px solid var(--accent-dim); outline-offset: -1px; }
+
+@media (prefers-reduced-motion: reduce) {
+  #v-quiet .tile,
+  #v-quiet .tile::after,
+  #v-quiet .tnum,
+  #v-quiet .tico,
+  #v-quiet .tcat,
+  #v-quiet .nav a { transition: none; }
+  #v-quiet .tile::after { transform: none; }
+}
+
+/* ------------------------------------------------------------ info panel */
+
+#v-quiet .info {
+  grid-area: info;
+  /* Stretched to the list's full height, with a rule on both edges that lands
+   * on the index's first and last. Left at its natural height the panel is a
+   * short block with 400px of nothing under it, which reads as an unfinished
+   * page rather than as whitespace; given the full column the same emptiness
+   * reads as a margin. */
+  align-self: stretch;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+
+#v-quiet .ilabel {
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.2em;
+  color: var(--faint);
+  margin-bottom: 20px;
+}
+
+#v-quiet .inm {
+  font-size: 30px;
+  line-height: 40px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--fg-strong);
+}
+
+#v-quiet .imeta {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+
+#v-quiet .idesc {
+  margin-top: 20px;
+  margin-bottom: 40px;   /* the floor under the CTA once the column stops stretching */
+  font-size: 15px;
+  line-height: 24px;
+  color: var(--fg);
+}
+
+/* The second and last appearance of the accent on the hub. A filled block
+ * would be louder than anything else on the page and would break the rule that
+ * nothing here is boxed; a rule under letterspaced small caps reads as a
+ * control without raising its voice. */
+#v-quiet .icta {
+  /* Art director's correction. This was anchored to the foot of the stretched
+   * column so its rule landed on the index's last one. The alignment was real,
+   * and it still read as a hole: 470px between a description and the control
+   * that acts on it separates them into two unrelated things. The column keeps
+   * its full height, so the empty space is now below the whole group rather
+   * than inside it, which is the version that reads as margin. */
+  margin-top: 34px;
+  padding-bottom: 6px;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  border-bottom: 1px solid var(--accent-dim);
+  transition: border-color 0.14s ease;
+}
+
+#v-quiet .icta::after { content: "  \2192"; }
+#v-quiet .info:hover .icta { border-bottom-color: var(--accent); }
+
+/* Launching is a single calm pulse of the underline, not a flicker. Everything
+ * else in this file is still; one 700ms event is allowed to move. */
+#v-quiet .info.is-launching .icta {
+  animation: quiet-launch 0.7s ease-out 1;
+}
+
+@keyframes quiet-launch {
+  0%   { border-bottom-color: var(--accent); border-bottom-width: 1px; }
+  30%  { border-bottom-color: var(--accent); }
+  100% { border-bottom-color: var(--accent-dim); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #v-quiet .info.is-launching .icta { animation: none; border-bottom-color: var(--accent); }
+  #v-quiet .icta { transition: none; }
+}
+
+/* --------------------------------------------------------- game samples */
+
+#v-quiet .sample {
+  grid-area: sample;
+  margin-top: 72px;
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+}
+
+#v-quiet .sample-h {
+  margin: 0 0 28px;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+#v-quiet .sample-row { display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start; }
+
+#v-quiet .sbox { flex: 0 0 auto; }
+
+#v-quiet .sbox-h {
+  display: block;
+  margin-bottom: 14px;
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Boards are drawn with 1px gaps over the rule colour rather than with cell
+ * borders — same trick as the index, no closed boxes, and the grid stays a
+ * true hairline at any zoom. */
+#v-quiet .sgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 38px);
+  gap: 1px;
+  background: var(--rule-lit);
+  padding: 1px;
+}
+
+#v-quiet .scell {
+  height: 38px;
+  display: grid;
+  place-items: center;
+  background: var(--panel);
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 24px;
+  line-height: 24px;
+  color: var(--fg);
+}
+
+/* Given clues are the puzzle's own ink; an entered digit is the player's, so
+ * it takes the accent. Same rule as the selected row and the CTA — the accent
+ * always means "you did this". */
+#v-quiet .scell.given { color: var(--fg-strong); }
+#v-quiet .scell.entered { color: var(--accent); }
+#v-quiet .scell.sel { background: #16211a; box-shadow: inset 0 0 0 1px var(--accent); }
+
+#v-quiet .mgrid {
+  display: flex;
+  gap: 1px;
+  background: var(--rule-lit);
+  padding: 1px;
+}
+
+#v-quiet .mcell {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: #12160f;
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 24px;
+  line-height: 24px;
+}
+
+/* The eight numbers.
+ *
+ * The constraint is a narrow hue band — everything here lives between 56° and
+ * 204°, yellow-green through green and teal to a single cool blue, so the set
+ * still belongs to the phosphor world. Distinguishability then has to come
+ * from real steps of lightness and saturation rather than from hue alone, so
+ * these were picked numerically and checked, not eyeballed:
+ *
+ *   n1 #9ecbdb  hsl(196,46,74)  10.5:1   pale blue
+ *   n2 #89d1a1  hsl(140,44,68)  10.2:1   green
+ *   n3 #d9e9b9  hsl( 80,52,82)  14.2:1   pale yellow-green
+ *   n4 #4f89b0  hsl(204,38,50)   4.8:1   deep blue
+ *   n5 #e4ece9  hsl(158,18,91)  15.2:1   near-white
+ *   n6 #2cbaba  hsl(180,62,45)   7.7:1   saturated teal
+ *   n7 #869d80  hsl(108,13,56)   6.2:1   grey-green
+ *   n8 #aca75d  hsl( 56,32,52)   7.4:1   olive
+ *
+ * Every pair is at least ΔE 20 apart in CIE L*a*b* (worst: n1/n5 at 20.6, a
+ * chromatic pale blue against a near-neutral white, which the eye separates
+ * more easily than that number suggests), and every one clears 4.5:1 on the
+ * #12160f cell. Deep blue at 4.8:1 is the floor and is deliberate: without one
+ * genuinely dark step the set has nowhere to put its eighth value.
+ *
+ * Rejected: a pure lightness ramp in one hue. Eight steps of a single green
+ * puts 1 and 2 within ΔE 8 of each other, which is unusable on a real board. */
+#v-quiet .n1 { color: #9ecbdb; }
+#v-quiet .n2 { color: #89d1a1; }
+#v-quiet .n3 { color: #d9e9b9; }
+#v-quiet .n4 { color: #4f89b0; }
+#v-quiet .n5 { color: #e4ece9; }
+#v-quiet .n6 { color: #2cbaba; }
+#v-quiet .n7 { color: #869d80; }
+#v-quiet .n8 { color: #aca75d; }
+
+/* The one warm note on the page. A flag is not a number, and giving it a
+ * colour from inside the band would make it read as a ninth value; red would
+ * be louder than anything else here, so this is a muted ochre. */
+#v-quiet .mcell.flag { color: #d09a52; font-size: 20px; }
+
+/* Covered cells are lighter than dug ones — the ground you have not turned
+ * over yet, which is the right way round and the opposite of what most dark
+ * Minesweepers do. */
+#v-quiet .mcell.hidden-cell { background: var(--panel-lit); }
+
+#v-quiet .pbar {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+#v-quiet .pscore {
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 34px;
+  line-height: 32px;
+  color: var(--fg-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Your score, in the same accent that means "yours" everywhere else. */
+#v-quiet .pscore:first-child { color: var(--accent); }
+
+#v-quiet .plabel {
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+}
+
+#v-quiet .pdiv { flex: 0 0 20px; height: 1px; background: var(--rule-lit); align-self: center; }
+
+#v-quiet .pcourt {
+  position: relative;
+  width: 268px;
+  height: 56px;
+  margin-top: 16px;
+  background: var(--panel);
+  border-top: 1px solid var(--rule-lit);
+  border-bottom: 1px solid var(--rule-lit);
+}
+
+#v-quiet .pcourt::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  bottom: 8px;
+  border-left: 1px dashed var(--rule-lit);
+}
+
+#v-quiet .ppad { position: absolute; width: 3px; height: 22px; background: var(--fg); }
+#v-quiet .ppad.l { left: 10px; top: 12px; background: var(--accent); }
+#v-quiet .ppad.r { right: 10px; top: 20px; background: var(--fg); }
+#v-quiet .pball { position: absolute; left: 62%; top: 24px; width: 5px; height: 5px; background: var(--fg-strong); }
+
+/* ------------------------------------------------------------------ foot */
+
+#v-quiet .foot {
+  grid-area: foot;
+  margin-top: 64px;
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------ responsive */
+
+/* Below the point where 296px of margin note plus a readable index fit side by
+ * side, the panel goes under the list rather than getting narrower. A squeezed
+ * detail column is worse than a stacked one. */
+@media (max-width: 940px) {
+  #v-quiet .screen {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "top" "strap" "list" "info" "sample" "foot";
+    padding: 44px 24px 64px 28px;
+    column-gap: 0;
+  }
+  #v-quiet .strap { margin-bottom: 36px; }
+  /* Stacked, the panel's closing rule sits 60px above the sample's opening one
+   * and the pair reads as an accident. The rule only has a job when the panel
+   * is a column. */
+  #v-quiet .info { margin-top: 44px; border-bottom: 0; }
+  #v-quiet .sample { margin-top: 56px; }
+  #v-quiet .sample-row { gap: 36px; }
+}
+
+@media (max-width: 620px) {
+  #v-quiet .brand { font-size: 36px; }
+  #v-quiet .top { flex-wrap: wrap; gap: 12px; }
+  /* The category drops to its own line under the description and the arrow
+   * goes: at this width the fill and the left bar carry the state on their
+   * own, and 22px of gutter is worth more than the glyph. */
+  #v-quiet .tile {
+    grid-template-columns: 32px 38px minmax(0, 1fr);
+    grid-template-areas:
+      "num ico name"
+      "num ico desc"
+      "num ico cat";
+    align-items: start;
+    padding: 14px 0 14px 12px;
+  }
+  #v-quiet .tnum,
+  #v-quiet .tico { align-self: start; }
+  #v-quiet .tname { align-self: auto; }
+  #v-quiet .tcat { justify-self: start; margin-top: 4px; }
+  #v-quiet .tile::after { display: none; }
+  #v-quiet .ico { width: 26px; height: 26px; }
+  #v-quiet .sgrid { grid-template-columns: repeat(3, 34px); }
+  #v-quiet .scell { height: 34px; }
+  #v-quiet .mcell { width: 30px; height: 30px; font-size: 21px; }
+  #v-quiet .pcourt { width: 100%; max-width: 268px; }
+}

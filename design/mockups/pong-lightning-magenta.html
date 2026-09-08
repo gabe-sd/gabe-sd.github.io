@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anime Pong — Lightning Attack (Magenta)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    background:#040604;
+    color:#33ff66;
+    font-family:"VT323", monospace;
+    display:flex; justify-content:center;
+    padding: 2.2rem 1rem;
+  }
+  .stage{
+    --p-bg:#040604;
+    --p-dim:#1f9e46;
+    --p-player: #ff4dd8;
+    --p-player-dim: #99276f;
+    --p-player-glow: rgba(255,77,216,0.55);
+    --p-red:#ff3b3b;
+    --p-red-dim:#992222;
+    --p-red-glow: rgba(255,59,59,0.65);
+    width:100%; max-width:820px;
+  }
+  .crumb{
+    font-size:0.72rem; letter-spacing:0.08em; color: var(--p-dim);
+    margin-bottom:0.6rem;
+  }
+  .crumb b{ color: var(--p-player); font-weight:normal; }
+  .scorebar{
+    display:flex; align-items:baseline; justify-content:center; gap:1.4rem;
+    margin-bottom:0.9rem;
+  }
+  .scorebar .side{ text-align:center; }
+  .scorebar .tag{ display:block; font-size:0.7rem; letter-spacing:0.12em; color: var(--p-dim); margin-bottom:0.1rem; }
+  .scorebar .num{ font-size:2.6rem; line-height:1; font-variant-numeric: tabular-nums; }
+  .scorebar .you .num{ color: var(--p-player); text-shadow:0 0 8px var(--p-player-glow); }
+  .scorebar .cpu .tag{ color: var(--p-red-dim); }
+  .scorebar .cpu .num{ color: var(--p-red); text-shadow:0 0 10px var(--p-red-glow); }
+  .scorebar .div{ font-size:2.2rem; color: var(--p-dim); }
+
+  .court-wrap{ position:relative; border:1px solid var(--p-dim); background: var(--p-bg); overflow:hidden; }
+  .court-wrap::after{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 3px);
+    mix-blend-mode: overlay;
+  }
+  svg{ display:block; width:100%; height:auto; }
+
+  .net{ stroke: var(--p-dim); stroke-width:2; stroke-dasharray:6 8; }
+  .paddle-you{ fill: var(--p-player); filter: drop-shadow(0 0 6px var(--p-player-glow)); }
+  .paddle-cpu{ fill: var(--p-red); filter: drop-shadow(0 0 10px var(--p-red-glow)) drop-shadow(0 0 22px var(--p-red-glow)); }
+  .ball{ fill:#eafff0; filter: drop-shadow(0 0 5px rgba(255,255,255,0.7)); }
+  .ball-trail{ stroke:#eafff0; stroke-width:2; opacity:0.3; fill:none; stroke-linecap:round; }
+
+  .bolt-glow{ fill:none; stroke: var(--p-red); stroke-width:9; stroke-linecap:round; stroke-linejoin:round; filter: blur(5px); opacity:0.55; }
+  .bolt-core{ fill:none; stroke:#ffe3e3; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; filter: drop-shadow(0 0 6px var(--p-red-glow)); }
+  .bolt-branch{ fill:none; stroke: var(--p-red); stroke-width:1.6; stroke-linecap:round; opacity:0.8; filter: drop-shadow(0 0 4px var(--p-red-glow)); }
+  .spark{ stroke: var(--p-red); stroke-width:2; stroke-linecap:round; opacity:0.85; }
+
+  .alert{
+    margin-top:0.85rem; font-size:1rem; letter-spacing:0.05em; color: var(--p-red);
+    text-shadow:0 0 6px var(--p-red-glow);
+  }
+  .alert .caret{ display:inline-block; animation: blink 1s steps(1) infinite; }
+  @media (prefers-reduced-motion: reduce){ .alert .caret{ animation:none; } }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .hint{ margin-top:0.5rem; font-size:0.78rem; color: var(--p-dim); }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="crumb"><b>GABE-SD ARCADE</b> / ANIME PONG</div>
+  <div class="scorebar">
+    <div class="side you"><span class="tag">YOU</span><span class="num">03</span></div>
+    <div class="div">:</div>
+    <div class="side cpu"><span class="tag">CPU</span><span class="num">05</span></div>
+  </div>
+  <div class="court-wrap">
+    <svg viewBox="0 0 800 460" xmlns="http://www.w3.org/2000/svg">
+      <line class="net" x1="400" y1="14" x2="400" y2="446"/>
+
+      <!-- player paddle (left) -->
+      <rect class="paddle-you" x="46" y="192" width="12" height="76" rx="4"/>
+
+      <!-- opponent paddle (right), mid power-surge -->
+      <rect class="paddle-cpu" x="742" y="150" width="12" height="90" rx="4"/>
+
+      <!-- origin spark burst at opponent paddle -->
+      <g class="spark">
+        <line x1="744" y1="195" x2="722" y2="176"/>
+        <line x1="744" y1="195" x2="726" y2="212"/>
+        <line x1="744" y1="195" x2="716" y2="196"/>
+      </g>
+
+      <!-- lightning bolt: opponent -> player, edges anchored into both paddles -->
+      <polyline class="bolt-glow" points="744,196 700,180 664,214 628,172 592,202 566,158 596,150 552,232 508,176 470,204 428,160 388,202 348,168 308,214 268,176 228,206 190,180 150,204 112,192 56,214"/>
+      <polyline class="bolt-core" points="744,196 700,180 664,214 628,172 592,202 566,158 596,150 552,232 508,176 470,204 428,160 388,202 348,168 308,214 268,176 228,206 190,180 150,204 112,192 56,214"/>
+
+      <!-- branch off the main bolt -->
+      <polyline class="bolt-branch" points="592,202 618,236 610,268"/>
+      <polyline class="bolt-branch" points="470,204 452,238"/>
+
+      <!-- impact burst at player paddle -->
+      <g class="spark">
+        <line x1="56" y1="214" x2="72" y2="196"/>
+        <line x1="56" y1="214" x2="74" y2="230"/>
+        <line x1="56" y1="214" x2="40" y2="214"/>
+      </g>
+
+      <!-- ball, mid-rally, clear of the bolt's path -->
+      <g class="ball-group">
+        <line class="ball-trail" x1="252" y1="352" x2="312" y2="346"/>
+        <line class="ball-trail" x1="266" y1="352" x2="312" y2="348" opacity="0.5"/>
+        <circle class="ball" cx="320" cy="345" r="7"/>
+      </g>
+    </svg>
+  </div>
+  <div class="alert">&gt; CPU LIGHTNING ATTACK INCOMING<span class="caret">_</span></div>
+  <div class="hint">mock screenshot — not the playable build</div>
+</div>
+</body>
+</html>

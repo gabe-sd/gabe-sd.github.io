@@ -16,16 +16,6 @@ see "Shared ground" in `CLAUDE.md`, and `WORKER.md`.
 What stays here is everything belonging to no single game: the naming rules
 below, games that do not exist yet, and site-wide work.
 
-**The site is mid-redesign, and other work on it is paused.** A complete visual
-overhaul is running on the `redesign` branch — Gabriel's decision, 2026-09-04,
-that everything else waits until it lands, so that a restyle touching every game
-is not racing a change to one of them. The integrator's checkout sits on that
-branch rather than on `main` for the duration; `main` stays clean and deployable
-if something urgent has to ship. The project's backlog is `design/TODO.md` on that
-branch rather than here, and deliberately not on `main` — the copy of that file
-here says why. The seat doing the work is the art director, `ART-DIRECTOR.md`.
-**Delete this note when the redesign merges.**
-
 ## Naming entries
 
 Every entry is headed by a slug — the game, then **the work**:
@@ -69,6 +59,20 @@ See `ART-DIRECTOR.md` for the seat.
 It is the front page of a public repo, but it reads like the internal docs beside
 it. Review with Gabriel before rewriting — what a visitor should get from it is
 his call.
+
+### site-dead-shared-rules — Three rules in `shared.css` are used by nothing
+
+`.page`, `.hint` and `.back-link` are styled in `shared.css` and applied by no
+page on the site. The frame replaced all three: a game page is `.game-page`, its
+link home is the breadcrumb, and standing instructions live in the collapsible
+panel rather than a hint line. The design mockups under `design/` do use `.page`
+and `.hint`, but they are self-contained and define their own — deleting these
+rules cannot touch them.
+
+Left in place deliberately for now. The contract in `CLAUDE.md` was the thing
+actively misleading readers and it has been corrected; the rules themselves cost
+nothing but the bytes, and `shared.css` is the art director's while the redesign
+is in flight. Worth sweeping once it lands.
 
 ### site-favicon — The site has no favicon
 
@@ -157,6 +161,53 @@ gone. Filing an entry in that game's `TODO.md` is the obvious candidate and is
 cheap, but it is still an edit in somebody else's area, which is the thing the
 rule exists to prevent. Ask Gabriel rather than picking one — the boundary of that
 rule is his, and the answer belongs in `INTEGRATOR.md` once it is settled.
+
+### workflow-worktree-relative-paths — A tool session's cwd can leave the worktree without saying so
+
+Twice on 2026-09-07, in one session, the shell's working directory silently
+returned from `.claude/worktrees/<name>` to the shared checkout between one
+command and the next. Everything written with a **relative** path after that
+landed in the shared checkout instead of the branch: the first time it was most
+of a phase's documentation, the second time a test file plus a full `npm test`
+run, which then reported a failure the branch had already fixed and cost a
+debugging cycle to explain.
+
+Nothing was lost either time — the two trees held disjoint edits and the work was
+moved across — but it is the same class of mistake "Shared ground" calls
+absolute: writing into a tree you are not in. There it is framed as a thing an
+agent does deliberately with `git -C` or a `cd`. This is the accidental version,
+and it is quieter, because a relative path that used to be right stays spelled
+the same way when it stops being right.
+
+The proposed rule is one line and costs nothing: **from a worktree, write with
+absolute paths.** Read freely with whatever is convenient; anything that
+*modifies* a file — an editor tool, a shell redirect, a script — names the tree
+it means. `git status` in both trees is the check that catches it after the
+fact, and it should be part of finishing a phase rather than something you
+happen to run.
+
+Where it goes is the open question. It is not art-director-specific, so
+`CLAUDE.md`'s "Shared ground" is the natural home, next to the existing rule it
+is a variant of — but `CLAUDE.md` belongs to Gabriel and both seat files that
+take a worktree would then repeat it. Decide with him.
+
+### workflow-npm-serve-background — `npm run serve` from a worktree binds the port and answers nothing
+
+On 2026-09-07, `PORT=0 npm run serve` and `PORT=8936 npm run serve` started as
+background tasks from a worktree both bound their port and then closed every
+connection without a response — `curl` reported an empty reply, and a browser
+`ERR_EMPTY_RESPONSE`. The same `python3 -u -m http.server <port>` run directly
+from the same directory, in the foreground *or* backgrounded, served normally,
+and `npm run serve` from the shared checkout was fine throughout.
+
+So it is the npm wrapper plus the background task runner, not the server and not
+the worktree. It was worked around by running `python3 -m http.server` directly
+and passing on that URL, which is exactly what the npm script does anyway.
+
+Unresolved: whether this reproduces outside the one harness it was seen in, and
+whether the `exec` in the `serve` script is involved. Worth ten minutes before
+`CLAUDE.md`'s "Port 8934 is the shared checkout's" paragraph tells the next agent
+to run a command that does not work where it tells them to run it.
 
 ### workflow-worktree-server-orphan — Removing a worktree leaves its server running
 

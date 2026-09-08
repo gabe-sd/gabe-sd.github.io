@@ -5,16 +5,57 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chess · Game Arcade</title>
 <link rel="stylesheet" href="../../shared.css">
+<link rel="stylesheet" href="../../game.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="page">
-    <a class="back-link" href="../../index.html">← All games</a>
-    <h1>Chess</h1>
-    <p id="status" class="status">White's turn</p>
-    <div id="board" role="grid" aria-label="Chess board"></div>
-    <p class="hint">Pawns auto-promote to queen · castling &amp; en passant supported</p>
-    <button id="restart" class="btn">Restart</button>
+  <main class="game-page">
+    <!-- The machine: the wash behind everything, the scanlines over it. Both
+         are decoration and neither is announced. The board is lifted above
+         them by .game-stage — see game.css, "chrome against screen". -->
+    <div class="game-deco" aria-hidden="true"></div>
+    <div class="game-crt" aria-hidden="true"></div>
+
+    <div class="game-in">
+      <div class="game-top">
+        <!-- The contract's link home. A breadcrumb rather than a back-link:
+             it says where you are as well as where you can go. -->
+        <a class="crumb" href="../../index.html">← ARCADE / <b>CHESS</b></a>
+        <h1 class="game-title">CHESS</h1>
+      </div>
+
+      <p id="status" class="status game-strap"><span class="who">WHITE</span> to move</p>
+
+      <div class="game-stage">
+        <!-- The stack owns --sq, because the trays and the file letters are
+             siblings of the board and have to match its width. Put it on
+             #board and a later change to the square size silently leaves
+             them at the old one. -->
+        <div class="board-stack">
+          <div id="taken-by-black" class="tray"
+               aria-label="Pieces Black has captured" aria-live="polite"></div>
+          <div class="ranks" aria-hidden="true">
+            <span>8</span><span>7</span><span>6</span><span>5</span>
+            <span>4</span><span>3</span><span>2</span><span>1</span>
+          </div>
+          <div id="board" role="grid" aria-label="Chess board"></div>
+          <div id="taken-by-white" class="tray"
+               aria-label="Pieces White has captured" aria-live="polite"></div>
+          <div class="files" aria-hidden="true">
+            <span>a</span><span>b</span><span>c</span><span>d</span>
+            <span>e</span><span>f</span><span>g</span><span>h</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="restart" class="btn">Restart</button>
+      </div>
+
+      <div class="game-foot">
+        <span>click a piece, then a square</span>
+      </div>
+    </div>
   </main>
   <script src="script.js"></script>
 </body>

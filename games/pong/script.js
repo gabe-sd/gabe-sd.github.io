@@ -4,7 +4,12 @@ const statusEl = document.getElementById("status");
 const restartBtn = document.getElementById("restart");
 const helpToggle = document.getElementById("help-toggle");
 const instructions = document.getElementById("instructions");
-const scoreReader = document.getElementById("score-reader");
+// The scorebar on the bezel. Real text on the chrome, so it is the same score
+// for a sighted player and a screen reader — the hidden live region this
+// replaces existed only because the score was painted on the canvas.
+const scoreYou = document.getElementById("score-you");
+const scoreAi = document.getElementById("score-ai");
+const winScoreBar = document.getElementById("win-score-bar");
 const menu = document.getElementById("menu");
 const menuHeading = document.getElementById("menu-heading");
 const playBtn = document.getElementById("play");
@@ -196,6 +201,10 @@ const ABILITY = {
     // this is not a warning about anything - there is nothing to brace for. The
     // charge treatment on top read as a second, different thing happening.
     tell: "tint",
+    // Paints white-hot rather than rose. Rose is now what your paddle looks
+    // like at rest, so tinting it rose said nothing; --p-hot reads as the same
+    // paddle turned up rather than as a different player's.
+    tintAs: "hot",
     chance: 0,            // never random: it is earned, not rolled
     telegraphTicks: 10,
     // Expand is not an event with a duration - it is a *state*. You have the big
@@ -330,6 +339,21 @@ const AI_DEFAULTS = { ...AI };
 const DIFFICULTY_KEY = "pong.difficulty";
 let difficulty = "normal";
 const BALL_SIZE = 10;
+
+// The ball's phosphor trail: three decaying copies behind it, placed one every
+// TRAIL_GAP pixels of *travel* rather than one every N ticks. Spacing by tick
+// would make Insane's trail as much longer than Normal's as its ball is faster,
+// which is the exact failure a ball trail has - at wide enough spacing the
+// ghosts stop reading as one object and start reading as three balls.
+// TRAIL_GAP is deliberately above the speed cap so a single tick can never span
+// two ghosts and stack them on one spot.
+const TRAIL_GAP = 12;
+const TRAIL_ALPHAS = [0.5, 0.28, 0.14];
+// Enough history to place every ghost at the slowest ball; the walk stops as
+// soon as it has them, so a longer buffer costs nothing but memory.
+const TRAIL_HISTORY = 16;
+let trail = [];
+
 // Points needed to take the match. `let` because the menu sets it; the ? panel
 // reads it from here rather than hardcoding it, so it has to be refreshed
 // whenever it changes and not only at load.
@@ -384,9 +408,21 @@ function readColors() {
     fg: style.getPropertyValue("--fg").trim() || "#1c1c1e",
     accent: style.getPropertyValue("--accent").trim() || "#3b82f6",
     border: style.getPropertyValue("--cell-border").trim() || "#c7c7cc",
-    // Whose move it is: the villain's red, yours green.
-    villain: style.getPropertyValue("--lose").trim() || "#ef4444",
-    hero: style.getPropertyValue("--win").trim() || "#22c55e",
+    // Court furniture that is a *label* rather than a line: the charge caption
+    // and the serve prompt. --cell-border is a hairline colour and text drawn
+    // in it is unreadable.
+    muted: style.getPropertyValue("--muted").trim() || "#8e8e93",
+    // The centre line. Brighter than a hairline, dimmer than anything in play.
+    rule: style.getPropertyValue("--p-rule").trim() || "#c7c7cc",
+    // Whose move it is: the villain's coral, yours rose. Both are read as raw
+    // palette values rather than through `--win`/`--lose`, which are *outcome*
+    // colours — jade for a solved Sudoku, coral for a lost game — and a paddle
+    // is not an outcome. Same pixels as `--lose` today; the point is that a
+    // later change to what losing looks like cannot repaint the opponent.
+    villain: style.getPropertyValue("--p-coral").trim() || "#ff6a56",
+    hero: style.getPropertyValue("--p-rose").trim() || "#ff7fcb",
+    // The brightest thing on the court. Expand tints with it; see ABILITY.expand.
+    hot: style.getPropertyValue("--p-hot").trim() || "#ffffff",
   };
 }
 
@@ -908,14 +944,19 @@ function applyDifficulty(level) {
 function applyWinScore(n) {
   WIN_SCORE = WIN_SCORES.includes(n) ? n : WIN_SCORES[0];
   markSelected(winScoreBtns, "score", WIN_SCORE);
-  // The ? panel states the target. Filling it in only at load left it confidently
-  // wrong the moment the choice could change.
+  // The scorebar and the ? panel both state the target. Filling either in only
+  // at load left it confidently wrong the moment the choice could change.
+  winScoreBar.textContent = WIN_SCORE;
   document.getElementById("win-score").textContent = WIN_SCORE;
 }
 
+// "READY" is the menu's resting title, replaced by the result once there is
+// one. An untitled menu was fine when the page had a heading of its own above
+// it; under the new frame the court is the page and the menu needs to say what
+// it is.
 function showMenu(heading = "") {
   phase = "menu";
-  menuHeading.textContent = heading;
+  menuHeading.textContent = heading || "READY";
   menu.hidden = false;
   updateStatus();
 }
@@ -939,6 +980,7 @@ function newBall(dir) {
 
 function serve() {
   ball = newBall(serveTo);
+  trail = [];
   phase = "play";
   updateStatus();
 }
@@ -949,12 +991,12 @@ function setPaused(value) {
   updateStatus();
 }
 
-// #status is game state only. draw() already paints both scores across the top of
-// the canvas, so repeating them here would be the same information twice; the
-// score goes to the hidden live region instead, which is the only way it reaches
-// anyone not looking at the canvas.
+// #status is game state only, and the scorebar carries the score, so nothing
+// here repeats a number. The serve prompt is absent for the same reason: it is
+// drawn on the court now, where the eye already is — see drawServePrompt.
 function updateStatus() {
-  scoreReader.textContent = `You ${player.score}, AI ${ai.score}`;
+  scoreYou.textContent = player.score;
+  scoreAi.textContent = ai.score;
   if (phase === "menu") {
     statusEl.textContent = ""; // the menu heading carries the result
   } else if (gameOver) {
@@ -963,10 +1005,8 @@ function updateStatus() {
     statusEl.textContent = "Paused · Esc to resume";
   } else if (phase === "countdown") {
     statusEl.textContent = "Serving…";
-  } else if (phase === "serve") {
-    statusEl.textContent = "Press Space to serve";
   } else {
-    statusEl.textContent = ""; // nothing to say during a rally
+    statusEl.textContent = ""; // the court speaks for the serve and the rally
   }
 }
 
@@ -1148,6 +1188,11 @@ function update() {
 
   const prevX = ball.x;
   const prevY = ball.y;
+  // The path actually taken, one point per tick, so the trail bends around a
+  // bounce instead of poking through the wall the way extrapolating backwards
+  // along the velocity would.
+  trail.push({ x: prevX, y: prevY });
+  if (trail.length > TRAIL_HISTORY) trail.shift();
   ball.x += ball.vx;
   ball.y += ball.vy;
 
@@ -1215,13 +1260,16 @@ function onScore(scorer) {
   }
   syncExpand();
   ball = centredBall();
+  // Or the ghosts of the shot that just scored hang across the court through
+  // the whole serve countdown, pointing at a ball that is no longer there.
+  trail = [];
   phase = "countdown";
   serveTicks = SERVE_DELAY_TICKS;
   updateStatus();
 }
 
 // Which moves show on which paddle, in order of precedence. The colour says whose
-// move it is rather than what it does: red is the villain acting, green is yours.
+// move it is rather than what it does: red is the villain acting, rose is yours.
 // Clutch first: its pulse is the only thing that says a charge is in hand, while
 // expand's tell is the paddle's own size and shows whatever is drawn over it.
 // Squeeze is listed on the *opponent's* paddle even though it lands on yours:
@@ -1254,10 +1302,13 @@ function drawPaddle(p, x, tells) {
     // A move whose effect lands somewhere else only tells while it is winding up.
     if (spec.tellWhile && st.phase !== spec.tellWhile) continue;
     // ...and one that is outranked says nothing at all. Expand can already be
-    // running when the lightning lands; a green paddle that is also small claims
-    // a gift you are not getting.
+    // running when the lightning lands; a paddle tinted hero's colour that is
+    // also small claims a gift you are not getting.
     if (spec.blockedBy && moveActive(spec.blockedBy)) continue;
-    tint = colors[who];
+    // `tintAs` overrides whose colour a tell paints in. Only expand needs it,
+    // and only because the paddle it lands on now rests in that very colour —
+    // a tell that tints rose onto rose is not a tell. See ABILITY.expand.
+    tint = colors[spec.tintAs || who];
     if (spec.tell === "tint") break;   // the colour is the whole tell
     if (st.phase === "telegraph") {
       const t = spec.telegraphTicks > 0 ? 1 - st.ticks / spec.telegraphTicks : 1;
@@ -1301,7 +1352,15 @@ function drawPaddle(p, x, tells) {
       ctx.shadowBlur = 4 + 20 * glow;
     }
   } else {
-    ctx.fillStyle = colors.fg;
+    // At rest a paddle wears its own side's colour: yours rose, the ai's coral.
+    // Both used to be --fg, which made the two players identical objects and
+    // left the court with no colour in it at all until something went off.
+    //
+    // No glow here on purpose. The mockup gives the resting paddles a soft one,
+    // but a glow past the paddle's own edge is how this game says "a charge is
+    // in hand" — see the tells above — and lighting every paddle all the time
+    // spends that signal on nothing.
+    ctx.fillStyle = p === ai ? colors.villain : colors.hero;
   }
   ctx.fillRect(x, p.y + (shake > 0 ? (Math.random() * 2 - 1) * shake : 0),
     PADDLE_WIDTH, p.h);
@@ -1311,10 +1370,12 @@ function drawPaddle(p, x, tells) {
 // Three pips on the player's side of the board. Empty ones are outlined so the
 // meter reads as "two of three" rather than as two loose marks, which is what
 // makes a partly-filled one explain itself the first time you see it.
-const METER = { x: 14, y: HEIGHT - 18, w: 20, h: 7, gap: 4 };
+// x is where the *pips* start; the word sits immediately to their left, drawn
+// right-aligned so it lands there whatever width the label renders at.
+const METER = { x: 86, y: HEIGHT - 20, w: 14, h: 9, gap: 3 };
 
 // One segment. A popping pip throws a ring outward, swells past its own size and
-// burns white at the core before settling back to green.
+// burns white at the core before settling back to rose.
 function drawPip(i, lit, charged) {
   const P = ABILITY.pop;
   const x = METER.x + i * (METER.w + METER.gap);
@@ -1360,6 +1421,18 @@ function drawClutchMeter() {
   if (!spec.modes.includes(difficulty) || spec.segments <= 0) return;
   const charged = moveActive("clutch");
   const filled = charged ? spec.segments : clutchCharge;
+  // Three blocks in a corner are unreadable as anything until they are named.
+  // Right-aligned against the pips so the word ends where they begin however
+  // wide it renders — including on the first frames, before VT323 has loaded
+  // and the fallback is measuring wider.
+  ctx.save();
+  ctx.fillStyle = colors.muted;
+  ctx.font = "16px VT323, ui-monospace, monospace";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  ctx.letterSpacing = "3px"; // ignored where unsupported, which costs nothing
+  ctx.fillText("charge", METER.x - 10, METER.y + METER.h / 2);
+  ctx.restore();
   for (let i = 0; i < spec.segments; i++) drawPip(i, i < filled, charged);
 }
 
@@ -1481,17 +1554,117 @@ function drawLightning() {
   ctx.restore();
 }
 
+// The score burned into the phosphor, behind play. It can be this faint because
+// it is texture rather than information: the number a player actually reads is
+// the one on the bezel, in daylight, beside the word for whose it is. `#2a1c09`
+// is the court's own ground lifted a few steps - a burn tone, not a palette
+// colour, and used nowhere else.
+function drawBurnIn() {
+  ctx.save();
+  ctx.fillStyle = "#2a1c09";
+  ctx.font = "120px VT323, ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(player.score, WIDTH / 2 - 72, 150);
+  ctx.fillText(ai.score, WIDTH / 2 + 72, 150);
+  ctx.restore();
+}
+
+// Darkens the corners so the court reads as a curved tube rather than a flat
+// rectangle. Elliptical, via a scaled circle, because the court is 3:2 and a
+// round vignette on it pinches the top and bottom before it reaches the sides.
+//
+// Over the court's *texture* — the ground, the burned-in score, the centre
+// line — and under everything that is played with. Elliptical, via a scaled
+// circle, because the court is 3:2 and a round vignette on it pinches the top
+// and bottom before it reaches the sides.
+//
+// It shipped over play, the way the mockup draws it, and that was the bug
+// Gabriel reported as the game being invisible. A vignette darkens the corners,
+// and the corners of a Pong court are exactly where the paddles live: a paddle
+// at the top or bottom of its travel lost a third of its brightness, on a 10px
+// sliver against a near-black ground. Weakening it only made it cost less
+// while still costing something.
+//
+// Under the play layer it costs nothing and still does the work, because the
+// things it shades are the burn-in and the centre line rather than the court
+// itself — darkening a near-black ground does nothing, which is why the first
+// version was drawn on top in the first place.
+function drawVignette() {
+  const r = WIDTH * 0.72;
+  ctx.save();
+  ctx.translate(WIDTH / 2, HEIGHT * 0.45);
+  ctx.scale(1, HEIGHT / WIDTH);
+  const g = ctx.createRadialGradient(0, 0, r * 0.6, 0, 0, r);
+  g.addColorStop(0, "rgba(0, 0, 0, 0)");
+  g.addColorStop(1, "rgba(0, 0, 0, 0.6)");
+  ctx.fillStyle = g;
+  ctx.fillRect(-WIDTH, -WIDTH, WIDTH * 2, WIDTH * 2);
+  ctx.restore();
+}
+
+// Walks back along the recorded path, dropping a ghost every TRAIL_GAP pixels
+// of travel. Distance rather than ticks - see TRAIL_GAP.
+function drawTrail() {
+  if (ball.vx === 0 && ball.vy === 0) return;
+  let want = TRAIL_GAP;
+  let ghost = 0;
+  let dist = 0;
+  let px = ball.x;
+  let py = ball.y;
+  ctx.save();
+  ctx.fillStyle = colors.accent;
+  for (let i = trail.length - 1; i >= 0 && ghost < TRAIL_ALPHAS.length; i--) {
+    dist += Math.hypot(trail[i].x - px, trail[i].y - py);
+    px = trail[i].x;
+    py = trail[i].y;
+    while (ghost < TRAIL_ALPHAS.length && dist >= want) {
+      ctx.globalAlpha = TRAIL_ALPHAS[ghost];
+      ctx.fillRect(px, py, BALL_SIZE, BALL_SIZE);
+      ghost += 1;
+      want += TRAIL_GAP;
+    }
+  }
+  ctx.restore();
+}
+
+// On the court rather than in the status line above it: the eye is on the court
+// waiting for a ball, and the status line is where it is not. Not drawn while
+// paused, where the prompt would be a lie.
+function drawServePrompt() {
+  if (phase !== "serve" || paused || gameOver) return;
+  ctx.save();
+  ctx.fillStyle = colors.muted;
+  ctx.font = "26px VT323, ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.letterSpacing = "4px"; // ignored where unsupported, which costs nothing
+  ctx.fillText("PRESS SPACE TO SERVE", WIDTH / 2, 300);
+  ctx.restore();
+}
+
 function draw() {
   ctx.fillStyle = getComputedStyle(canvas).backgroundColor;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  ctx.strokeStyle = colors.border;
-  ctx.setLineDash([6, 10]);
+  drawBurnIn();
+
+  // Court furniture, and the one line on the board that belongs to neither
+  // player: --p-rule rather than the hairline colour, round-capped, and short
+  // of both edges so it reads as drawn on the tube rather than as a seam.
+  ctx.save();
+  ctx.strokeStyle = colors.rule;
+  ctx.globalAlpha = 0.5;
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.setLineDash([2, 10]);
   ctx.beginPath();
-  ctx.moveTo(WIDTH / 2, 0);
-  ctx.lineTo(WIDTH / 2, HEIGHT);
+  ctx.moveTo(WIDTH / 2, 8);
+  ctx.lineTo(WIDTH / 2, HEIGHT - 8);
   ctx.stroke();
+  ctx.restore();
   ctx.setLineDash([]);
+
+  // Shades the texture drawn so far and nothing after it — see drawVignette.
+  drawVignette();
 
   // Ghosts first, so the paddle itself lands on top of its own trail.
   if (aiGhosts.length > 0) {
@@ -1512,16 +1685,16 @@ function draw() {
   drawCharged(ai, WIDTH - PADDLE_WIDTH, "villain");
   drawLightning();
   drawPaddleFlash();
-  drawClutchMeter();
 
+  // Ghosts under the ball, so the ball itself is the brightest thing in its own
+  // trail rather than being tinted by the copy nearest it.
+  drawTrail();
   ctx.fillStyle = colors.accent;
   ctx.fillRect(ball.x, ball.y, BALL_SIZE, BALL_SIZE);
 
-  ctx.fillStyle = colors.fg;
-  ctx.font = "bold 28px system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText(player.score, WIDTH / 2 - 40, 40);
-  ctx.fillText(ai.score, WIDTH / 2 + 40, 40);
+  // The two things a player reads off the court rather than out of it.
+  drawClutchMeter();
+  drawServePrompt();
 }
 
 // Drain accumulated real time into fixed-size ticks. Returns how many it ran,
@@ -1670,6 +1843,7 @@ function resetMatch() {
   player = newPaddle();
   ai = newPaddle();
   ball = centredBall();
+  trail = [];
   gameOver = false;
   accumulator = 0;
   control = "keyboard";

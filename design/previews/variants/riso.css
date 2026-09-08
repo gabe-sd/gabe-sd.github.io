@@ -1,0 +1,626 @@
+/* 07 — Arcade Flyer
+ *
+ * Paper, not a screen. A risograph-printed flyer stapled to a wall in 1983:
+ * off-white uncoated stock, exactly two spot inks, halftone dots, and a
+ * wordmark whose second plate landed a millimetre out.
+ *
+ * This is the light variant, and it is light on purpose — it exists to ask
+ * whether the dark-only decision should be reopened, so it does not hedge
+ * toward grey anywhere.
+ *
+ * The inks are semi-transparent in reality, so overprint is done with
+ * mix-blend-mode: multiply rather than by hardcoding a third colour. The
+ * section is `isolation: isolate` so that blending can never reach the
+ * gallery chrome behind it.
+ */
+
+#v-riso {
+  /* Stock. The brief's #f4efe4 is the ink-free value; this is two points
+   * lighter because the dot screen and the tooth sit on top of it and land the
+   * rendered sheet back at roughly #f0ebdf. */
+  --paper: #f6f1e6;
+  --pink: #ff4d6d;         /* fluoro pink, plate 1 */
+  --blue: #2b41ff;         /* blue, plate 2 */
+  --over: #2b146d;         /* what multiply(pink, blue) actually produces */
+
+  /* Tints. A riso tint is a coarser dot, not a lighter ink, so these are only
+   * ever grounds — never type colours. */
+  --pink-10: rgba(255, 77, 109, 0.14);
+  --pink-25: rgba(255, 77, 109, 0.30);
+  --blue-25: rgba(43, 65, 255, 0.26);
+
+  /* The mine icon punches its highlight with this; on a light ground it has
+   * to be the paper or the mine reads as a doughnut. */
+  --icon-hole: #f6f1e6;
+
+  isolation: isolate;
+  background: var(--paper);
+  color: var(--blue);
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+/* --------------------------------------------------------------- texture */
+
+/* Two layers, both faint. The halftone is a 4px dot screen; the starburst is
+ * the one rotated element on the sheet, kept to the top-right so it never
+ * sits under body text.
+ *
+ * Rejected: putting the halftone over the type as well. At any opacity where
+ * you could see the dots you could also see them eating the small print, and
+ * it stopped looking like printing and started looking like a filter. */
+#v-riso .deco {
+  background-image:
+    /* halftone dot screen */
+    radial-gradient(circle at 50% 50%, rgba(43, 65, 255, 0.09) 0 1px, transparent 1.3px),
+    /* a slight ink build-up at the head of the sheet */
+    linear-gradient(to bottom, rgba(255, 77, 109, 0.08), transparent 30%);
+  background-size: 4px 4px, auto;
+  background-position: 1px 1px, 0 0;
+}
+
+/* The starburst. First attempt was a full-bleed repeating-conic-gradient on
+ * .deco and it was a disaster — an unmasked conic covers the whole sheet, so
+ * every ray ran under the listing and the page stopped being paper. It is a
+ * corner ornament or it is nothing, so it is masked to a disc off the top
+ * right and never reaches the type. */
+#v-riso::before {
+  content: "";
+  position: absolute;
+  top: -268px;
+  right: -150px;
+  width: 540px;
+  height: 540px;
+  z-index: 0;
+  pointer-events: none;
+  background: repeating-conic-gradient(from 6deg,
+    rgba(255, 77, 109, 0.26) 0deg 6deg, transparent 6deg 14deg);
+  -webkit-mask-image: radial-gradient(closest-side, #000 18%, transparent 70%);
+  mask-image: radial-gradient(closest-side, #000 18%, transparent 70%);
+}
+
+/* Paper tooth, over everything including the type — this is the layer that
+ * makes it read as stock rather than as a white background. feTurbulence in a
+ * data URI so it stays one file with no asset. Multiply at 0.10: any higher
+ * and the small print goes furry. */
+#v-riso::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: 0.085;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='t'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23t)'/%3E%3C/svg%3E");
+}
+
+#v-riso .screen {
+  max-width: 1000px;
+  margin: 0 auto;
+  /* Generous margins — a sheet, not a viewport. */
+  padding: 2.6rem 2.4rem 3.4rem;
+}
+
+/* ------------------------------------------------------------- the plate */
+
+#v-riso .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 7px solid var(--blue);
+}
+
+/* The signature move: the wordmark set twice, the pink plate 4px out. The
+ * pink copy is painted over the blue one and multiplies, so the overlap is a
+ * genuine overprint (#2b146d) rather than a colour I picked. Used here and on
+ * the call to action, and nowhere else — a flyer with everything misregistered
+ * is not a flyer, it is a mistake. */
+#v-riso .brand {
+  position: relative;
+  display: block;
+  font-family: 'Archivo Black', 'Space Grotesk', sans-serif;
+  font-size: clamp(2.6rem, 8.2vw, 5.4rem);
+  line-height: 0.82;
+  letter-spacing: -0.035em;
+  color: var(--blue);
+  text-transform: uppercase;
+}
+
+/* white-space: nowrap is load-bearing. An absolutely positioned copy shrinks
+ * to fit its containing block, so without it the pink plate broke to two lines
+ * while the blue one stayed on one — which looks like a bug, not a misprint. */
+#v-riso .brand::before {
+  content: "GAME ARCADE";
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  white-space: nowrap;
+  color: var(--pink);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+#v-riso .nav {
+  display: flex;
+  gap: 0.55rem;
+  padding-bottom: 0.5rem;
+}
+
+#v-riso .nav a {
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue);
+  padding: 0.3rem 0.7rem 0.26rem;
+  border: 2px solid var(--blue);
+  text-decoration: none;
+}
+
+#v-riso .nav a.active,
+#v-riso .nav a:hover {
+  color: var(--paper);
+  background: var(--pink);
+  border-color: var(--pink);
+}
+
+#v-riso .strap {
+  margin: 0.7rem 0 0;
+  padding-bottom: 0.85rem;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: clamp(0.86rem, 2.1vw, 1.12rem);
+  letter-spacing: 0.02em;
+  color: var(--over);
+  border-bottom: 3px solid var(--pink);
+}
+
+/* --------------------------------------------------------- game listing */
+
+/* A printed listing, not a card grid: number, mark, name, small print, ruled
+ * off. Two columns on a wide sheet, because six one-column rows across 1000px
+ * is a column of air. */
+#v-riso .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  column-gap: 2.2rem;
+  row-gap: 0;
+  margin-top: 1.5rem;
+}
+
+#v-riso .tile {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.3rem 44px 1fr auto;
+  grid-template-areas:
+    "num ico name cat"
+    "num ico desc cat";
+  align-items: center;
+  column-gap: 0.85rem;
+  padding: 0.72rem 0.55rem 0.72rem 0.35rem;
+  border-bottom: 1px solid var(--blue);
+  text-decoration: none;
+  color: var(--blue);
+}
+
+/* Hairlines between the entries, a heavy rule opening and closing the block —
+ * the listing was floating between a very heavy header and a very heavy
+ * coupon, and six identical hairlines gave it no edges of its own. */
+#v-riso .grid .tile:nth-child(-n + 2) { border-top: 3px solid var(--blue); }
+#v-riso .grid .tile:nth-child(n + 5) { border-bottom-width: 3px; }
+
+#v-riso .tnum {
+  grid-area: num;
+  display: block;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 1.55rem;
+  line-height: 1;
+  color: var(--pink);
+}
+
+#v-riso .tico { grid-area: ico; display: block; }
+#v-riso .ico { width: 40px; height: 40px; }
+
+#v-riso .tname {
+  grid-area: name;
+  align-self: end;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 1.32rem;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+#v-riso .tdesc {
+  grid-area: desc;
+  align-self: start;
+  font-size: 0.82rem;
+  line-height: 1.3;
+  color: var(--over);
+  padding-top: 0.15rem;
+}
+
+#v-riso .tcat {
+  grid-area: cat;
+  align-self: center;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  color: var(--paper);
+  background: var(--blue);
+  padding: 0.24rem 0.42rem 0.2rem;
+}
+
+/* Hover and selection are an ink block, not a colour change: the row prints
+ * solid and the type reverses out of it. That survives greyscale, which a tint
+ * swap would not. The second cue is the pointer set in the left margin, which
+ * only the live row has. */
+#v-riso .tile:hover,
+#v-riso .tile:focus-visible {
+  outline: none;
+  background: var(--pink-10);
+  /* A wash alone is colour-only, which the bar fixes: the row grows a solid
+   * pink edge that is visible as a shape at a glance and in greyscale. */
+  box-shadow: inset 5px 0 0 var(--pink);
+}
+
+#v-riso .tile.is-selected {
+  background: var(--blue);
+  color: var(--paper);
+  border-bottom-color: var(--blue);
+}
+
+#v-riso .tile.is-selected .tnum { color: var(--paper); }
+#v-riso .tile.is-selected .tdesc { color: rgba(244, 239, 228, 0.88); }
+
+#v-riso .tile.is-selected .tcat {
+  color: var(--blue);
+  background: var(--paper);
+}
+
+/* Halftone over the solid ink, so the selected row is printed rather than
+ * filled — the same dot screen as .deco, knocked back. */
+#v-riso .tile.is-selected::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.13) 0 1px, transparent 1.3px);
+  background-size: 4px 4px;
+}
+
+#v-riso .tile.is-selected::before {
+  content: "\25B6";
+  position: absolute;
+  left: -1.15rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.7rem;
+  color: var(--pink);
+}
+
+/* ------------------------------------------------------------ the ticket */
+
+/* The info panel is the tear-off coupon at the foot of the flyer: dashed cut
+ * line, a solid plate, everything reversed out of it.
+ *
+ * The plate was pink first and it failed the readability bar — paper on
+ * #ff4d6d is about 2.6:1, which is fine for the 40px name and not fine for the
+ * 15px description underneath it. Fluoro pink simply is not a dark colour, so
+ * no amount of tuning the text saves it. The plate is the overprint instead,
+ * which is what you would actually get by running both plates solid, reads at
+ * about 11:1, and gives the sheet the dark anchor it was missing. Pink stays
+ * as the cut line and the meta. */
+#v-riso .info {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "label name cta"
+    "label meta cta"
+    "label desc cta";
+  align-items: center;
+  column-gap: 1.5rem;
+  margin-top: 2.1rem;
+  padding: 1.2rem 1.4rem 1.3rem;
+  background: var(--over);
+  border: 3px dashed var(--pink);
+  outline: 2px solid var(--over);
+  color: var(--paper);
+}
+
+#v-riso .info::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle at 50% 50%, rgba(255, 77, 109, 0.20) 0 1px, transparent 1.3px);
+  background-size: 4px 4px;
+}
+
+#v-riso .ilabel {
+  grid-area: label;
+  align-self: start;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 0.66rem;
+  letter-spacing: 0.28em;
+  color: var(--paper);
+}
+
+#v-riso .inm {
+  grid-area: name;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: clamp(1.9rem, 5vw, 2.9rem);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  color: var(--paper);
+}
+
+#v-riso .imeta {
+  grid-area: meta;
+  margin-top: 0.3rem;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  color: var(--pink);
+}
+
+#v-riso .idesc {
+  grid-area: desc;
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+  color: var(--paper);
+}
+
+#v-riso .icta {
+  grid-area: cta;
+  position: relative;
+  align-self: center;
+  justify-self: end;
+  padding: 0.75rem 1.3rem 0.65rem;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: clamp(0.95rem, 2.4vw, 1.35rem);
+  letter-spacing: 0.04em;
+  color: var(--pink);
+  background: var(--paper);
+}
+
+/* The second misregistration, and the last. */
+#v-riso .icta::before {
+  content: "PRESS TO PLAY";
+  position: absolute;
+  left: calc(1.3rem + 3px);
+  top: calc(0.75rem + 3px);
+  white-space: nowrap;
+  color: var(--blue);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+/* Launch is a print knock: the plate shifts and comes back, five times. */
+#v-riso .info.is-launching { animation: riso-print 0.14s steps(1) 5; }
+
+@keyframes riso-print {
+  50% { transform: translate(3px, -2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #v-riso .info.is-launching { animation: none; }
+}
+
+/* ---------------------------------------------------------- game samples */
+
+#v-riso .sample { margin-top: 2.6rem; }
+
+#v-riso .sample-h {
+  margin: 0 0 0.9rem;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--blue);
+  border-top: 3px solid var(--blue);
+  padding-top: 0.45rem;
+}
+
+#v-riso .sample-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1.4rem; }
+
+#v-riso .sbox {
+  flex: 0 0 auto;
+  padding: 0.75rem 0.9rem 0.95rem;
+  /* A hairline around the box and a heavier rule around the board inside it —
+   * two 2px borders read as a box drawn twice. */
+  border: 1px solid var(--blue);
+  background: var(--paper);
+}
+
+#v-riso .sbox-h {
+  display: block;
+  margin-bottom: 0.6rem;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 0.64rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pink);
+}
+
+/* Sudoku: givens on the blue plate, entries on the pink one — which is how a
+ * two-colour print would separate "printed for you" from "written in". */
+#v-riso .sgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 34px);
+  gap: 0;
+  border: 2px solid var(--blue);
+}
+
+#v-riso .scell {
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--blue-25);
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 1.05rem;
+  color: var(--blue);
+}
+
+#v-riso .scell.given { color: var(--blue); }
+#v-riso .scell.entered { color: var(--pink); }
+
+#v-riso .scell.sel {
+  background: var(--pink-25);
+  box-shadow: inset 0 0 0 2px var(--pink);
+}
+
+/* ---- the eight numbers -------------------------------------------------
+ * Two inks have to carry eight steps, and a tint ramp of one ink cannot: by
+ * the fourth step it is unreadable on paper. So each number is a pair —
+ * (which ink, which ground) — and the ground does half the work:
+ *
+ *   1 blue on paper            5 paper on solid blue
+ *   2 pink on paper            6 paper on solid pink
+ *   3 overprint on paper       7 paper on solid overprint
+ *   4 blue on a pink screen    8 overprint on a blue screen
+ *
+ * 4 and 8 started as flat tints and 8 was then too close to 3 — a dark number
+ * on a pale wash reads as the same cell with the light on. They are dot
+ * screens instead, which is what a riso tint physically is, and the texture
+ * separates them from the flat cells at a glance rather than by hue.
+ *
+ * Four of the eight reverse out, so they stay distinct in greyscale and to a
+ * colour-blind reader, which no all-positive palette manages. The cost is real
+ * and is in the report: a reversed cell on a live board also reads a little
+ * like a highlighted cell. */
+#v-riso .mgrid {
+  display: flex;
+  gap: 0;
+  border: 2px solid var(--blue);
+}
+
+#v-riso .mcell {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--blue-25);
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 1.05rem;
+}
+
+#v-riso .n1 { color: var(--blue); }
+#v-riso .n2 { color: var(--pink); }
+#v-riso .n3 { color: var(--over); }
+#v-riso .n5 { color: var(--paper); background: var(--blue); }
+#v-riso .n6 { color: var(--paper); background: var(--pink); }
+#v-riso .n7 { color: var(--paper); background: var(--over); }
+
+#v-riso .n4 {
+  color: var(--blue);
+  background-image: radial-gradient(circle at 50% 50%, rgba(255, 77, 109, 0.85) 0 1.5px, transparent 1.8px);
+  background-size: 4px 4px;
+}
+
+#v-riso .n8 {
+  color: var(--over);
+  background-image: radial-gradient(circle at 50% 50%, rgba(43, 65, 255, 0.45) 0 1.5px, transparent 1.8px);
+  background-size: 4px 4px;
+}
+
+#v-riso .mcell.flag { color: var(--pink); font-size: 1.15rem; }
+
+/* An unrevealed cell is the one place a flat tint would be wrong: on paper it
+ * is the coarser screen, so it gets the dot itself rather than a fill. */
+#v-riso .mcell.hidden-cell {
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(43, 65, 255, 0.30) 0 1.2px, transparent 1.5px);
+  background-size: 4px 4px;
+}
+
+/* ---- pong ---- */
+
+#v-riso .pbar {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  font-family: 'Archivo Black', sans-serif;
+}
+
+#v-riso .pscore { font-size: 1.7rem; line-height: 1; color: var(--blue); }
+#v-riso .pbar .pscore:last-child { color: var(--pink); }
+#v-riso .plabel { font-size: 0.62rem; letter-spacing: 0.16em; color: var(--over); }
+#v-riso .pdiv { flex: 0 0 22px; height: 3px; background: var(--pink); align-self: center; }
+
+#v-riso .pcourt {
+  position: relative;
+  height: 48px;
+  margin-top: 0.6rem;
+  border: 2px solid var(--blue);
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(43, 65, 255, 0.20) 0 1px, transparent 1.3px);
+  background-size: 4px 4px;
+}
+
+#v-riso .pcourt::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  bottom: 4px;
+  border-left: 2px dashed var(--pink);
+}
+
+#v-riso .ppad { position: absolute; top: 8px; width: 7px; height: 24px; background: var(--blue); }
+#v-riso .ppad.l { left: 8px; }
+#v-riso .ppad.r { right: 8px; top: 17px; background: var(--pink); }
+
+#v-riso .pball {
+  position: absolute;
+  left: 62%;
+  top: 18px;
+  width: 10px;
+  height: 10px;
+  background: var(--over);
+  border-radius: 50%;
+}
+
+/* ----------------------------------------------------------------- foot */
+
+#v-riso .foot {
+  margin-top: 2.8rem;
+  padding-top: 0.6rem;
+  border-top: 7px solid var(--blue);
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  color: var(--over);
+}
+
+/* ------------------------------------------------------------ narrow ---- */
+
+@media (max-width: 700px) {
+  /* 1.6rem left, not 1.1rem: the selected row's ▶ hangs 1.15rem into the
+   * margin and was being clipped by the section edge. */
+  #v-riso .screen { padding: 1.6rem 1.2rem 2.4rem 1.7rem; }
+  #v-riso .top { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+  #v-riso .tile {
+    grid-template-columns: 1.9rem 34px 1fr;
+    grid-template-areas: "num ico name" "num ico desc" "num ico cat";
+  }
+  #v-riso .tcat { justify-self: start; margin-top: 0.3rem; }
+  /* The heavy opening and closing rules are indexed for two columns; in one
+   * column they land in the middle of the list and read as a section break. */
+  #v-riso .grid .tile:nth-child(2) { border-top-width: 0; }
+  #v-riso .grid .tile:nth-child(5) { border-bottom-width: 1px; }
+  #v-riso .ico { width: 30px; height: 30px; }
+  #v-riso .info {
+    grid-template-columns: 1fr;
+    grid-template-areas: "label" "name" "meta" "desc" "cta";
+  }
+  #v-riso .ilabel { writing-mode: horizontal-tb; transform: none; margin-bottom: 0.3rem; }
+  #v-riso .icta { justify-self: start; margin-top: 1rem; }
+}

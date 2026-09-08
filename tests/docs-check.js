@@ -42,8 +42,13 @@ const walk = (dir, out = []) => {
 };
 const files = walk(".").map((f) => f.replace(/^\.\//, ""));
 const docs = files.filter((f) => f.endsWith(".md"));
+// design/mockups/ is reference material rather than the site: hand-built pages
+// that were never served and whose markup is deliberately not ported. Feeding them
+// to the checks below would let a function that exists only in a dead mockup
+// satisfy a doc naming it, and would offer a storage key nobody ever wrote.
 const code = files
   .filter((f) => /\.(js|html|css)$/.test(f))
+  .filter((f) => !f.startsWith("design/mockups/"))
   .map((f) => read(f))
   .join("\n");
 const allDocs = docs.map((d) => read(d)).join("\n");
@@ -136,19 +141,33 @@ const todos = files.filter((f) => f === "TODO.md" || f.endsWith("/TODO.md"));
 const slugs = todos.flatMap((f) =>
   [...read(f).matchAll(/^### ([a-z0-9-]+)/gm)].map((m) => `${f}:${m[1]}`)
 );
-//    The quotes in the pattern matter: without them `pong-mobile-support` matches
-//    the merge of `pong-mobile-support-entry`, which landed the note, not the work.
+//    Two message shapes count, because both are in use: `Merge branch '<slug>'`,
+//    which is what git writes by default, and `Merge <slug>: <what it was>`,
+//    which the redesign's phase merges use to say what landed. Matching only the
+//    first is how this check spent an entire project matching nothing: every
+//    phase merge on `redesign` was worded the second way, so a landed entry sat
+//    in `design/TODO.md` and nothing said so.
+//    Something has to close the slug, or `pong-mobile-support` matches the merge
+//    of `pong-mobile-support-entry`, which landed the note rather than the work.
+//    The closing quote does it for the first shape and the colon for the second,
+//    which is why the colon is not optional.
+//    `^` closes the other end. `--grep` is a substring match over the whole
+//    message, and it anchors per *line*, not per message - so this pins both
+//    shapes to the start of a line, which a merge subject always is. Without it a
+//    body sentence that happened to read `... Merge <slug>: ...` would mark that
+//    entry landed. Widening the pattern is what made that worth spending a
+//    character on: there are two ways in now rather than one.
 //    The optional prefix is there because a worktree branch is created as
 //    `worktree-<slug>`, and a merge of one is still that entry landing.
 const landed = slugs.filter((entry) => {
   const slug = entry.split(":")[1];
   const log = execFileSync(
     "git",
-    //  -E so the optional prefix needs no backslashes: a template literal eats
-    //  them, which silently turned the group into three literal characters and
-    //  made this check pass on everything.
+    //  -E so the groups need no backslashes: a template literal eats them, which
+    //  silently turned one into three literal characters and made this check
+    //  pass on everything.
     ["log", "--all", "--oneline", "--merges", "-E",
-     `--grep=Merge branch '(worktree-)?${slug}'`],
+     `--grep=^Merge (branch '(worktree-)?${slug}'|(worktree-)?${slug}:)`],
     { cwd: ROOT, encoding: "utf8" }
   );
   return log.trim().length > 0;

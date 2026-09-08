@@ -55,8 +55,15 @@ const { check, report } = makeChecks();
   const where = (b) => `centre ${(b.x + BALL_SIZE / 2).toFixed(1)},`
     + `${(b.y + BALL_SIZE / 2).toFixed(1)} vs board ${WIDTH / 2},${HEIGHT / 2}`;
 
-  const readerText = () => page.evaluate(() =>
-    document.getElementById("score-reader")?.textContent ?? null);
+  // The scorebar on the bezel, read as "<you>-<ai>". It replaced a hidden live
+  // region holding the same numbers, which existed only because the score was
+  // painted on the canvas and so unreadable to a screen reader. The bar is real
+  // text, so one element now serves both.
+  const barScore = () => page.evaluate(() => {
+    const you = document.getElementById("score-you");
+    const ai = document.getElementById("score-ai");
+    return you && ai ? `${you.textContent}-${ai.textContent}` : null;
+  });
 
   const consts = await page.evaluate(`({
     WIDTH, HEIGHT, PADDLE_WIDTH, PADDLE_HEIGHT, BALL_SIZE, WIN_SCORE, PADDLE_SPEED,
@@ -89,35 +96,63 @@ const { check, report } = makeChecks();
     check("ball waits to be served rather than launching itself",
       s.ball.vx === 0 && s.ball.vy === 0, `${s.ball.vx},${s.ball.vy}`);
     check("the menu is showing", await page.isVisible("#menu"));
-    check("with no heading before a game has been played",
-      (await page.textContent("#menu-heading")).trim() === "",
+    check("the menu titles itself before a game has been played",
+      (await page.textContent("#menu-heading")).trim() === "READY",
       await page.textContent("#menu-heading"));
     check("and the status line is left to the menu",
       (await page.textContent("#status")).trim() === "",
       await page.textContent("#status"));
     check("canvas is 600x400", WIDTH === 600 && HEIGHT === 400, `${WIDTH}x${HEIGHT}`);
 
-    // draw() paints the score on the canvas, which no screen reader can read.
-    // Not isVisible(): a 1px clipped element counts as visible to Playwright, so
-    // assert on the technique itself.
-    const reader = await page.evaluate(() => {
-      const el = document.getElementById("score-reader");
+    // The score is on the bezel, in text, announced when it changes. Rendered
+    // rather than clipped: it is the same score for everyone, which is the whole
+    // reason the hidden copy it replaced could go.
+    const bar = await page.evaluate(() => {
+      const el = document.querySelector(".scorebar");
       if (!el) return null;
       const r = el.getBoundingClientRect();
-      const st = getComputedStyle(el);
-      return { live: el.getAttribute("aria-live"), w: r.width, h: r.height,
-               display: st.display, clip: st.clipPath };
+      const court = document.getElementById("board").getBoundingClientRect();
+      return { live: el.getAttribute("aria-live"),
+               atomic: el.getAttribute("aria-atomic"),
+               w: r.width, h: r.height,
+               // Flush with the court, which is what puts `you` over the
+               // player's paddle instead of out at the window's edge.
+               dLeft: Math.abs(r.left - court.left),
+               dRight: Math.abs(r.right - court.right) };
     });
-    check("a live region carries the score", reader && reader.live === "polite",
-      reader && reader.live);
-    if (reader) {
-      check("clipped away rather than rendered", reader.w <= 1 && reader.h <= 1,
-        `${reader.w}x${reader.h} clip=${reader.clip}`);
-      check("but still in the accessibility tree, not display:none",
-        reader.display !== "none", reader.display);
+    check("a live region carries the score", bar && bar.live === "polite",
+      bar && bar.live);
+    if (bar) {
+      check("read as a whole, so a point is not a lone digit",
+        bar.atomic === "true", bar.atomic);
+      check("visible rather than clipped away", bar.w > 100 && bar.h > 10,
+        `${bar.w}x${bar.h}`);
+      check("and its ends line up with the court's",
+        bar.dLeft < 2 && bar.dRight < 2, `${bar.dLeft} / ${bar.dRight}`);
     }
-    check("and starts level", (await readerText()) === "You 0, AI 0",
-      await readerText());
+    check("and starts level", (await barScore()) === "0-0", await barScore());
+    check("the target is stated beside it",
+      (await page.textContent("#win-score-bar")) === String(WIN_SCORE),
+      await page.textContent("#win-score-bar"));
+
+    // The score used to be painted across the top of the canvas as well. It is
+    // now burned faintly into the phosphor behind play instead - texture, not
+    // the number anyone reads - so nothing bright is drawn up there any more.
+    const topStrip = await page.evaluate(() => {
+      draw();
+      const d = ctx.getImageData(0, 0, WIDTH, 60).data;
+      let brightest = 0;
+      for (let i = 0; i < d.length; i += 4) {
+        brightest = Math.max(brightest, d[i] + d[i + 1] + d[i + 2]);
+      }
+      return brightest;
+    });
+    // 300 sits between what is allowed up there and what is not: the centre
+    // line at half opacity comes to about 120, the score that used to be drawn
+    // there was --fg at 28px, which is 528. Not "is it dark" - the court is
+    // always dark - but "is anything as bright as text being drawn on it".
+    check("and nothing is painted over the top of the court", topStrip < 300,
+      topStrip);
   }
 
   console.log("2. the harness can actually freeze the loop");
@@ -286,8 +321,8 @@ const { check, report } = makeChecks();
     check("ball returns to the centre", isCentred(s.ball), where(s.ball));
     check("ball waits rather than launching straight away", s.ball.vx === 0,
       s.ball.vx);
-    check("the score reaches the hidden live region",
-      (await readerText()) === "You 0, AI 1", await readerText());
+    check("the score reaches the scorebar",
+      (await barScore()) === "0-1", await barScore());
     check("and is not repeated in the status line",
       !/\d/.test(await page.textContent("#status")),
       await page.textContent("#status"));
@@ -417,8 +452,8 @@ const { check, report } = makeChecks();
     await page.evaluate(() => restart());
     const t = await read();
     check("scores cleared", t.player.score === 0 && t.ai.score === 0);
-    check("the live region is reset too",
-      (await readerText()) === "You 0, AI 0", await readerText());
+    check("the scorebar is reset too", (await barScore()) === "0-0",
+      await barScore());
     check("gameOver cleared", t.gameOver === false);
     check("paddles recentred", t.player.y === MAX_Y / 2 && t.ai.y === MAX_Y / 2);
     check("ball re-served from the centre", isCentred(t.ball), where(t.ball));
@@ -541,16 +576,23 @@ const { check, report } = makeChecks();
       (await read()).player.y === MAX_Y, (await read()).player.y);
   }
 
-  console.log("13. the canvas palette follows the OS theme");
+  console.log("13. the canvas palette is dark-only, regardless of the OS theme");
   {
+    // shared.css dropped prefers-color-scheme - one phosphor palette, always.
+    // This used to assert the opposite (that the OS theme flipped the canvas
+    // colours); design/DESIGN.md, "Dark only" says why that changed underneath
+    // it. The guard worth keeping is that colors{} still reads real values from
+    // the CSS custom properties, not that it responds to the OS at all.
     await page.emulateMedia({ colorScheme: "light" });
     await page.waitForTimeout(80);
     const light = await page.evaluate(() => ({ ...colors }));
     await page.emulateMedia({ colorScheme: "dark" });
     await page.waitForTimeout(80);
     const dark = await page.evaluate(() => ({ ...colors }));
-    check("foreground changes with the theme, without a reload",
-      light.fg !== dark.fg, `${light.fg} -> ${dark.fg}`);
+    check("the palette does not change with the OS theme",
+      light.fg === dark.fg && light.accent === dark.accent &&
+        light.border === dark.border,
+      `${JSON.stringify(light)} vs ${JSON.stringify(dark)}`);
     check("the palette is fully populated in both",
       [light.fg, light.accent, light.border, dark.fg, dark.accent, dark.border]
         .every((c) => typeof c === "string" && c.length > 0));
@@ -1342,8 +1384,8 @@ const { check, report } = makeChecks();
     check("and drops into the serve prompt", s24.phase === "serve", s24.phase);
     check("and stops claiming somebody won",
       !s24.status.includes("win"), s24.status);
-    check("the live region resets too",
-      (await readerText()) === "You 0, AI 0", await readerText());
+    check("the scorebar resets too", (await barScore()) === "0-0",
+      await barScore());
 
     // The outcome that actually matters: the board is alive again.
     await page.keyboard.press("Space");
@@ -1819,11 +1861,22 @@ const { check, report } = makeChecks();
           Math.round(METER.y + METER.h / 2), 1, 1).data;
         return [d[0], d[1], d[2]];
       };
-      const paddleGlows = () => {
+      // A point just past the paddle's edge, still on bare board when nothing
+      // is lit. Two earlier versions of this helper broke on a change to the
+      // *ground* rather than to the glow: first a hardcoded "255,255,255",
+      // which was the light theme's white; then the board's flat background
+      // colour, which stopped being flat when the court gained a vignette.
+      // So: capture that very pixel while nothing is lit, and call it glowing
+      // only when it gets brighter. A glow is light added, whatever is under it.
+      const litAt = () => {
         const d = ctx.getImageData(PADDLE_WIDTH + 5,
           Math.round(player.y + player.h / 2), 1, 1).data;
-        return `${d[0]},${d[1]},${d[2]}` !== "255,255,255";
+        return d[0] + d[1] + d[2];
       };
+      resetAbilities();
+      draw();
+      const quietSum = litAt();
+      const paddleGlows = () => litAt() > quietSum + 8;
       const edgeHit = () => onPlayerReturn(player.y + 2 - BALL_SIZE / 2);
 
       // One close call.
@@ -1905,16 +1958,23 @@ const { check, report } = makeChecks();
       phase = "play";
       return { empty, two, charged, absent: snap() };
     });
+    // "Lit" rather than "a different string": the court carries a vignette, so
+    // three pips side by side sit on three slightly different grounds and no
+    // two unlit ones are ever byte-identical. A filled pip is rose (r=255) and
+    // an unlit one is court-dark, so the red channel separates them with a
+    // margin nothing else on the board can cross.
+    const lit = (s) => Number(s.split(",")[0]) > 120;
+    const same = (a, b) => a.every((s, i) =>
+      s.split(",").every((v, k) => Math.abs(Number(v) - Number(b[i].split(",")[k])) <= 2));
     check("an empty meter paints no filled pips",
-      new Set(pips.empty).size === 1, pips.empty.join(" | "));
+      pips.empty.every((s) => !lit(s)), pips.empty.join(" | "));
     check("two close calls light exactly two pips",
-      pips.two[0] === pips.two[1] && pips.two[2] === pips.empty[2]
-        && pips.two[0] !== pips.empty[0], pips.two.join(" | "));
-    check("a charged shot lights all three",
-      new Set(pips.charged).size === 1 && pips.charged[0] !== pips.empty[0],
+      lit(pips.two[0]) && lit(pips.two[1]) && !lit(pips.two[2]),
+      pips.two.join(" | "));
+    check("a charged shot lights all three", pips.charged.every(lit),
       pips.charged.join(" | "));
     check("and no meter is drawn in a mode that has no clutch",
-      pips.absent.join() === pips.empty.join(), pips.absent.join(" | "));
+      same(pips.absent, pips.empty), pips.absent.join(" | "));
 
     // Expand recolours the paddle and does nothing else. A glow bleeds outside the
     // paddle rect, so sampling just past its edge is what separates the two tells.
@@ -2333,12 +2393,31 @@ const { check, report } = makeChecks();
     await page.evaluate(() => {
       cancelAnimationFrame(rafId);
       // Counts red-dominant pixels in a vertical strip. Brightness will not do:
-      // the light theme's background is near-white, so it lights up every pixel.
+      // the board background sits near-black, so it lights up every pixel.
+      // A per-channel gap will not do either, now: Amber Arcade's ordinary
+      // paddle fill and ball (colors.fg, colors.accent) are themselves
+      // red-leaning by raw channel magnitude, so a bare threshold either lets
+      // amber through as "red" or, tightened past amber, starts missing the
+      // real attack colour wherever it is glow-blurred rather than solid -
+      // a shadowBlur halo blends toward the near-black board, which scales
+      // every channel down by the same factor and can put a faint patch of
+      // real red under a threshold built for a solid fill.
+      // Hue is what actually distinguishes them, and blending toward black
+      // does not move it: scaling r, g and b by the same alpha leaves every
+      // ratio between them unchanged. So classify by hue instead of
+      // magnitude - amber sits at 37-41°, colors.villain (coral) at 6-7°, and
+      // that gap holds however faint the pixel is.
       window.redIn = (x, w) => {
         const d = ctx.getImageData(x, 0, w, HEIGHT).data;
         let n = 0;
         for (let i = 0; i < d.length; i += 4) {
-          if (d[i] > d[i + 1] + 40 && d[i] > d[i + 2] + 40 && d[i + 3] > 0) n++;
+          const r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
+          if (a === 0 || r !== Math.max(r, g, b)) continue;
+          const min = Math.min(r, g, b);
+          if (r - min < 20) continue;   // too washed out to have a real hue
+          let hue = 60 * (((g - b) / (r - min)) % 6);
+          if (hue < 0) hue += 360;
+          if (hue <= 20) n++;
         }
         return n;
       };
@@ -2441,13 +2520,17 @@ const { check, report } = makeChecks();
     check("and it still shrinks the paddle - the effect is not the visuals",
       off.shrank);
 
-    // The board is pure white in the light theme and near-black in the dark one,
-    // and the bolt's core is the brightest thing in it. A fixed white core is
-    // invisible on a white board - the effect loses the part that makes it read
-    // as lightning, in the theme most people are using.
-    for (const scheme of ["light", "dark"]) {
+    // Dark-only now (design/DESIGN.md, "Dark only"): there is one board, not a
+    // light one and a dark one, so this used to loop `emulateMedia` over both
+    // and run the identical check twice once shared.css stopped giving it
+    // anything to switch - staying green while testing nothing, which is
+    // exactly the failure this suite's own "canvas measurement" rule warns
+    // about. The claim worth keeping is that the bolt's core still reads
+    // against whatever the board now is; the boardLum-based branch stays,
+    // computed rather than hardcoded, so a later palette change cannot make
+    // this pass by accident either.
+    {
       const themed = await browser.newPage();
-      await themed.emulateMedia({ colorScheme: scheme });
       await themed.goto(PAGE);
       await themed.waitForSelector("#board");
       const seen = await themed.evaluate(() => {
@@ -2483,7 +2566,7 @@ const { check, report } = makeChecks();
         draw();
         return { before, after: contrast() };
       });
-      check(`the bolt has a bright core against a ${scheme} board`,
+      check("the bolt has a bright core against the board",
         seen.after > seen.before + 200, `${seen.before} -> ${seen.after}`);
       await themed.close();
     }
@@ -2589,11 +2672,22 @@ const { check, report } = makeChecks();
     await page.waitForSelector("#board");
     await page.evaluate(() => {
       cancelAnimationFrame(rafId);
+      // See case 28's copy of this for why this classifies by hue rather than
+      // channel magnitude: Amber Arcade's ordinary paddle and ball colours are
+      // themselves red-leaning by raw magnitude, and only hue tells them apart
+      // from colors.villain - the actual attack colour - at every opacity a
+      // glow blends down to.
       window.redIn = (x, w) => {
         const d = ctx.getImageData(x, 0, w, HEIGHT).data;
         let n = 0;
         for (let i = 0; i < d.length; i += 4) {
-          if (d[i] > d[i + 1] + 40 && d[i] > d[i + 2] + 40 && d[i + 3] > 0) n++;
+          const r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
+          if (a === 0 || r !== Math.max(r, g, b)) continue;
+          const min = Math.min(r, g, b);
+          if (r - min < 20) continue;
+          let hue = 60 * (((g - b) / (r - min)) % 6);
+          if (hue < 0) hue += 360;
+          if (hue <= 20) n++;
         }
         return n;
       };
@@ -2795,11 +2889,28 @@ const { check, report } = makeChecks();
         phase = "play";
         player.y = HEIGHT / 2 - player.h / 2;
       };
-      window.greenOnPlayer = () => {
+      // Named for the gift's original colour, but the gift is `colors.hero` -
+      // Pong's own player colour now, not literally green - so this counts
+      // pixels close to whatever colors.hero currently is rather than
+      // assuming a hue. A channel-magnitude test like the old green-only one
+      // would silently read 0 forever the day hero stops being green.
+      // Counts pixels of expand's tint in the player's paddle column. It counts
+      // --p-hot, not hero: the paddle now *rests* in hero's rose, so a tell
+      // that painted it rose would be no tell at all, and this helper would
+      // have gone on reporting a tint that was really just the paddle.
+      // Matched by *ratio*, not by value: --p-hot is near-white, so its three
+      // channels sit close together, while rose and coral both drop green and
+      // blue hard. The court's vignette scales every channel by the same
+      // factor, so the ratio survives it where an "is it #fff2da" comparison
+      // does not - and that comparison is exactly what a vignette drawn over
+      // the paddles would silently turn into "is it nothing at all".
+      window.hotOnPlayer = () => {
         const d = ctx.getImageData(0, 0, PADDLE_WIDTH, HEIGHT).data;
         let n = 0;
         for (let i = 0; i < d.length; i += 4) {
-          if (d[i + 1] > d[i] + 30 && d[i + 1] > d[i + 2] + 30 && d[i + 3] > 0) n++;
+          if (d[i + 3] === 0) continue;
+          const r = d[i];
+          if (r > 90 && d[i + 1] > r * 0.8 && d[i + 2] > r * 0.7) n++;
         }
         return n;
       };
@@ -2863,24 +2974,36 @@ const { check, report } = makeChecks();
     check("and can again once it lets go", locked.allowed === true,
       locked.allowed);
 
-    // A green paddle that is also small claims a gift you are not getting.
+    // A paddle tinted hero's colour that is also small claims a gift you are
+    // not getting.
     const tint = await page.evaluate(() => {
       stage();
+      draw();
+      const quiet = hotOnPlayer();
       startMove("expand");
       draw();
-      const gift = greenOnPlayer();
+      const gift = hotOnPlayer();
       armMove("squeeze"); startMove("squeeze");
       draw();
-      const attacked = greenOnPlayer();
+      const attacked = hotOnPlayer();
       endMove("squeeze");
       draw();
-      return { gift, attacked, restored: greenOnPlayer() };
+      return { quiet, gift, attacked, restored: hotOnPlayer(),
+               area: PADDLE_WIDTH * player.h };
     });
-    check("the bigger paddle shows green", tint.gift > 0, tint.gift);
+    // Counted by area rather than by presence. The opponent's bolt ends *on*
+    // this paddle and its core is white, so a squeezed paddle always carries a
+    // few dozen near-white pixels where the lightning crosses it - which is a
+    // line drawn over the paddle, not the paddle being painted. A tint fills
+    // it: half its own area or more.
+    const filled = (n) => n > tint.area * 0.5;
+    check("a quiet paddle is not white-hot", !filled(tint.quiet), tint.quiet);
+    check("the bigger paddle burns white-hot", filled(tint.gift),
+      `${tint.gift} of ${tint.area}`);
     check("but says nothing while the lightning outranks it",
-      tint.attacked === 0, tint.attacked);
-    check("and speaks again once the lightning ends", tint.restored > 0,
-      tint.restored);
+      !filled(tint.attacked), `${tint.attacked} of ${tint.area}`);
+    check("and speaks again once the lightning ends", filled(tint.restored),
+      `${tint.restored} of ${tint.area}`);
 
     // The off value has to work, like every other knob here.
     const unblocked = await page.evaluate(() => {
@@ -3025,6 +3148,102 @@ const { check, report } = makeChecks();
       localStorage.removeItem("pong.difficulty");
       restart();
     });
+  }
+
+  console.log("32. the court draws what the status line used to say");
+  {
+    await freeze();
+    // Everything below scans the right-hand half only, clear of the centre
+    // line: that line is --p-rule, which is warm enough to pass for a faint
+    // ghost of the amber ball and would be counted as trail on every row.
+    const trailReach = (speed) => page.evaluate((speed) => {
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = "play";
+      player.y = 150;
+      ai.y = 150;
+      // A flat path across the right-hand half, well clear of both paddles.
+      ball = { x: 560, y: 200, vx: -speed, vy: 0 };
+      trail = [];
+      for (let i = 0; i < 10; i++) update();
+      draw();
+      const row = Math.round(ball.y + BALL_SIZE / 2);
+      const d = ctx.getImageData(0, row, WIDTH, 1).data;
+      // Amber over a near-black court. The faintest ghost is 14% of --accent,
+      // which lands around r=47 - well under anything an absolute "is it
+      // bright" threshold would catch, and unmistakable by ratio.
+      // Stops short of the ai's paddle: coral passes the same warm-pixel
+      // test the amber ghosts do, and sitting at the far right it was being
+      // read as the end of the trail - which made the trail look like it grew
+      // with speed purely because a faster ball starts further from it.
+      let furthest = 0;
+      for (let x = 330; x < WIDTH - PADDLE_WIDTH * 3; x++) {
+        const i = x * 4;
+        if (d[i] > 30 && d[i] > d[i + 2] * 2 && x > ball.x + BALL_SIZE) {
+          furthest = Math.max(furthest, x - ball.x);
+        }
+      }
+      return furthest;
+    }, speed);
+
+    // The failure a ball trail has is that it stops reading as one object. Fix
+    // the ghosts N ticks apart and a fast ball spreads them out until they read
+    // as three balls, which is exactly what Insane would do. They are spaced by
+    // distance instead, so the trail is the same length however fast the ball
+    // is going - and this is the check that says so.
+    const slow = await trailReach(5);
+    const fast = await trailReach(13);
+    check("the ball draws a trail behind it", slow > 20, slow);
+    check("and it is the same length at any speed",
+      Math.abs(slow - fast) <= 12, `${slow}px at 5px/tick, ${fast}px at 13`);
+    check("rather than growing with the ball's speed", fast < slow * 1.6,
+      `${fast} vs ${slow}`);
+
+    // A trail left behind after a point hangs across the court for the whole
+    // serve countdown, pointing at a ball that is no longer there.
+    const afterPoint = await page.evaluate(() => {
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = "play";
+      player.y = 0;
+      ball = { x: 40, y: 300, vx: -6, vy: 0 };
+      for (let i = 0; i < 30 && phase === "play"; i++) update();
+      return { phase, ghosts: trail.length };
+    });
+    check("preconditions: the point was scored",
+      afterPoint.phase === "countdown", afterPoint.phase);
+    check("and the trail goes with the ball", afterPoint.ghosts === 0,
+      afterPoint.ghosts);
+
+    // "Press Space to serve" moved off the status line and onto the court.
+    const prompt = (mode) => page.evaluate((mode) => {
+      restart();
+      document.getElementById("menu").hidden = true;
+      phase = mode === "serve" ? "serve" : "play";
+      paused = mode === "paused";
+      if (mode === "paused") phase = "serve";
+      // Park the ball far from the prompt's band so it cannot be what is read.
+      ball = { x: 60, y: 60, vx: 0, vy: 0 };
+      draw();
+      // Above the centre line, which crosses this band: --p-rule at half
+      // opacity comes to about 68, and the prompt is --p-dim at 184.
+      const d = ctx.getImageData(200, 285, 200, 30).data;
+      let n = 0;
+      for (let i = 0; i < d.length; i += 4) if (d[i] > 110) n++;
+      return n;
+    }, mode);
+    const onServe = await prompt("serve");
+    const inPlay = await prompt("play");
+    const whilePaused = await prompt("paused");
+    check("the serve prompt is drawn on the court", onServe > 50, onServe);
+    check("and nothing is written there once the ball is live", inPlay === 0,
+      inPlay);
+    check("nor while the game is paused", whilePaused === 0, whilePaused);
+    check("and the status line no longer says it",
+      !/space/i.test(await page.textContent("#status")),
+      await page.textContent("#status"));
+
+    await page.evaluate(() => { paused = false; restart(); });
   }
 
   check("no page errors", errors.length === 0, errors.join("; "));

@@ -1,25 +1,67 @@
-:root {
-  color-scheme: light dark;
-  --bg: #f4f4f5;
-  --fg: #1c1c1e;
-  --card-bg: #ffffff;
-  --cell-bg: #ffffff;
-  --cell-border: #c7c7cc;
-  --accent: #3b82f6;
-  --win: #22c55e;
-  --lose: #ef4444;
-  --muted: #6b7280;
+@font-face {
+  font-family: "VT323";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/vt323-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1c1c1e;
-    --fg: #f4f4f5;
-    --card-bg: #2c2c2e;
-    --cell-bg: #2c2c2e;
-    --cell-border: #48484a;
-    --muted: #9ca3af;
-  }
+@font-face {
+  font-family: "VT323";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/vt323-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  color-scheme: dark;
+
+  /* The palette: raw phosphor values, named for what they are.
+     design/DESIGN.md, "The palette" — source of truth for every one of these. */
+  --p-ground: #0a0704;
+  --p-panel: #150f07;
+  --p-panel-lit: #221709;
+  --p-hairline: #3d2807;
+  --p-rule: #7a5008;
+  --p-dim: #b8790a;
+  --p-soft: #f2bc62;
+  --p-amber: #ffb000;
+  --p-pale: #ffd694;
+  --p-hot: #fff2da;
+  --p-desc: #d8a45a;
+  --p-cell: #100b06;
+
+  --p-cyan: #6fdcf2;
+  --p-jade: #5fd9a0;
+  --p-lime: #d4e85c;
+  --p-coral: #ff6a56;
+  --p-rose: #ff7fcb;
+  --p-violet: #b9a2ff;
+
+  --bloom: 0 0 8px rgba(255, 176, 0, 0.3), 0 0 26px rgba(255, 176, 0, 0.16);
+  --bloom-lg: 0 0 6px rgba(255, 176, 0, 0.42), 0 0 22px rgba(255, 176, 0, 0.34),
+    0 0 46px rgba(255, 176, 0, 0.2), 0 0 96px rgba(255, 176, 0, 0.1);
+
+  /* The contract: named for what each does, read by name from every game's
+     style.css and from games/pong/script.js and games/flappy-bird/script.js
+     at runtime. Change values freely; change a name only by updating those
+     scripts' fallbacks in the same commit — see design/DESIGN.md, "How the
+     tokens are layered". */
+  --bg: var(--p-ground);
+  --fg: var(--p-soft);
+  --card-bg: var(--p-panel);
+  --cell-bg: var(--p-cell);
+  --cell-border: var(--p-hairline);
+  --accent: var(--p-amber);
+  --win: var(--p-jade);
+  --lose: var(--p-coral);
+  --muted: var(--p-dim);
 }
 
 * {
@@ -31,7 +73,15 @@ body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--fg);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "VT323", ui-monospace, "Courier New", monospace;
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+@media (max-width: 760px) {
+  body {
+    font-size: 20px;
+  }
 }
 
 .page {
@@ -77,35 +127,62 @@ button {
   font-family: inherit;
 }
 
+/* A terminal key, not a pill. Square corners, a hairline edge, and a label in
+   letterspaced uppercase — the same language the hub uses for a selected tile,
+   so a button on a game page belongs to the same machine as the one that sent
+   you there. The rounded amber pill this replaces was the last thing on the
+   site still wearing the pre-redesign default stylesheet. */
 .btn {
-  padding: 0.5rem 1.25rem;
-  font-size: 1rem;
-  border: none;
-  border-radius: 8px;
+  padding: 0.32rem 0.95rem;
+  font-size: 1.05rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid var(--accent);
+  border-radius: 0;
   background: var(--accent);
-  color: white;
+  color: var(--p-ground);
   cursor: pointer;
+  box-shadow: 0 0 14px rgba(255, 176, 0, 0.35);
 }
 
 .btn:not(:disabled):hover {
-  opacity: 0.9;
+  background: var(--p-pale);
+  border-color: var(--p-pale);
+  box-shadow: 0 0 18px rgba(255, 214, 148, 0.45);
 }
 
 .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
+/* Unselected: outline only. The filled/outline pair is the whole "selected"
+   idiom here — it carries the difference on its own, with no second signal. */
 .btn.secondary {
   background: transparent;
-  border: 2px solid var(--cell-border);
-  color: var(--fg);
+  border: 1px solid var(--cell-border);
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.btn.secondary:not(:disabled):hover {
+  background: transparent;
+  border-color: var(--p-rule);
+  color: var(--p-pale);
+  box-shadow: none;
 }
 
 /* Square rather than a pill, for a button whose label is a single glyph. */
 .btn.icon {
-  padding: 0.5rem 0.7rem;
+  padding: 0.32rem 0.65rem;
   line-height: 1;
+  letter-spacing: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* A row of buttons under the board. */
