@@ -81,13 +81,10 @@ If your harness named the branch `worktree-<slug>`, rename it to the bare slug:
 `tests/docs-check.js` tolerates the prefix so a landed entry is still recognised, but
 nothing else does.
 
-Expect that rename to produce a false alarm much later. The worktree tooling records
-the branch name it created and does not follow a rename, so its removal warning
-counts commits against a ref that no longer exists — it read "will discard 35
-commits" here against a true answer of none. Answer it by checking the commits rather
-than the count: `git merge-base --is-ancestor <commit> main` for each one you
-authored, then remove it. The safe-looking response, keeping a worktree nobody needs,
-is the one that costs the next agent twenty minutes.
+Expect that rename to produce a false alarm much later: the worktree tooling does not
+follow a rename, so its removal warning counts commits against a ref that no longer
+exists. Check the commits rather than the count — `git merge-base --is-ancestor
+<commit> main` for each one you authored — then remove it.
 
 ### The slug says whether the entry closes
 

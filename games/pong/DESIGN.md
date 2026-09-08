@@ -174,19 +174,12 @@ would, but it trades away the 1:1 spatial mapping this section just spent severa
 paragraphs justifying, so it was not used for this.
 
 **Moving the listener to the window does not move the takeover guard's border
-with it — that stays the board.** Widening where movement is *seen* widens where
-it can be *brushed* too: before this change, only a mouse resting over the canvas
-could ever clear `POINTER_TAKEOVER_PX`, because nothing else reached the handler.
-On the window, reaching for Restart or the help button while playing keyboard is
-also "12px of movement" now, and unlike a rally the player is not even looking at
-the board when it happens. So the guard keeps its old question — is this landing
-on the board? — and only the answer to "should tracking keep going once the
-pointer already has control" changed. A move is a takeover only if `handlePointerMove`
+with it — that stays the board.** A move is a takeover only if `handlePointerMove`
 sees it while `e.clientX`/`e.clientY` fall inside the canvas's own rect; once
-control is already `"pointer"`, no such check applies, which is what lets a
-chase carry the paddle past the edge in the first place. Decided this way rather
-than surveyed with a playtest because it restores an existing invariant — the
-brushed-mouse guard predates this entry — rather than setting a new one.
+control is already `"pointer"`, no such check applies, which is what lets a chase
+carry the paddle past the edge. Without that border, reaching for Restart while
+playing on the keys is twelve pixels of movement too, and the player is not even
+looking at the board when it happens.
 
 ## The AI
 

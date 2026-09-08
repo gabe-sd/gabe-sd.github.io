@@ -204,11 +204,6 @@ this entry's business.
 
 Three specific things were flagged during that work and never decided:
 
-- **Insane sits at ~99% saves**, up from ~98% before Blink was bound to the ball.
-  Still beatable and still under the softlock line, but you take roughly half as
-  many points off it as you used to. If it now reads as unwinnable rather than
-  brutal, `chance` on Insane's `blink` is the knob — not the ai's reading error,
-  which is what actually makes it hard.
 - **Blink hops for the entire flight now.** That is what was asked for, and at
   `hopTicks` 3 it is around thirty teleports in a Normal-speed crossing. It may
   read as noise rather than menace. `hopTicks` makes it calmer; `lockPx` makes it

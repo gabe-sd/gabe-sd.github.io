@@ -950,11 +950,8 @@ one copy of a fact is worth more than two that can disagree.
 
 What belongs in this file is what it means for design work. **Use it, and use it
 in a loop.** Every one of the thirteen directions needed four or five
-write-look-fix rounds before it was any good, and the defects it caught were not
-subtle once seen: an icon that read as a fish rather than a bird, a mine that
-read as a sun, a 470px hole between a description and the button that acts on
-it, an eight-colour ramp with three colours that looked alike. Every one of them
-is invisible in a diff and obvious in one glance.
+write-look-fix rounds before it was any good, and what the loop caught was never
+subtle once seen — it was invisible in a diff and obvious in one glance.
 
 The corollary matters as much. A screenshot is not Gabriel looking at a served
 page, and it does not shorten that step — it only means he is not the first

@@ -180,12 +180,10 @@ shot, or it is a picture of the resting page.
 **`deviceScaleFactor: 2` is for reading detail, never for judging a game.** It
 doubles every dimension, so a 10px paddle arrives 20px wide and a resampled edge
 arrives smoothed across four pixels instead of two. Pong's redesign was checked
-entirely at 2x, on element crops of frames posed by hand with the loop stopped,
-and passed every look — while the real page rendered a 600x400 canvas into a
-598 x 398.67 box and smeared the paddles and the ball into the background. It
-was reported as the game being invisible.
+entirely that way and passed every look while the real page was rendering the
+game into the background — see `games/pong/DESIGN.md`, "The canvas is drawn 1:1".
 
-Three rules came out of that, and they are cheap:
+Three rules came out of it, and they are cheap:
 
 - **Judge at `deviceScaleFactor: 1`**, at a realistic window width, full page.
   Shoot at 2x afterwards if you need to read something small.
