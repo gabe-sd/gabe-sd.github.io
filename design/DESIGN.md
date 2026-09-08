@@ -171,9 +171,9 @@ per "How the tokens are layered" below:
 | `--lose` | `#ff6a56` | coral |
 | `--muted` | `#b8790a` | |
 
-The moment those land, all six games change colour with no other work. **That is
-the check that the token layer works** — and the reason the five games a phase
-has not reached keep rendering correctly.
+They landed, and all six games changed colour with no other work. **That was the
+check that the token layer works** — and it is why a game no phase has reached
+yet goes on rendering correctly.
 
 ## The typeface
 
@@ -822,21 +822,28 @@ One palette. `prefers-color-scheme` comes out of `shared.css`, and the light hal
 of every theme-aware branch in the games goes with it. Gabriel's decision,
 2026-09-04.
 
-Consequences a later session will hit:
+**Two theme-flip assertions in `tests/pong.test.js` died with it, and only one of
+them would have said so.** Case 13 asserted that the canvas palette *changed*
+when the OS theme flipped, which the decision makes false; it announced itself by
+going red, and now asserts the opposite — "the canvas palette is dark-only,
+regardless of the OS theme". Case 28 was the dangerous one. It looped both
+schemes with `emulateMedia` and checked that the bolt's core read against the
+board in each, and with one theme it would have run the identical check twice and
+**stayed green while testing nothing**. It is collapsed to a single theme with
+the measurement kept, because the claim worth protecting survives the decision:
+the core stays visible against whatever the board now is. `colorScheme` appears
+nowhere outside that file, so those two were the whole of it.
 
-- `tests/pong.test.js` case 13 asserts the canvas palette *changes* when the OS
-  theme flips. That stops being true and the assertion has to be rewritten rather
-  than deleted.
-- **It is not the only theme-flip check, and the second one is the dangerous
-  one.** Case 28 loops over both schemes with `emulateMedia` and checks the
-  bolt's core reads against the board in each. With one theme it runs the
-  identical check twice and **stays green while testing nothing** — case 13
-  announces itself by going red, this one does not announce itself at all.
-  `design/TODO.md` carries the detail; `colorScheme` appears nowhere else in the
-  suite, so those two are the whole of it.
-- `boltCore()` in `games/pong/script.js` picks the lightning bolt's core colour
-  from the board's luminance, which existed only because the light theme's board
-  was pure white. One branch of it is now dead.
+That pair is worth remembering as a shape rather than as history. Removing an
+axis a suite varies over does not remove the loop that varied over it, and the
+loop goes on passing — the most literal form of `CLAUDE.md`'s "a test that has
+never failed has not been shown to test anything". That loop had never failed,
+and after the decision it never could.
+
+**Still open:** `boltCore()` in `games/pong/script.js` picks the lightning bolt's
+core colour from the board's luminance, which existed only because the light
+theme's board was pure white. One branch of it is now dead, and what replaces it
+is undecided — `games/pong/TODO.md`, `pong-bolt-core-dead-branch`.
 
 ## What a game may vary
 
