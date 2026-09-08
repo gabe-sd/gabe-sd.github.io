@@ -25,9 +25,12 @@ may not do. When it does, it runs on an **integration branch** rather than on
 and every session after the first would branch from a base nobody has seen whole.
 `INTEGRATOR.md` describes how that works.
 
-**The project running now is on `redesign`, and every entry below is cut from
-it.** Nothing lands on `main` until the whole redesign does. So an entry names the
-branch it is cut from; do not assume `main`:
+**The remaining phases are ordinary work off `main`.** The redesign ran on an
+integration branch — `redesign` — while it crossed every area at once; that ended
+when the branch merged and the ref went, and nothing below is cut from it any
+more. An entry still names the branch it is cut from, because the next project
+that needs an integration branch will take one again. Read the line; do not
+assume:
 
 ```markdown
 ### <slug> — <one line saying what changes>
@@ -67,45 +70,48 @@ rather than deciding.
   and fall back to a hardcoded hex of the *old* palette when one is missing, so a
   rename fails nothing and silently keeps painting the design being replaced. A
   palette layer of raw phosphor values goes *underneath* the existing names. This
-  is what lets five untouched games keep rendering correctly through every phase.
+  is what lets the games a phase has not reached keep rendering correctly.
 - **Pong owns its player and opponent colours locally.** The design brief proposed
   a site-wide player/opponent accent pair; that over-generalises one game's idea
   and is rejected. `--win` and `--lose` stay outcome colours — a solved Sudoku, a
   tripped mine — and Pong stops reading them for its paddles.
-- **The hub gets** category accent colours, the selected-game info panel, and the
-  top nav. **It does not get** filter chips or unbuilt "idea" tiles.
+- **The hub gets** category accent colours and the top nav. **It does not get**
+  filter chips or unbuilt "idea" tiles. The selected-game info panel was on this
+  list and was dropped entirely rather than trimmed: the whole tile became the
+  select-and-play control, which left a panel nothing to do. See
+  `design/DESIGN.md`, "Tile selection: the whole tile is the control".
 - **`about.html` is a stub.** The nav links to it, so it has to exist, but its
   words are Gabriel's — see the visitor-facing prose rule in `CLAUDE.md`. "Under
   construction" and nothing more.
-- **All other work on the site is suspended** for the duration, by his decision.
+- **Other work on the site was suspended while the redesign held `main`**, by his
+  decision. That ended when the integration branch landed. The phases still open
+  below are ordinary work and block nothing.
 - **Verification is Gabriel looking at a served page.** The suite is a regression
   net. Every phase ends with a preview he has seen before the branch is handed
   over.
 - **Ask him, before starting a phase, whether he wants a preview or wants it
-  built.** He answers per phase and there is no standing rule in either direction:
-  "art director should ask if i want a preview or if i want him to just build it
-  before beginning work on a task." If he wants one, serve something as soon as
-  there is anything to react to — for the first phase, the palette and the type
-  scale on a throwaway page — iterate, and get his approval before the real page
-  is built on it. If he wants it built, build it. An earlier version of this
-  bullet made the preview automatic; that was the art director's reading and he
-  corrected it the same day. The end-of-phase preview is a separate thing and is
-  unaffected. This restates a rule proposed for `ART-DIRECTOR.md` on the branch
-  `art-director-preview-gate`; when that lands and `redesign` absorbs `main`, cut
-  this down to a pointer so the two cannot drift.
-- **The art director fetches the font.** The VT323 woff2 and the SIL Open Font
-  License text are downloaded and committed under `assets/fonts/` as part of the
-  first phase, which is also when that folder starts existing. Nothing is expected
-  from Gabriel.
+  built.** He answers per phase and there is no standing rule in either direction.
+  The full version is in `ART-DIRECTOR.md`, which is where it belongs — it landed
+  there in `art-director-preview-gate`, and this is deliberately a pointer rather
+  than a second copy. The end-of-phase preview above is a separate thing and is
+  unaffected.
+- **The art director fetched the font.** The VT323 woff2 and the SIL Open Font
+  License text are committed under `assets/fonts/`, done as part of the first
+  phase. Nothing was needed from Gabriel.
 
 ## Phases
 
-Each is one session, one branch, one merge into `redesign`. They are in order and
+Each is one session, one branch, one merge into `main`. They are in order and
 each assumes the ones above it have landed.
+
+**What would make that wrong is a later project taking an integration branch
+again.** If one does, this line and the `Branch from:` line in every entry below
+are the two places the base is written down, and both go stale the day the branch
+is cut — not the day it lands.
 
 ### redesign-flappy-bird — Flappy Bird
 
-**Branch from:** `redesign`
+**Branch from:** `main`
 
 **The frame has landed** — breadcrumb, title, strap, scanlines, footer and the
 shared `#instructions` panel are all in place and covered by
@@ -119,7 +125,7 @@ new palette or whether Flappy takes its own.
 
 ### redesign-minesweeper — Minesweeper
 
-**Branch from:** `redesign`
+**Branch from:** `main`
 
 **The frame has landed** — breadcrumb, title, strap, scanlines, footer and the
 shared `#instructions` panel are all in place and covered by
@@ -133,7 +139,7 @@ phosphor ground, which the current eight will not be.
 
 ### redesign-sudoku — Sudoku
 
-**Branch from:** `redesign`
+**Branch from:** `main`
 
 **The frame has landed** — breadcrumb, title, strap, scanlines, footer and the
 shared `#instructions` panel are all in place and covered by
@@ -146,7 +152,7 @@ rather than assuming they carry over.
 
 ### redesign-tic-tac-toe — Tic Tac Toe
 
-**Branch from:** `redesign`
+**Branch from:** `main`
 
 **The frame has landed** — breadcrumb, title, strap, scanlines, footer and the
 shared `#instructions` panel are all in place and covered by
@@ -158,7 +164,7 @@ is nearly free once everything above has settled.
 
 ### redesign-category-accents — Decide whether colour by category stays
 
-**Branch from:** `redesign`
+**Branch from:** `main`
 
 Not work yet — a decision to take with Gabriel once the hub and every game have
 been seen in the new palette.
