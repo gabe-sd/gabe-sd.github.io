@@ -496,7 +496,7 @@ pointer while the button is held. Do not delete it.
   is about capturing the real desktop. A headless Chromium launched through the
   repo's own `playwright-core` rasterises the page itself, never touches the
   display, and writes a PNG an agent can open and look at — which is how the
-  redesign's eleven visual directions were built and checked. Reach for it for
+  redesign's visual directions were built and checked. Reach for it for
   anything visual: reasoning about CSS you cannot see is how a design goes
   wrong quietly. Two constraints. Snap Chromium is confined and cannot read
   files under `/home/g/.claude/`, so a page to be shot has to sit inside the
