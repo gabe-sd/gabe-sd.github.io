@@ -49,8 +49,9 @@ folder, stop and say so — open the line with WORKFLOW ISSUE:.**
 to walk into hidden directories, because a worktree is a full checkout whose
 `TODO.md` would otherwise be read as this branch's — which is how a stale worktree
 once turned `main` red. A tree outside the project folder also puts an agent's files
-somewhere Gabriel has said they must not go; see `workflow-worktree-location` in the
-root `TODO.md`.
+somewhere Gabriel has said they must not go — his decision of 2026-09-03, for
+security, and the reason the path is spelled out in the command above rather than
+left to whatever the harness picks.
 
 **This holds even when you are the only agent working**, because **the shared
 checkout is the integrator's seat**. Branch there and that branch is checked out

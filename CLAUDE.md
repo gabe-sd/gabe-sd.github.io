@@ -91,6 +91,13 @@ session was killed here while its own identification request sat unanswered, and
 it turned out to be the one its user was typing in. Asking and hearing nothing is
 not permission.
 
+**One exception, and only one: a cwd that `ls` marks `(deleted)`.** Nobody is
+working in a directory that is not there, so the deletion is the proof the asking
+was for. The integrator sweeps for these when cleaning up worktrees, because a
+removed worktree can leave its server running — `INTEGRATOR.md` has the procedure.
+It is narrow on purpose: a cwd that still resolves is somebody's, however sure you
+are that it is not.
+
 Kill by PID, looked up with `ss -ltnp`. **Never `pkill -f`** — its pattern matches
 your own command line as readily as the target, because the pattern is *in* that
 command line. It killed the shell mid-command twice in one session here. Use plain
