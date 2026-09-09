@@ -148,6 +148,11 @@ or hand-edited save can't fake a win. A save whose grid disagrees with its
 puzzle's current `givens` (for instance if `PUZZLES` changes between visits)
 is discarded outright rather than partially applied.
 
+`renderCell()` is why that restore works with no special-casing: `given`,
+`wrong`, and `won` are all recomputed from live state on every render rather
+than set once and left to go stale, so any path that ends in `renderBoard()`
+— loading, restoring, restarting — repaints all three correctly on its own.
+
 Restart and New puzzle both discard the saved grid (they run `loadPuzzle()`,
 which overwrites it with a fresh blank copy), so both are two-step: a first
 click arms the button — label flips to "Sure? Click to confirm", styled like
