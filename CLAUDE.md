@@ -71,6 +71,14 @@ into one you do not own is absolute: a `git -C`, a `cd` then `checkout`, a
 all do the same damage. Uncommitted work has no git record — clobber it and there
 is nothing to recover it from.
 
+**From a worktree, write with absolute paths.** That is the accidental version of
+the same mistake, and it is quieter: a session's working directory can return to
+the shared checkout between one command and the next, and a relative path that used
+to be right is spelled exactly the same way when it stops being right. It happened
+twice in one session, once costing most of a phase's documentation. Read with
+whatever is convenient; anything that *modifies* a file names the tree it means.
+`git status` in both trees is what catches it afterwards.
+
 **Two guards catch some of this by accident**, and neither is a substitute for the
 rule: git refuses to check out a branch already checked out in another worktree,
 and an agent session pinned to a worktree is blocked from running git against the

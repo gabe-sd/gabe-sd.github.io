@@ -233,16 +233,11 @@ over several rounds:
 ```
 
 The glow is the tile's own category colour, not a fixed amber — Gabriel's
-correction after an earlier round used amber for every tile regardless of
-category. The low end of the pulse never drops near invisible and the high end
-is a real jump, not a shimmer, then pulled back about 15% once the first "more
-intense" pass read as gaudy; the cycle runs a little slower than first built
-(2.3s, up from 1.8s) for the same reason. **The tile's footprint never changes
-size between resting and armed — nothing in the grid reflows.**
-
-The description stays in the tile permanently, at rest and armed alike; it was
-never conditional on selection. This is what closes "whether the info panel
-keeps the description" — there is no panel left to ask the question of.
+correction after a round that used amber for every tile. The pulse was pulled back
+about 15% once a "more intense" pass read as gaudy, and slowed from 1.8s to 2.3s
+for the same reason. **The tile's footprint never changes size between resting and
+armed — nothing in the grid reflows**, and the description sits in the tile
+permanently rather than appearing on selection.
 
 ### Category colour: at rest, all the time
 
@@ -265,14 +260,12 @@ need a badge system yet; if it's wanted later it is new work, not an extension o
 category colour.
 
 **The bar itself is a glow, not a flat `border-left`, and the tile gets a real
-hover state.** The first build shipped a flat 4px `border-left` and a hover that
-only swapped the background; Gabriel's reaction was "why does it look like the
-cheap mockups". Checked against `design/previews/variants/amberlit.css`, the gap
-was exactly that: it draws the edge as a separate `::before` layer with its own
-`box-shadow` glow, and gives hover a lift, a card-wide glow, and a bloomed name and
-icon. Pulled into `hub.css` with one change — amberlit hides the bar until hover,
-which is the hover-only treatment reversed above, so here it stays visible at rest
-and gains a stronger glow on interaction.
+hover state.** A flat 4px `border-left` with a background-swap hover drew "why does
+it look like the cheap mockups" from Gabriel. The fix is amberlit.css's treatment —
+the edge as a separate `::before` layer with its own `box-shadow`, and a hover that
+lifts, glows card-wide and blooms the name and icon — with one change: amberlit
+hides the bar until hover, which is the hover-only treatment reversed above, so
+here it stays visible at rest and strengthens on interaction.
 
 ```css
 .tile::before {
@@ -315,14 +308,13 @@ things on purpose.
 ### Icons
 
 **Ported from `design/previews/gallery.js`'s `LINE_ICONS`**, at Gabriel's request —
-the first build had kept the six emoji from the pre-redesign hub, which is part of
-what the "cheap mockups" reaction was about. Six hand-drawn stroke icons on one
-48x48 grid at a single weight (`stroke-width` 2.4–3.2 depending on the glyph),
-coloured entirely through `currentColor` so a game's icon never needs its own colour
-rule. Inlined in `index.html` as `<svg class="ico" viewBox="0 0 48 48">` inside each
-tile's `.tico` span, verbatim from `LINE_ICONS` with one exception: the mine icon's
-punched highlight hole was `fill="var(--icon-hole, #040604)"`, a token that only
-exists in the gallery; repointed to `fill="var(--bg)"`.
+the first build kept the pre-redesign hub's six emoji, which is part of what the
+"cheap mockups" reaction was about. Six stroke icons on one 48x48 grid at a single
+weight (`stroke-width` 2.4–3.2 by glyph), coloured entirely through `currentColor`
+so no icon needs a colour rule of its own. Inlined in `index.html` as
+`<svg class="ico" viewBox="0 0 48 48">` inside each tile's `.tico` span, verbatim
+but for the mine icon's highlight hole, which used a gallery-only token and is
+repointed to `fill="var(--bg)"`.
 
 `.tico` carries the colour: `--p-dim` at rest, `--p-amber` on
 hover/focus-visible, so the icon reads as chrome (one hue, not category-tinted)
@@ -366,13 +358,11 @@ and stops it showing through the gaps between tiles.
 
 ### Depth and framing: `.deco`
 
-The first build had no framing layer at all — Gabriel's reaction was "no depth or
-framing... reads as flat rectangles on black." `.deco` started as
-`design/previews/variants/amberlit.css`'s wash-and-vignette ported unchanged, then
-he asked for more amber glow than that source carries. Checked against the archive,
-amberlit's own values were already what had shipped, so this is a deliberate
-departure from the previewed direction rather than a fix to a mis-port. `z-index: 0`,
-below `.crt`'s 6, so both the texture and the game grid still paint over it.
+The first build had no framing layer at all — "no depth or framing... reads as flat
+rectangles on black." `.deco` is amberlit.css's wash-and-vignette with more amber
+glow than that source carries: a deliberate departure Gabriel asked for, not a
+mis-port. `z-index: 0`, below `.crt`'s 6, so the texture and the game grid both
+paint over it.
 
 ```css
 .deco {
@@ -488,7 +478,7 @@ uppercase, which is the same "selected" language the hub uses for a tile:
 
 | State | Treatment |
 | --- | --- |
-| `.btn` | filled `--accent`, `--p-ground` text, 14px amber glow |
+| `.btn` | filled `--accent`, `--p-ground` text, 14px amber glow, uppercase at `letter-spacing 0.1em`, `border-radius: 0` |
 | `.btn:hover` | filled `--p-pale`, 18px glow |
 | `.btn.secondary` | transparent, 1px `--cell-border`, `--muted` text, no glow |
 | `.btn.secondary:hover` | border `--p-rule`, text `--p-pale` |
@@ -678,7 +668,8 @@ global `box-sizing: border-box` — which made the drawing surface render at
 | bezel | `linear-gradient(#160f08, #0d0905)`, 1px `--p-hairline`, `inset 0 0 40px rgba(0,0,0,.8)`, 12px padding |
 | corner brackets | 14px, 1px `--p-rule`, two sides each, top-left and bottom-right |
 | court | `#0d0905`, 1px `--p-hairline` |
-| labels | `you` / `ai` / `first to N`, 0.9rem, `letter-spacing .2em`, `--p-dim`, lowercase |
+| labels | `you` / `ai`, 0.9rem, `letter-spacing .2em`, `--p-dim`, lowercase; `first to N` the same but `.24em` |
+| menu backdrop | `rgba(10, 7, 4, 0.86)` over an opaque `--p-ground` fallback, so the final score stays readable behind it either way; `READY` above it in `--p-hot` at `letter-spacing .12em` with `var(--bloom)` |
 | the digits | 2rem, `--p-rose` and `--p-coral`, each glowing its own colour at 50% |
 | radius | none, anywhere on this page |
 

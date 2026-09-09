@@ -20,13 +20,8 @@ then 4 into another empty cell in the same row: the second turns red, the first
 stays plain, even though both are equally part of the clash. Reversing the order
 reverses which one is marked — it is always the last one typed, not the wrong one.
 
-Reproduced headless on 2026-09-07 at both cells of a row pair, reading the class
-and the predicate together:
-
-```
-conflicts(0,0) = true   class = "cell"
-conflicts(0,1) = true   class = "cell wrong"
-```
+Reproduced headless at both cells of a row pair: `conflicts()` returns true for
+each, and only the second carries `.wrong`.
 
 `DESIGN.md` promises a conflicting digit is marked "live as it's typed", and half
 of every conflict is unmarked, so a player clearing the red cell can be left with
@@ -38,11 +33,9 @@ defined in the same file and is what `conflicts()` uses. Clearing a cell has the
 same gap in reverse: emptying one half of a pair should un-mark the other, which
 also needs the peers re-rendered.
 
-**Not caused by the redesign.** `placeDigit()` is byte-identical on `main` —
-`git diff main..redesign -- games/sudoku/script.js` is empty — so this has been
-here as long as the live-conflict check has. Found during the pre-merge review of
-the redesign and filed rather than fixed, because a game's area belongs to its
-own branch.
+It predates the redesign and has been here as long as the live-conflict check has.
+It was found during a pre-merge review and filed rather than fixed, because a
+game's area belongs to its own branch.
 
 `tests/sudoku.test.js` asserts only that the newly-typed duplicate is marked, so
 whatever fixes this needs a case asserting the *older* cell of the pair is marked

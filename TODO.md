@@ -109,6 +109,36 @@ one is rewriting the rules it is working under. If a rule bites you, that is not
 a task to pick up — say so at the time, marked **WORKFLOW ISSUE:**, which is what
 puts an entry here in the first place.
 
+### workflow-slug-reference-check — Nothing checks that a slug a doc names still exists
+
+A slug is both a `TODO.md` entry heading and the branch name for that work, and
+docs point at them in backticks — "see `redesign-tokens-hub` for the reasoning".
+Those references rot in one specific way: the work lands, the entry is deleted as
+the convention requires, and every pointer to it is now aimed at nothing.
+`tests/docs-check.js` cannot see it. Check 1 only matches paths with a directory
+in them, and a slug is neither a path nor a function name.
+
+It has already happened: `design/previews/README.md` sent readers to
+`redesign-tokens-hub` for the full reasoning, and that entry was deleted in
+`5232f4e`. Found by hand during the docs passes, not by any check.
+
+The rule is one line — **every backticked slug is either an open entry heading in
+some `TODO.md`, or has a merge commit naming it.** Open means still to do, merged
+means it landed and git has it; neither means dangling. Check 5 already builds the
+merge-subject pattern this needs (both accepted shapes, closing quote or colon),
+so this is mostly a second use of it.
+
+Two false-positive shapes to expect, both currently benign and neither worth
+failing on: the naming rules quote `pong-difficulty-menu` and `pong-difficulty` as
+illustrations, and `games/pong/TODO.md` names `pong-shooter-powerup`, an entry
+retired by replacement rather than by landing. Scope the pattern to known area
+prefixes or the false-alarm rate makes it worthless — the thing check 5's own
+history warns about.
+
+This is the integrator's, needs the break-and-restore proof like any `tests/`
+change, and is first here because it is the only entry in this section that needs
+no decision from Gabriel first.
+
 ### workflow-worktree-location — Worktrees must live inside the project folder
 
 Gabriel's decision, 2026-09-03: every Claude instance keeps its files under the
@@ -132,51 +162,18 @@ rather than prevents.
 ### workflow-cleared-worker-findings — "Report, never fix" assumes a live worker
 
 `INTEGRATOR.md` tells the integrator to report a finding in a game's area rather
-than fixing it, and to let it ride on that game's next branch. The reasoning holds
-— the context is alive in another session, and a fix on `main` collides with the
-branch that worker is holding.
-
-It has no answer for a worker that is being cleared. That happened on
-`sudoku-puzzle-quality`: the review turned up two wrong claims in Sudoku's docs,
-the branch merged, and the session was retired the same evening. There was no next
-branch and nobody holding context, so the findings existed only in one chat log
-that was about to be closed. Gabriel resolved it by authorising a direct edit in
-Sudoku's area, once, by name — which worked, and is not a rule.
+than fix it, and let it ride on that game's next branch. That reasoning holds only
+while the worker is live — it has no answer for one being cleared. It happened on
+`sudoku-puzzle-quality`: two wrong doc claims found, branch merged, session retired
+the same evening, so the findings existed only in a chat log about to close.
+Gabriel authorised a direct edit in Sudoku's area, once, by name — which worked and
+is not a rule.
 
 What to decide: what the integrator does by default when the owning session is
 gone. Filing an entry in that game's `TODO.md` is the obvious candidate and is
-cheap, but it is still an edit in somebody else's area, which is the thing the
-rule exists to prevent. Ask Gabriel rather than picking one — the boundary of that
-rule is his, and the answer belongs in `INTEGRATOR.md` once it is settled.
-
-### workflow-worktree-relative-paths — A tool session's cwd can leave the worktree without saying so
-
-Twice on 2026-09-07, in one session, the shell's working directory silently
-returned from `.claude/worktrees/<name>` to the shared checkout between one
-command and the next. Everything written with a **relative** path after that
-landed in the shared checkout instead of the branch: the first time it was most
-of a phase's documentation, the second time a test file plus a full `npm test`
-run, which then reported a failure the branch had already fixed and cost a
-debugging cycle to explain.
-
-Nothing was lost either time — the two trees held disjoint edits and the work was
-moved across — but it is the same class of mistake "Shared ground" calls
-absolute: writing into a tree you are not in. There it is framed as a thing an
-agent does deliberately with `git -C` or a `cd`. This is the accidental version,
-and it is quieter, because a relative path that used to be right stays spelled
-the same way when it stops being right.
-
-The proposed rule is one line and costs nothing: **from a worktree, write with
-absolute paths.** Read freely with whatever is convenient; anything that
-*modifies* a file — an editor tool, a shell redirect, a script — names the tree
-it means. `git status` in both trees is the check that catches it after the
-fact, and it should be part of finishing a phase rather than something you
-happen to run.
-
-Where it goes is the open question. It is not art-director-specific, so
-`CLAUDE.md`'s "Shared ground" is the natural home, next to the existing rule it
-is a variant of — but `CLAUDE.md` belongs to Gabriel and both seat files that
-take a worktree would then repeat it. Decide with him.
+cheap, but it is still an edit in somebody else's area, which is the thing the rule
+exists to prevent. **Ask Gabriel rather than picking one**; the answer belongs in
+`INTEGRATOR.md` once it is settled.
 
 ### workflow-npm-serve-background — `npm run serve` from a worktree binds the port and answers nothing
 
@@ -200,25 +197,16 @@ to run a command that does not work where it tells them to run it.
 
 `git worktree remove` succeeds while a preview server is still serving that path,
 and the process outlives the tree with its cwd pointing at a directory that no
-longer exists. One did on 2026-09-03: the `sudoku-how-to-play` worker said it had
-stopped its own server, removed the tree and went offline, and a
-`python3 -m http.server` rooted in that tree was still listening afterwards. It
-was found by the integrator at end of session and killed by pid.
+longer exists. One did, after its worker said it had stopped the server and gone
+offline. It is quiet rather than harmful, which is the problem: a worktree serves
+on `PORT=0`, so an orphan holds a random port and the usual check — is 8934 taken?
+— sees nothing wrong. Neither seat file covers it.
 
-It is quiet rather than harmful, which is the problem. A worktree serves on
-`PORT=0`, so an orphan holds a random port and the usual check — is 8934 taken? —
-sees nothing wrong. And neither seat file covers it: `WORKER.md` has no cleanup
-section — "Handing over" is about the branch — and never mentions a server or a
-process anywhere, while `INTEGRATOR.md`'s "Cleaning up" is written entirely about
-branches and trees.
-
-Two candidates, neither decided. `WORKER.md` could require stopping the server
-before removing the tree, and verifying with `ss -ltnp` rather than trusting that
-it stopped. Or `INTEGRATOR.md`'s cleanup could sweep for listeners whose
-`/proc/<pid>/cwd` names a deleted path. The second is the stronger one, because it
-catches the case where the worker believed it had cleaned up — which is the case
-that actually happened — but it costs more: it has the integrator killing a
-process it did not start, which "Shared ground" forbids without asking first. That
-is only safe once the owning session is known to be gone, so any such rule has to
-say how that is established. Decide the boundary with Gabriel before writing
-either one.
+Two candidates, neither decided. `WORKER.md` could require verifying with
+`ss -ltnp` rather than trusting the server stopped. Or `INTEGRATOR.md`'s cleanup
+could sweep for listeners whose `/proc/<pid>/cwd` names a deleted path — stronger,
+because it catches the case that actually happened, where the worker believed it
+had cleaned up. It costs more, though: it has the integrator killing a process it
+did not start, which "Shared ground" forbids without asking. That is safe only once
+the owning session is known to be gone, so any such rule has to say how that is
+established. **Decide the boundary with Gabriel before writing either.**
