@@ -122,6 +122,7 @@ Six, admitted to boards and category accents only. **Never to the chrome.**
 | --- | --- | --- | --- |
 | `#6fdcf2` | cyan | 192° | puzzle; an entered Sudoku digit; n2 |
 | `#5fd9a0` | jade | 157° | strategy; `--win`; n4 |
+| `#72e07c` | fern | 125° | Flappy Bird's whole world — **added later, see below** |
 | `#d4e85c` | lime | 75° | n6 — **the risk value**, see below |
 | `#ff6a56` | coral | 6° | `--lose`; the mine flag; Pong's opponent; n3 |
 | `#ff7fcb` | rose | 328° | arcade; Pong's player; n5 |
@@ -130,6 +131,16 @@ Six, admitted to boards and category accents only. **Never to the chrome.**
 Every one is **warmed and lightened** off the value it came from in Cold
 Terminal or Vector Neon. Do not substitute the originals back: `#3fd4ff` on this
 ground reads as a hole punched to another site.
+
+**Fern is the seventh, added 2026-09-09 for Flappy Bird**, and it is the only
+hue admitted after the palette was set. Gabriel asked for the pipes in the green
+Flappy Bird is remembered by, and neither existing green could do it: jade at
+157° reads as mint rather than as leaf, and lime at 75° sits 34° from the amber
+bird — the same pair this file already flags as the risky one — so the bird all
+but merged with the pipes. Both were built and looked at before fern was drawn.
+
+**Adding an eighth needs the same bar.** Two of the six already in hand had to be
+shown to fail at the actual size, not argued about, before a new value was cut.
 
 Minesweeper's eight: **n1 amber, n2 cyan, n3 coral, n4 jade, n5 rose, n6 lime,
 n7 violet, n8 `#fff2da`.** No underline, no second device — eight hues is what
@@ -737,6 +748,81 @@ use, find out what that hue was saying.
   The page contract keeps standing instructions in a collapsible panel. The footer
   carries the hint as well — that is cheap, and it is what the mockup got right.
 
+## Flappy Bird: one lit actor
+
+Built 2026-09-09 against a served page with every option switchable in the real
+game, because the pipes are painted by a script and a static mock would have lied
+about how they move. There is no mockup for this one.
+
+### The cabinet, at this board's width
+
+The same bezel, corner brackets, court value and court-width column as Pong,
+with `--court: 400px` instead of `600px`. **The two canvas games are one
+machine**, and every width in the column derives from `--court` for the reason
+Pong's does. The court is the same `#0d0905`.
+
+### Amber bird, fern world
+
+| part | value |
+| --- | --- |
+| the bird | `--p-amber`, drawn as a 2px outline with a solid wing and beak inside it |
+| its glow | `shadowBlur` 10 in its own colour, two passes under a clean one |
+| dead | `--lose`, same drawing, no glow |
+| the eye | `--p-hot` with a `--bg` pupil |
+| pipes | a `--p-fern` veil at 0.22, a 2px `--p-fern` rim inside the edge, `shadowBlur` 14 clipped to the rectangle |
+| the ground | `--p-fern`, 2px, on the pixels that end the run |
+| the ceiling | `--p-fern` at 0.45, a broken rule — it only stops you |
+
+**The board is two colours: the bird and everything else.** That is the whole
+idea, and the ground and ceiling wearing the pipes' hue rather than amber is what
+buys it — the edges belong to the world, not to the page, so the bird is the only
+amber inside the board even though the page around it is amber throughout.
+
+**The beak is the bird's own colour**, which is Gabriel's call against my
+recommendation: a white beak was built and he preferred the plain gold ring.
+
+**Both readout numbers are `--p-amber`, and the light is what separates them** —
+the live score glows, the stored best does not. Same distinction the bird makes
+when it dies, which is why it is worth having twice.
+
+### What this answers about hub-tile inheritance
+
+`design/TODO.md`'s `redesign-category-accents` noted that chess and Pong each
+chose an in-game accent matching their hub tile, independently, and asked whether
+Flappy Bird would make it three. **It did not.** Arcade is rose; the bird is
+amber. Rose was built and set against amber on the same frame, and lost on two
+counts: with amber permanently on the board as the ground line and the ceiling,
+rose and amber crowd the warm half of the wheel at 73° apart, and rose is 38°
+from the coral a dead bird turns — a resting colour a neighbour away from its own
+state colour.
+
+So the pattern is two games out of three, which makes it a tendency and not a
+rule. **The generalisation that survives is the weaker one:** a game's accent is
+chosen by eye against its own board, and sometimes that lands on the tile's hue.
+
+### Rejected, with the reason
+
+- **Pipes in coral** — a solid slab in `--lose`. It reads as the hazard it is, but
+  the bird turns coral when it dies, so the board would be painted in the colour
+  of the thing that just happened to you.
+- **Pipes in amber** — dark conduits with lit amber rims and rungs. Handsome, and
+  the first thing built, but the pipes end up the brightest thing on the board and
+  the bird stops being the subject. It also puts amber against the amber ground.
+- **Pipes in jade** — the palette's own green, and 4° off rose's exact complement,
+  which is the pair the colour wheel prefers. Rejected twice over: it reads as
+  mint rather than as leaf, and green for the thing that kills you inverts what
+  `--win` means everywhere else on the site.
+- **A rose bird**, above.
+- **A white-hot beak.** `--p-hot` is a *state* value in Pong, and spending it on
+  permanent furniture starts blurring what it means. Gabriel also preferred the
+  plain ring.
+- **A solid shape for the dead bird.** Four things changing at once — hue, fill,
+  outline and glow — is a stronger signal than hue alone, but on a board that is
+  entirely line work a filled ball is a style break. The glow going out carries it.
+- **A glow on the pipes that reaches past them.** Clipped to the rectangle
+  instead: a pipe that looks wider than it kills is the same defect as a bird that
+  does, and this game has now had both.
+
 ## How the tokens are layered
 
 `shared.css` already owns nine token names — `--bg`, `--fg`, `--card-bg`,
@@ -757,12 +843,16 @@ of the *old* palette when the name is missing. So renaming a token breaks nothin
 loudly: the canvas quietly carries on painting the design that was replaced,
 every test still passes, and nobody finds out until they look at the game.
 
-Flappy Bird reads `--fg`, `--accent`, `--win`, `--lose` and `--cell-bg`. Pong
-reads `--fg`, `--accent`, `--cell-border` and `--muted`, plus four raw palette
-values it takes directly — `--p-rose`, `--p-coral`, `--p-hot` and `--p-rule`.
-That second list is the "what a game may vary" rule below in practice: a paddle
-is not an outcome, so it does not read an outcome token, and the price is that
-those four names are load-bearing for a canvas as well as for a stylesheet.
+Flappy Bird reads `--lose` and `--bg`, plus three raw palette values —
+`--p-amber`, `--p-hot` and `--p-fern`. Pong reads `--fg`, `--accent`,
+`--cell-border` and `--muted`, plus four — `--p-rose`, `--p-coral`, `--p-hot`
+and `--p-rule`.
+
+Those raw names are the "what a game may vary" rule below in practice: a paddle
+is not an outcome and neither is a pipe, so neither reads an outcome token, and
+the price is that seven `--p-*` names are load-bearing for a canvas as well as
+for a stylesheet. **`--lose` is the one contract token either canvas still reads,
+and both read it for the same thing — the moment you lost.**
 
 Change a name only by changing that script in the same commit, fallback included.
 
@@ -772,18 +862,18 @@ not reached yet keep rendering correctly.
 **The raw names actually used, in `shared.css`:** `--p-ground`, `--p-panel`,
 `--p-panel-lit`, `--p-hairline`, `--p-rule`, `--p-dim`, `--p-soft`, `--p-amber`,
 `--p-pale`, `--p-hot`, `--p-desc` and `--p-cell` for the amber ramp; `--p-cyan`,
-`--p-jade`, `--p-lime`, `--p-coral`, `--p-rose` and `--p-violet` for the six guest
-hues — one name per row of "The palette" tables above, so a later phase can read
-a value this doc describes without re-deriving a name for it. `--bloom` and
-`--bloom-lg` sit alongside them as the two amber text-shadow recipes "Chrome, as
-built" uses for the wordmark and the active nav link.
+`--p-jade`, `--p-fern`, `--p-lime`, `--p-coral`, `--p-rose` and `--p-violet` for
+the seven guest hues — one name per row of "The palette" tables above, so a later
+phase can read a value this doc describes without re-deriving a name for it.
+`--bloom` and `--bloom-lg` sit alongside them as the two amber text-shadow recipes
+"Chrome, as built" uses for the wordmark and the active nav link.
 
-Only the nine contract names are read by a game's own script at runtime; the
-`--p-*` names and the two bloom shadows are free for any stylesheet to use
-directly; `hub.css` does, for everything in "The hub" that is not one of the
-nine (`--p-hairline` for rules, `--p-dim`/`--p-pale`/`--p-hot` for nav and
-wordmark states, `--p-desc` for tile descriptions, `--p-jade`/`--p-cyan`/
-`--p-rose` for the three category accents).
+Neither canvas game is confined to the nine contract names any more — both read
+`--p-*` values directly, listed above. The `--p-*` names and the two bloom
+shadows are equally free for any stylesheet to use; `hub.css` does, for
+everything in "The hub" that is not one of the nine (`--p-hairline` for rules,
+`--p-dim`/`--p-pale`/`--p-hot` for nav and wordmark states, `--p-desc` for tile
+descriptions, `--p-jade`/`--p-cyan`/`--p-rose` for the three category accents).
 
 ## Dark only
 
@@ -814,6 +904,17 @@ is undecided — `games/pong/TODO.md`, `pong-bolt-core-dead-branch`.
 player/opponent accent pair site-wide; that over-generalises one game's idea and
 is rejected. `--win` and `--lose` stay *outcome* colours — a solved Sudoku, a
 tripped mine — and Pong stops reading them for its paddles.
+
+**Flappy Bird owns its bird and world colours the same way**, and for the same
+reason: a pipe is a hazard rather than a defeat. It read `--win` for the pipes and
+`--lose` for the beak before this phase, which is decoration wearing outcome
+colours, and is what that rule exists to stop.
+
+**The rule underneath both, stated once:** a resting colour cannot be a state
+colour **or a neighbour of one**. Pong found the identity half — paddles at rest
+in the hue a tell already used deleted the tell. Flappy found the proximity half:
+a rose bird turning coral is 38° of change, which is not a signal. Where the hues
+have to be close, make something other than the hue change as well.
 
 ## Rejected, with the reason
 

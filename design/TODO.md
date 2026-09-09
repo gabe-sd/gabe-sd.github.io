@@ -50,28 +50,6 @@ four framed but not restyled inside.
 and the shared `#instructions` panel are in place and covered by
 `tests/contract.test.js`. What is left in each is the inside of the board.
 
-### redesign-flappy-bird — Flappy Bird
-
-The other canvas game, and much simpler than Pong. `readColors()` in
-`games/flappy-bird/script.js` maps `--win` to the pipes and `--lose` to the beak,
-which is decoration borrowing outcome colours. `design/DESIGN.md`'s "What a game
-may vary" already settles the general question — `--win`/`--lose` are outcome
-colours and stay one — so this phase gives the pipes and beak colours of their
-own rather than keeping the borrowed tokens; move `readColors()`'s old-palette
-fallbacks in the same commit as any token it starts reading instead.
-
-Two things ride on this phase rather than waiting for a later one:
-
-- **The `🏆` HUD glyph is shared with Minesweeper**, per `redesign-emoji-glyphs`
-  below. Whatever this phase picks to replace it — word, abbreviation, drawn
-  glyph — has to also work for Minesweeper's HUD, or the two diverge and one of
-  them has to redo it. Decide the convention here, not the glyph alone; the
-  entry below leaves the rest of the sweep for its own phase.
-- **This is the next chance to test whether an in-game accent inherits its hub
-  tile's hue**, per `redesign-category-accents`. Flappy's tile is arcade → rose
-  `#ff7fcb`, the same question Chess and Pong both answered yes to independently.
-  Worth deciding on purpose here rather than by not noticing the option.
-
 ### redesign-minesweeper — Minesweeper
 
 Mostly `style.css`. The one real piece of work is `.n1` through `.n8`, eight hardcoded
@@ -104,9 +82,10 @@ method that finds a glyph living in a string that has not fired yet:
 | Game | Where | Glyphs |
 | --- | --- | --- |
 | minesweeper | HUD, board, settings button, win message | `🚩` `⏱` `🏆`, `💣` `🚩` as cell content, `⚙` on the settings button, `🎉` ×3 |
-| flappy-bird | HUD | `🐦` `🏆` |
 | pong | status line and the menu | `🎉` ×2 |
 | sudoku | status line | `🎉` |
+
+Flappy Bird's `🐦` and `🏆` are gone — `redesign-flappy-bird` took its own share.
 
 Chess, Tic Tac Toe and the hub have none.
 
@@ -122,18 +101,28 @@ Four problems wearing one costume, and they do not have one answer:
 - **The six `🎉`** are a tone choice in a win message, not a palette problem. Whether
   the site wants to sound like that is Gabriel's call, and they are in `#status` text.
 
-**Not in this entry, and worth a look while someone is in here:** `⌫` in Sudoku and
-`↑` `↓` `▶` in Pong and Flappy Bird. They are monochrome symbols that render in the
-page font, so they may be fine — but nobody has checked them against the palette.
+**`↑` was checked, and it is not fine.** Looked at on Flappy Bird's page at 4x on
+2026-09-09: VT323 has no U+2191, so the browser falls back and the arrow arrives
+in another face — visibly thinner strokes than the letters either side of it. Not
+the emoji problem, but the same symptom, and it will read the same in Pong. `⌫` in
+Sudoku and `↓` `▶` in Pong are almost certainly the same and were not looked at.
+
+The fix is a wording change — "Space, ↑ or W" becoming words — and **the words on
+that panel are Gabriel's**, so this needs asking rather than deciding. It stays
+here rather than being folded into a game's phase for that reason.
 
 **Pong is the one to notice.** It went through a full redesign phase and kept two
 `🎉`, which says a game's own phase will not necessarily catch these. Hence one entry
 across all four rather than a line in each.
 
-**`🏆` is the one exception to "each takes its own share" below.** It is in both
-Flappy Bird's and Minesweeper's HUD, so the two phases need the same answer for
-it — `redesign-flappy-bird` above decides the convention and Minesweeper's phase
-follows it, rather than each inventing one and the second having to match.
+**`🏆` was the one exception to "each takes its own share" below, and the
+convention is now set.** It was in both Flappy Bird's and Minesweeper's HUD, so
+the two phases needed one answer. Flappy Bird's phase decided it: **a HUD readout
+is a drawn stroke glyph on a 48 grid at the hub's icon weight, `aria-hidden`, plus
+the word it stands for as off-screen text, plus the number.** Not a word on its
+own — words were built and set against glyphs on a served page, and the glyph row
+won. Minesweeper's phase follows that for `🚩` `⏱` `🏆`; its `💣` and `🚩` as cell
+*content* are a different problem and chess is still the precedent there.
 
 **If the list is edited, sweep for non-ASCII across pages *and* scripts** rather than
 grepping for the glyphs already known about. It was counted the narrow way once and
@@ -150,11 +139,15 @@ category is what is unsettled, along with whether categories exist as a visible 
 all. Filter chips and idea tiles were dropped for this project and can be reconsidered
 here.
 
-**One half of this is now answered by practice rather than by decision.** Whether a
-game's in-game accent inherits from its hub tile: both games designed since said yes
-independently — chess's black army is the strategy tile's jade, Pong's player is the
-arcade tile's rose. Neither was argued for on those grounds; each was chosen by eye and
-turned out to agree. That is worth noticing but is not the same as deciding it, and
-Flappy Bird is the next chance to find out whether it generalises.
+**One half of this now has an answer, and it is no.** Whether a game's in-game
+accent inherits from its hub tile: chess and Pong each said yes independently —
+chess's black army is the strategy tile's jade, Pong's player is the arcade tile's
+rose — and **Flappy Bird said no**. Its tile is arcade rose; its bird is amber.
+Rose was built and looked at first, and lost for reasons particular to that board;
+`design/DESIGN.md`, "What this answers about hub-tile inheritance", has them.
+
+Two out of three is a tendency, not a rule. What is left to decide here is
+narrower than it was: whether categories are a visible idea at all, and whether the
+hub keeps a fixed colour per category — not whether games are obliged to match.
 
 Close this entry by writing the answer into `design/DESIGN.md`, whichever way it goes.
