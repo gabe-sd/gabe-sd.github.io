@@ -109,6 +109,36 @@ one is rewriting the rules it is working under. If a rule bites you, that is not
 a task to pick up — say so at the time, marked **WORKFLOW ISSUE:**, which is what
 puts an entry here in the first place.
 
+### workflow-slug-reference-check — Nothing checks that a slug a doc names still exists
+
+A slug is both a `TODO.md` entry heading and the branch name for that work, and
+docs point at them in backticks — "see `redesign-tokens-hub` for the reasoning".
+Those references rot in one specific way: the work lands, the entry is deleted as
+the convention requires, and every pointer to it is now aimed at nothing.
+`tests/docs-check.js` cannot see it. Check 1 only matches paths with a directory
+in them, and a slug is neither a path nor a function name.
+
+It has already happened: `design/previews/README.md` sent readers to
+`redesign-tokens-hub` for the full reasoning, and that entry was deleted in
+`5232f4e`. Found by hand during the docs passes, not by any check.
+
+The rule is one line — **every backticked slug is either an open entry heading in
+some `TODO.md`, or has a merge commit naming it.** Open means still to do, merged
+means it landed and git has it; neither means dangling. Check 5 already builds the
+merge-subject pattern this needs (both accepted shapes, closing quote or colon),
+so this is mostly a second use of it.
+
+Two false-positive shapes to expect, both currently benign and neither worth
+failing on: the naming rules quote `pong-difficulty-menu` and `pong-difficulty` as
+illustrations, and `games/pong/TODO.md` names `pong-shooter-powerup`, an entry
+retired by replacement rather than by landing. Scope the pattern to known area
+prefixes or the false-alarm rate makes it worthless — the thing check 5's own
+history warns about.
+
+This is the integrator's, needs the break-and-restore proof like any `tests/`
+change, and is first here because it is the only entry in this section that needs
+no decision from Gabriel first.
+
 ### workflow-worktree-location — Worktrees must live inside the project folder
 
 Gabriel's decision, 2026-09-03: every Claude instance keeps its files under the
