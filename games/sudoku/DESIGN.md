@@ -41,7 +41,9 @@ has only one conflict-free complete grid — no need to compare against
   that cell's ~20 peers, no board-wide scan.
 - Win: every editable cell is filled and no cell conflicts with any peer.
 - Restart re-copies the current puzzle's `givens` into `grid`. New puzzle picks
-  a different entry from `PUZZLES` and does the same.
+  a different entry from `PUZZLES` and does the same. Both go through
+  `loadPuzzle()`, so both overwrite the saved progress below with the fresh
+  blank grid — see "Saved progress" for why that's guarded.
 
 ## Not in v1
 
@@ -58,9 +60,6 @@ earned:
   tiers by given-count later without touching the model above.
 - **Pencil marks, undo/redo, a hint button, a timer.** None of these change the
   model above; each is an independent addition layered on top if ever wanted.
-- **Persistence.** No `localStorage` key yet — nothing survives a reload.
-  Whichever of these lands first should follow Minesweeper's wrapped-read
-  pattern (its own `DESIGN.md`) rather than an unguarded call.
 
 ## Puzzle data
 
@@ -137,6 +136,31 @@ must also clear these, checked in `tests/sudoku-puzzles.test.js`:
 None of this is a difficulty tier — see "Not in v1" above. It's a floor on
 board *content*, orthogonal to how hard a legally-unique puzzle is to solve.
 
+## Saved progress
+
+The grid survives a reload, following Minesweeper's wrapped-`localStorage`
+pattern (its own `DESIGN.md`) rather than an unguarded call — every access
+degrades to "nothing saved" instead of throwing. `puzzleIndex` and `grid` are
+saved on every `placeDigit()` and restored on load via `restoreProgress()`,
+which re-derives `gameOver`/won/wrong state by running the normal `checkWin()`
+over the restored grid rather than trusting anything that was saved — a stale
+or hand-edited save can't fake a win. A save whose grid disagrees with its
+puzzle's current `givens` (for instance if `PUZZLES` changes between visits)
+is discarded outright rather than partially applied.
+
+Restart and New puzzle both discard the saved grid (they run `loadPuzzle()`,
+which overwrites it with a fresh blank copy), so both are two-step: a first
+click arms the button — label flips to "Sure? Click to confirm", styled like
+Minesweeper's Reset best time — and a second click within 5s carries it out.
+Armed state is per-button but mutually exclusive (arming one disarms the
+other), lapses after the window, and is dropped the moment a digit is placed,
+since continuing to play is a clearer "no" than any timeout. Skipped entirely
+when the board is untouched (`grid` already equals `givens`) — that case
+still resets in one click, same as before saving existed. A solved board
+still counts as progress worth confirming: nothing about the guard changes
+once `gameOver` is true, so admiring a just-finished grid doesn't mean losing
+it to a stray click.
+
 ## Page ids
 
 On top of the shared `#board`, `#status` and `#restart` from `CLAUDE.md`'s page
@@ -147,4 +171,6 @@ collapsible how-to-play panel described in `CLAUDE.md`'s page contract).
 
 ## Stored data
 
-None yet.
+`sudoku.progress` — `{ puzzleIndex, grid }` as JSON, the player's current
+puzzle and fill. See "Saved progress" above for when it's written, restored,
+and discarded.

@@ -87,18 +87,29 @@ const { check, report } = makeChecks();
   check("status announces it", result.status.includes("Solved"), result.status);
   check("cells marked won", (await page.$$("#board .cell.won")).length === 81);
 
-  console.log("8. Restart clears entries back to the same puzzle's givens");
+  console.log("8. Restart needs a second click to confirm once there's progress to lose");
+  // The board is solved at this point, which counts as progress - see
+  // DESIGN.md's "Saved progress". A single click only arms the button.
   const puzzleIndexBefore = await page.evaluate(() => puzzleIndex);
   await page.click("#restart");
+  check("first click does not reset the grid",
+    !(await page.evaluate(() => JSON.stringify(grid) === JSON.stringify(givens))));
+  check("button shows the confirm prompt",
+    (await page.textContent("#restart")).includes("Sure?"), await page.textContent("#restart"));
+  await page.click("#restart");
+  check("second click resets the grid",
+    await page.evaluate(() => JSON.stringify(grid) === JSON.stringify(givens)));
   check("no longer game over", !(await page.evaluate(() => gameOver)));
   check("same puzzle", (await page.evaluate(() => puzzleIndex)) === puzzleIndexBefore);
-  check("grid matches givens again",
-    await page.evaluate(() => JSON.stringify(grid) === JSON.stringify(givens)));
   check("status back to the prompt",
     (await page.textContent("#status")).includes("Select a cell"),
     await page.textContent("#status"));
+  check("button label restored",
+    (await page.textContent("#restart")) === "Restart", await page.textContent("#restart"));
 
   console.log("9. New puzzle moves to a different entry and resets state");
+  // The board is untouched since step 8's reset, so this needs only one click
+  // - see the "no confirm on an untouched board" case in sudoku-progress.test.js.
   await page.click("#new-puzzle");
   check("puzzle index advanced",
     (await page.evaluate(() => puzzleIndex)) !== puzzleIndexBefore);
@@ -138,8 +149,13 @@ const { check, report } = makeChecks();
   check("focus not stuck on the number pad button",
     (await page.evaluate(() => document.activeElement.tagName)) !== "BUTTON" ||
     !(await page.evaluate(() => document.activeElement.classList.contains("num-btn"))));
+  // The board has an entry from step 10, so this arms rather than resets -
+  // focus release has to hold on the arming click too, not just the confirm.
   await page.click("#restart");
-  check("focus not stuck on Restart",
+  check("focus not stuck on Restart (arming click)",
+    (await page.evaluate(() => document.activeElement.id)) !== "restart");
+  await page.click("#restart");
+  check("focus not stuck on Restart (confirming click)",
     (await page.evaluate(() => document.activeElement.id)) !== "restart");
 
   console.log("12. How to play toggles the instructions panel");
