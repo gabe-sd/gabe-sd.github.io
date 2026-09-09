@@ -812,12 +812,6 @@ the measurement kept, because the claim worth protecting survives the decision:
 the core stays visible against whatever the board now is. `colorScheme` appears
 nowhere outside that file, so those two were the whole of it.
 
-That pair is worth remembering as a shape rather than as history. Removing an
-axis a suite varies over does not remove the loop that varied over it, and the
-loop goes on passing — the most literal form of `CLAUDE.md`'s "a test that has
-never failed has not been shown to test anything". That loop had never failed,
-and after the decision it never could.
-
 **Still open:** `boltCore()` in `games/pong/script.js` picks the lightning bolt's
 core colour from the board's luminance, which existed only because the light
 theme's board was pure white. One branch of it is now dead, and what replaces it
@@ -866,19 +860,6 @@ a real phosphor does. That works on a ten-cell sample and cannot work on a
 texture is a question of degree rather than of yes or no, and the ceiling is set
 by Minesweeper rather than by taste.
 
-**Eight distinguishable numbers do not exist inside one hue.** Five independent
-attempts converged on the same answer from different directions: a single-hue
-palette gets five or six steps, and the remaining two or three need a *second
-device* rather than another colour. The devices that worked were an underline
-under the glyph, an inverted cell, a dithered field, a border, and a weight
-change. Two of them also observed that splitting the eight into two visibly
-different halves — dark-on-light against light-on-dark — is worth more when
-actually reading a board than any single pair being maximally separated.
-
-That is a rule for `redesign-minesweeper` whichever palette wins: **do not spend
-the whole problem on hue.** A monochrome direction should plan on roughly six
-colours and two marks.
-
 **Chrome and other transparent-fill text takes `filter: drop-shadow`, never
 `text-shadow`.** With `-webkit-text-fill-color: transparent` a text shadow is
 drawn *through* the glyph rather than behind it, and a gradient fill turns to
@@ -893,29 +874,20 @@ red and green and a step lighter — `#6fdcf2`, `#5fd9a0`, `#ff7fcb`. The rule
 generalises past this palette: **an accent borrowed from a direction with a
 different ground is a starting point, not a value.**
 
-**Eight hues remove the need for a second device entirely.** The finding above
-says a single-hue palette gets five or six steps and the rest need an underline,
-an inverted cell or a border. The converse is worth stating because it is what
-the colour actually buys: with six guest hues plus the home hue plus one
-neutral, Amber Arcade's eight numbers need no mark at all, and the two rarest
-digits stop costing the player a decode. That is the clearest single difference
-between the coloured and monochrome readings of the same direction.
-
-**A region can be lifted out from under the CRT texture, but only if the screen
-gives up its stacking context.** `gallery.css` puts `.screen` at `z-index: 2`
-and the texture layer at `6`; while the screen is a stacking context, nothing
-inside it can rise above the texture, so no part of the page can be exempted.
-Setting `.screen { z-index: auto }` and giving the board strip `z-index: 7` plus
-an opaque background does it — the opaque background is not decoration, since
-the texture otherwise shows straight through the gaps between cells.
+**Eight hues remove the need for a second device.** A single-hue palette gets
+five or six distinguishable steps and the remaining two or three need a mark
+rather than another colour — an underline, an inverted cell, a border; five
+independent attempts converged on that. With six guest hues plus the home hue
+plus one neutral, Amber Arcade's eight numbers need no mark at all, and the two
+rarest digits stop costing the player a decode. That is the clearest single thing
+the colour buys, and it is what makes `redesign-minesweeper` a recolour rather
+than a hue-plus-marks problem.
 
 Measured rather than eyeballed, because at *as mocked* the texture is too subtle
 to judge from a screenshot: a scanline makes a column of pixels oscillate row to
 row, so the mean absolute row-to-row difference down one column separates
-textured from flat. Cold Terminal reads 11.33 through a hub tile and 5.31
-through a board panel; Cold Terminal Mk II reads the identical 11.33 through the
-tile and **0** through the board panel. Cold is the control — its non-zero board
-figure is what proves the probe detects texture where texture exists.
+textured from flat. Probe a region known to be textured as a control, or a zero
+reading cannot be told from a broken probe.
 
 ## Where the exploration is kept
 
@@ -978,11 +950,8 @@ one copy of a fact is worth more than two that can disagree.
 
 What belongs in this file is what it means for design work. **Use it, and use it
 in a loop.** Every one of the thirteen directions needed four or five
-write-look-fix rounds before it was any good, and the defects it caught were not
-subtle once seen: an icon that read as a fish rather than a bird, a mine that
-read as a sun, a 470px hole between a description and the button that acts on
-it, an eight-colour ramp with three colours that looked alike. Every one of them
-is invisible in a diff and obvious in one glance.
+write-look-fix rounds before it was any good, and what the loop caught was never
+subtle once seen — it was invisible in a diff and obvious in one glance.
 
 The corollary matters as much. A screenshot is not Gabriel looking at a served
 page, and it does not shorten that step — it only means he is not the first

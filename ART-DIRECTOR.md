@@ -46,21 +46,13 @@ its colour and shape are yours, the fact that it shrinks your paddle is not.
 
 Your branch touches every game at once, and `WORKER.md` tells a worker not to start
 beside something that already owns its area. Read literally that halts every other
-kind of work for as long as this seat is occupied. The split inside a game folder,
-when both seats are live:
+kind of work for as long as this seat is occupied. It does not: `WORKER.md`'s "A
+restyle in flight splits a game folder between two seats" gives the split from the
+other side, and it is the copy a worker actually reads.
 
-- **Yours** — `style.css`, the class names and markup in `index.html`, what a canvas
-  draws, and the part of `DESIGN.md` describing the look.
-- **The worker's** — `script.js` apart from its drawing, `TODO.md`, and everything in
-  `DESIGN.md` about how the game plays.
-
-That leaves one genuine overlap: `index.html` and `script.js` in a game being restyled
-and changed at the same time. The answer is the one used everywhere else here — say so
-before starting and let one of you go first.
-
-A worker who finds a visual problem **files it in `design/TODO.md` rather than fixing
-it**. That is the one thing another seat writes into your area, and it is deliberate:
-the alternative is six people each fixing the look of one page.
+That leaves one genuine overlap — `index.html` and `script.js` in a game being
+restyled and changed at the same time — settled the way everything else here is: say
+so before starting and let one of you go first.
 
 ## Your home is `design/`
 
@@ -209,7 +201,8 @@ Four things go with the branch:
 
 ## What is untested about this seat
 
-`CLAUDE.md` says the split as a whole is provisional and asks you to propose a better
-rule rather than working around one that bites. Specific to this seat: it is newer than
-the other two and was written before it had ever been occupied, which makes it the least
-tested document in the repo.
+This file was written before the seat had ever been occupied. It has been since — the
+redesign was built from it — so it is no longer the least tested document here. What
+remains untested is the part that needs two seats at once: "Working beside a worker"
+describes a split that only matters while an art director and a worker are live in the
+same game folder.

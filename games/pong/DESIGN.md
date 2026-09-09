@@ -174,46 +174,12 @@ would, but it trades away the 1:1 spatial mapping this section just spent severa
 paragraphs justifying, so it was not used for this.
 
 **Moving the listener to the window does not move the takeover guard's border
-with it — that stays the board.** Widening where movement is *seen* widens where
-it can be *brushed* too: before this change, only a mouse resting over the canvas
-could ever clear `POINTER_TAKEOVER_PX`, because nothing else reached the handler.
-On the window, reaching for Restart or the help button while playing keyboard is
-also "12px of movement" now, and unlike a rally the player is not even looking at
-the board when it happens. So the guard keeps its old question — is this landing
-on the board? — and only the answer to "should tracking keep going once the
-pointer already has control" changed. A move is a takeover only if `handlePointerMove`
+with it — that stays the board.** A move is a takeover only if `handlePointerMove`
 sees it while `e.clientX`/`e.clientY` fall inside the canvas's own rect; once
-control is already `"pointer"`, no such check applies, which is what lets a
-chase carry the paddle past the edge in the first place. Decided this way rather
-than surveyed with a playtest because it restores an existing invariant — the
-brushed-mouse guard predates this entry — rather than setting a new one.
-
-## On a phone
-
-Not designed for, but measured. An emulated phone with real touch events was
-driven through a game, and the result is worth keeping because it is not what
-anyone expected: **it already works.** Tapping the board serves, dragging moves
-the paddle, `touch-action: none` stops the page scrolling under the drag, the
-layout does not overflow and nothing errors. Three things are genuinely wrong.
-
-**There is no way to pause.** Escape and `p` are the only manual bindings and a
-phone has no keyboard. Auto-pause on a hidden tab still fires and tapping the
-board resumes, so you can get out of a pause but never into one. That is a
-functional hole rather than polish.
-
-**The `?` panel lies to a touch device.** It lists W/S, the arrow keys and Space,
-none of which exist on a phone, and never mentions dragging. Fixing it means
-showing the right controls to the right device without sniffing the user agent; a
-pointer media query is the usual answer.
-
-**Your finger covers the paddle.** The player's paddle sits on the left edge,
-exactly where you drag. Nothing fixes that except moving the control somewhere
-else, which is a design question and not a bug.
-
-One consequence of a decision made for the mouse: touch **teleports** the paddle,
-because pointer control is not rate-limited (see Controls above). On a mouse that
-is a curiosity. On touch, lifting a finger and putting it down elsewhere is the
-normal way to move, so it happens constantly.
+control is already `"pointer"`, no such check applies, which is what lets a chase
+carry the paddle past the edge. Without that border, reaching for Restart while
+playing on the keys is twelve pixels of movement too, and the player is not even
+looking at the board when it happens.
 
 ## The AI
 
@@ -267,13 +233,8 @@ knob names its own off value, and a test holds the whole `AI` object to it. See
 Three modes, each a character rather than a notch on a scale.
 
 There used to be five. Easy, Medium and Hard differed in `AI` settings alone and
-were the only modes *without* powerups, which is precisely what killed them: once
-every mode had powerups the thing that distinguished the middle three was gone,
-and five names described three real differences. They are worth remembering for
-what they cost — while they existed, the middle three all played an identical
-ball, which was the only reason the share of shots the ai saves compared honestly
-between them. Nothing does now. Every mode is measured against its own game, and
-`tests/ai-sweep.js` is a reading of one mode, not a ranking across them.
+were the only modes *without* powerups, which is exactly what killed them: once
+every mode had powerups, five names described three real differences.
 
 **Normal is the one you are meant to play.** It is the only mode with no `game`
 half at all: stock ball, stock paddles, no handicap on either side. Its ai sits
@@ -353,24 +314,18 @@ and re-running it is how any new preset gets a comparable figure:
 
 | version | saves |
 | --- | --- |
-| original chasing AI | 88% |
-| first predictive AI | 91% |
 | after the human-feel work, before tuning | **100%** |
 | untuned defaults | ~92% |
-| Easy / Medium / Hard, while they existed | ~72% / ~86% / ~96% |
 | Assisted / Normal / Insane, each against its own game | ~82% / ~88% / ~99% |
 
-Assisted's ai saving more than Easy's did is not a mistake — see above. It is
-supposed to return the ball; the help is the player's paddle and the slow ball,
-neither of which this number can see. Normal landing where Medium did is
-deliberate: it is the mode that replaced it.
+**Assisted's ai is the strongest of the three relative to what it faces**, and
+that is not a mistake — see above. It is supposed to return the ball; the help is
+the player's paddle and the slow ball, neither of which this number can see.
 
-**These are three separate readings, not a ranking.** While Easy, Medium and Hard
-existed they all played one ball, so their figures could be set against each
-other. Nothing does now — every surviving mode changes the ball, the paddles or
-both — so each number answers "how often does *this* mode's ai save *this* mode's
-ball" and nothing else. The harness never asks how hard the ball is for the
-**player**, which is most of what separates the three.
+**These are three separate readings, not a ranking.** Every mode changes the
+ball, the paddles or both, so each number answers "how often does *this* mode's
+ai save *this* mode's ball" and nothing else. The harness never asks how hard the
+ball is for the **player**, which is most of what separates the three.
 
 The number understates every mode with moves in it, and it is worth knowing why
 rather than trusting it. Only one of the opponent's three moves changes whether
@@ -984,9 +939,6 @@ to `WIDTH / 2` puts it a full half-width to the right of the centre line, which 
 drawn at exactly `WIDTH / 2`. That shipped for a while and is obvious once seen.
 
 `bounce()` and `predictInterceptY()` both carry the same half-width correction.
-Switching to a centre-based position would remove all of them, at the cost of
-touching every collision and the prediction at once — not worth doing on its own,
-worth knowing if something else forces that area open.
 
 ## Theme
 
@@ -1039,11 +991,8 @@ The last two are the same number in two places — `applyWinScore` rewrites both
 whenever the chosen win score changes, and filling either in only at load left
 it confidently wrong the moment the choice could change.
 
-There was also a `#score-reader`, a clipped live region holding the score as
-text because `draw()` painted it on the canvas and canvas pixels reach no screen
-reader. The scorebar is real text with the live region on it, so one element now
-does both jobs and the hidden copy is gone. A second copy would have announced
-every point twice.
+**Do not add a hidden copy of the score.** The scorebar is real text carrying the
+live region — see "Reading the game without seeing it".
 
 ## Stored data
 

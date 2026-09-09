@@ -383,9 +383,6 @@ the button is held. Do not delete it.
 - **Snap Chromium works on X11** with `--ozone-platform=x11` and `GDK_BACKEND=x11`.
   Without them it runs as a Wayland client and `window.screenX/screenY` report
   `0,0`, so XTEST clicks cannot be aimed at it.
-- **Snap Firefox cannot open `:0`** ("cannot open display") even though its x11 snap
-  interface shows as connected. Workaround: the Mozilla tarball, run unconfined with
-  `-no-remote -profile <dir>`.
 - **XTEST input works** on `:0` via `pynput`. Install into a venv — the system
   Python is PEP-668 managed and refuses `pip install`.
 - **Screen capture of the X11 root is black** because Wayland does the compositing,
@@ -399,8 +396,6 @@ the button is held. Do not delete it.
   directory; and a screenshot only proves what it shows — force a hover, a `data-`
   state or a motion frame before the shot. See `tests/README.md` for a working
   invocation.
-- CDP over websocket needs `--remote-allow-origins='*'`, or `suppress_origin=True`
-  on `websocket.create_connection`.
 - Node here is v22, so nothing forces the `playwright-core` pin any more. It stays
   at exactly 1.45.0 because that is what the suites are known to pass on — see
   `tests/README.md`.

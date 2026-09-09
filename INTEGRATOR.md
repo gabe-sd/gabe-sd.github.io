@@ -292,10 +292,8 @@ to.
 
 ## What is untested about this seat
 
-`CLAUDE.md` says the split as a whole is provisional and asks you to propose a better
-rule rather than working around one that bites. Specific to this seat: it came out of a
-single day, most of that with one worker and one integrator, and no two agents ever
-colliding on the same file. Two known gaps — nothing here has been tested against two
+This seat came out of a single day, most of that with one worker and one integrator,
+and no two agents ever colliding on the same file. Two known gaps — nothing here has been tested against two
 agents genuinely wanting the same file at the same time, and every integrator so far
 has also been an author of these rules, which is the least demanding reader they will
 ever have.

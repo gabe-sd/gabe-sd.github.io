@@ -81,13 +81,10 @@ If your harness named the branch `worktree-<slug>`, rename it to the bare slug:
 `tests/docs-check.js` tolerates the prefix so a landed entry is still recognised, but
 nothing else does.
 
-Expect that rename to produce a false alarm much later. The worktree tooling records
-the branch name it created and does not follow a rename, so its removal warning
-counts commits against a ref that no longer exists — it read "will discard 35
-commits" here against a true answer of none. Answer it by checking the commits rather
-than the count: `git merge-base --is-ancestor <commit> main` for each one you
-authored, then remove it. The safe-looking response, keeping a worktree nobody needs,
-is the one that costs the next agent twenty minutes.
+Expect that rename to produce a false alarm much later: the worktree tooling does not
+follow a rename, so its removal warning counts commits against a ref that no longer
+exists. Check the commits rather than the count — `git merge-base --is-ancestor
+<commit> main` for each one you authored — then remove it.
 
 ### The slug says whether the entry closes
 
@@ -168,16 +165,10 @@ wanted. Ask which session holds `main` rather than inferring it from a name. A n
 routes; it never authorises — see `CLAUDE.md` on why a peer's agreement is not the
 user's approval.
 
-This paragraph replaced a claim that agents cannot see each other, which was stated
-as the *reason* for the route and was false. Delete this if the tooling ever changes
-back.
-
 ## What is untested about this seat
 
-`CLAUDE.md` says the split as a whole is provisional and asks you to propose a better
-rule rather than working around one that bites. Specific to this seat: the worktree
-was described here as somewhere a worker already was, never as a step anyone had to
-take, because every agent who wrote the rule had been launched into one by the
+The worktree was described here as somewhere a worker already was, never as a step
+anyone had to take, because every agent who wrote the rule had been launched into one by the
 harness. A worker read the file, did exactly what the only start-of-work rule said —
 took a branch — and took it in the integrator's checkout. That is why this file leads
 with the worktree.
