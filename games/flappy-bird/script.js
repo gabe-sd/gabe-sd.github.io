@@ -206,6 +206,13 @@ function endRun(hit) {
     : `${what} — ${score} cleared. Flap to fly again.`;
 }
 
+// PREVIEW: the beak cannot be the bird's own hue or it disappears, which is
+// what an amber bird on amber chrome runs into.
+let beakHue = "amber";
+function beak() {
+  return beakHue === "court" ? "#0d0905" : colors[beakHue];
+}
+
 // PREVIEW: three designs for the bird, one of which survives.
 //
 // Each is drawn about the origin inside a box BIRD_SIZE across, which is
@@ -220,7 +227,7 @@ const BIRD_STYLES = {
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = colors.beak;
+    ctx.fillStyle = beak();
     ctx.beginPath();
     ctx.moveTo(r - 8, -2);
     ctx.lineTo(r, 1);
@@ -274,7 +281,7 @@ const BIRD_STYLES = {
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = colors.beak;
+    ctx.fillStyle = beak();
     ctx.beginPath();
     ctx.moveTo(r - 8, -2);
     ctx.lineTo(r - 1, 1);
@@ -303,7 +310,7 @@ const BIRD_STYLES = {
     ctx.stroke();
     ctx.fill(new Path2D("M14.5 20.5c6 0.5 9.5 3.5 11 8-6.5 0.5-10.5-2.5-11-8z"));
     ctx.fill(new Path2D("M10.5 20.5l-7-4 1.5 8z"));
-    ctx.fillStyle = colors.beak;
+    ctx.fillStyle = beak();
     ctx.fill(new Path2D("M31.8 20.5l9 2.5-9 2.5z"));
     ctx.fillStyle = c;
     ctx.beginPath();
@@ -331,10 +338,11 @@ function drawBird() {
   const tilt = Math.max(-0.4, Math.min(0.9, bird.vy * 0.06));
   const dead = phase === "over";
   const c = dead ? colors.dead : colors[birdHue];
-  // Death changes the bird four ways at once - hue, fill, outline and the glow
-  // going out - because hue alone is a weak signal when the resting colour and
-  // the state colour are neighbours on the wheel.
-  const style = dead ? "round" : birdStyle;
+  // Death keeps the drawing and changes its state: the ink goes to the outcome
+  // colour and the light goes out. Swapping the bird for a different *shape* was
+  // tried and is a style mismatch - the whole board is line work, and a solid
+  // ball on it reads as a piece from another game.
+  const style = birdStyle;
   const glow = dead ? 0 : birdGlow;
   ctx.save();
   ctx.translate(BIRD_X + r, bird.y + r);
@@ -407,10 +415,18 @@ let gateHue = "cyan";
 // The two edges of the world, which behave differently and so cannot look the
 // same. The ground is drawn on the pixels that end the run; the ceiling, which
 // only stops the bird, is a broken dim rule.
+// PREVIEW: whether the world's edges are the machine's amber or the hazard's
+// own hue. They are part of the world rather than part of the page, so if the
+// bird takes amber this is what stops the board being amber against amber.
+let worldHue = "amber";
+
 function drawEdges() {
-  ctx.fillStyle = colors.ground;
+  const world = worldHue === "amber"
+    ? { line: colors.ground, rule: colors.ceiling }
+    : { line: colors[pipeStyle === "c" ? gateHue : "amber"], rule: colors.ceiling };
+  ctx.fillStyle = world.line;
   ctx.fillRect(0, HEIGHT - 2, WIDTH, 2);
-  ctx.fillStyle = colors.ceiling;
+  ctx.fillStyle = worldHue === "amber" ? world.rule : veil(world.line, 0.45);
   for (let x = 0; x < WIDTH; x += 12) ctx.fillRect(x, 0, 7, 1);
 }
 
@@ -629,6 +645,15 @@ const CUP_GLYPH = `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 11h1
   });
   group("bird glow", [[0, "none"], [10, "soft"], [22, "strong"]], (v) => {
     birdGlow = v;
+    draw();
+  });
+  group("beak", [["amber", "amber"], ["hot", "white"], ["court", "dark"],
+                 ["pale", "pale"], ["coral", "coral"]], (v) => {
+    beakHue = v;
+    draw();
+  });
+  group("world edges", [["amber", "amber"], ["pipe", "pipe hue"]], (v) => {
+    worldHue = v;
     draw();
   });
   group("readout", [["words", "words"], ["icons", "icons"]], (v) => {
