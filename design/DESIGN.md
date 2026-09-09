@@ -478,7 +478,7 @@ uppercase, which is the same "selected" language the hub uses for a tile:
 
 | State | Treatment |
 | --- | --- |
-| `.btn` | filled `--accent`, `--p-ground` text, 14px amber glow |
+| `.btn` | filled `--accent`, `--p-ground` text, 14px amber glow, uppercase at `letter-spacing 0.1em`, `border-radius: 0` |
 | `.btn:hover` | filled `--p-pale`, 18px glow |
 | `.btn.secondary` | transparent, 1px `--cell-border`, `--muted` text, no glow |
 | `.btn.secondary:hover` | border `--p-rule`, text `--p-pale` |
@@ -668,7 +668,8 @@ global `box-sizing: border-box` — which made the drawing surface render at
 | bezel | `linear-gradient(#160f08, #0d0905)`, 1px `--p-hairline`, `inset 0 0 40px rgba(0,0,0,.8)`, 12px padding |
 | corner brackets | 14px, 1px `--p-rule`, two sides each, top-left and bottom-right |
 | court | `#0d0905`, 1px `--p-hairline` |
-| labels | `you` / `ai` / `first to N`, 0.9rem, `letter-spacing .2em`, `--p-dim`, lowercase |
+| labels | `you` / `ai`, 0.9rem, `letter-spacing .2em`, `--p-dim`, lowercase; `first to N` the same but `.24em` |
+| menu backdrop | `rgba(10, 7, 4, 0.86)` over an opaque `--p-ground` fallback, so the final score stays readable behind it either way; `READY` above it in `--p-hot` at `letter-spacing .12em` with `var(--bloom)` |
 | the digits | 2rem, `--p-rose` and `--p-coral`, each glowing its own colour at 50% |
 | radius | none, anywhere on this page |
 
