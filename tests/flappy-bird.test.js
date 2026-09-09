@@ -385,9 +385,86 @@ const { check, report } = makeChecks();
     check("and lifts the bird", s.bird.vy === C.FLAP_VELOCITY, s.bird.vy);
   }
 
+  // The one drawing claim this suite makes, and it is a claim about pixels on
+  // purpose: the bird must not be bigger to look at than it is to fly through.
+  // The old beak reached seven pixels past the right edge of the hitbox, so a
+  // player read a gap as clearable and died to a bird wider than its square.
+  //
+  // drawBirdShape() rather than drawBird(), because drawBird() adds a glow that
+  // is *meant* to spill past the edge. The shape is what has to fit.
+  console.log("19. the bird is drawn no bigger than the square that kills it");
+  {
+    const ink = await page.evaluate(() => {
+      const el = document.getElementById("board");
+      const g = el.getContext("2d");
+      const at = 200;          // anywhere clear of the ground and the ceiling
+      const pad = 40;          // wide enough to catch ink well outside the box
+      g.clearRect(0, 0, el.width, el.height);
+      g.save();
+      g.translate(at, at);
+      drawBirdShape(BIRD_SIZE / 2, "#ffffff");
+      g.restore();
+      const side = pad * 2;
+      const d = g.getImageData(at - pad, at - pad, side, side).data;
+      const box = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+      for (let y = 0; y < side; y++) {
+        for (let x = 0; x < side; x++) {
+          if (d[(y * side + x) * 4 + 3] <= 8) continue;   // ignore the faintest antialiasing
+          box.minX = Math.min(box.minX, x - pad);
+          box.maxX = Math.max(box.maxX, x - pad);
+          box.minY = Math.min(box.minY, y - pad);
+          box.maxY = Math.max(box.maxY, y - pad);
+        }
+      }
+      return box;
+    });
+    // Drawn about the origin, so the hitbox is -r .. +r. One pixel of slack for
+    // the antialiased outside of the outline, which is far short of the seven
+    // this is guarding against.
+    const r = 12;
+    const slack = 1;
+    check("nothing is drawn past the right edge", ink.maxX <= r + slack, ink.maxX);
+    check("nor past the left edge", ink.minX >= -r - slack, ink.minX);
+    check("nor above or below it", ink.minY >= -r - slack && ink.maxY <= r + slack,
+      `${ink.minY}..${ink.maxY}`);
+    check("and the bird is actually there", ink.maxX > 0 && ink.maxY > 0,
+      JSON.stringify(ink));
+    await page.evaluate(() => { restart(); });
+  }
+
+  // renderScore and renderBest write into a .n inside each readout rather than
+  // replacing its text, because the glyph and the screen-reader word are markup.
+  // Every other check here reads textContent, which concatenates - so it would
+  // pass just as happily against a readout with no .n in it at all.
+  console.log("20. the readout is a glyph, an off-screen word and a number");
+  {
+    const hud = await page.evaluate(() => {
+      const out = {};
+      for (const id of ["score", "best-score"]) {
+        const el = document.getElementById(id);
+        const lbl = el.querySelector(".lbl");
+        out[id] = {
+          hasNumber: !!el.querySelector(".n"),
+          glyphHidden: el.querySelector(".gly").getAttribute("aria-hidden") === "true",
+          word: lbl ? lbl.textContent.trim() : null,
+          // display:none would take the word out of the reading as well as out
+          // of the picture, which is the whole point of hiding it this way.
+          wordRead: lbl ? getComputedStyle(lbl).display !== "none" : false,
+        };
+      }
+      return out;
+    });
+    for (const id of ["score", "best-score"]) {
+      check(`${id} keeps the .n the render functions write to`, hud[id].hasNumber);
+      check(`${id}'s glyph is out of the accessibility tree`, hud[id].glyphHidden);
+      check(`${id} still says a word`, !!hud[id].word, hud[id].word);
+      check(`${id}'s word is hidden but still read`, hud[id].wordRead);
+    }
+  }
+
   check("no page errors", errors.length === 0, errors.join("; "));
 
-  console.log("19. the game survives localStorage being unavailable");
+  console.log("21. the game survives localStorage being unavailable");
   const page2 = await browser.newPage();
   const errors2 = [];
   page2.on("pageerror", (e) => errors2.push(String(e)));
