@@ -296,13 +296,14 @@ ls -l /proc/<pid>/cwd               # "(deleted)" means the tree it served is go
 kill <pid>                          # plain kill, and never pkill -f
 ```
 
-**A deleted working directory is what makes this safe.** "Shared ground" forbids
-killing a process you did not start, because a live session and an abandoned one look
-identical — and that stops being true when the directory the process was launched from
-has been removed. Nobody is working in a directory that is not there, so the deletion
-is the proof, and no one has to be asked. That is also the whole of the licence: a
-listener whose cwd still resolves is somebody's, however sure you are that it is not,
-and it goes back to being a question rather than a sweep.
+The `(deleted)` marker is the whole of the licence, and it is "Shared ground"'s single
+exception to asking before you kill — the reasoning lives there rather than here. What
+this seat adds is only that the sweep is part of cleanup. A listener whose cwd still
+resolves is somebody's, and goes back to being a question.
+
+Both halves were reproduced before this was written: `git worktree remove` returned 0
+with a server still serving the path, the listener survived it, and the cwd gained the
+marker.
 
 ## Reading the docs before you merge
 
