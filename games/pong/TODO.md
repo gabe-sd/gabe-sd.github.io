@@ -300,72 +300,56 @@ playtest of its own.** How hard the slow bites, how long it lasts and how you ea
 it are all feel, and it is the first thing you own that reaches the other side of
 the board.
 
-Vines shoot out of the player's paddle, cross the board, wrap around the
-opponent's paddle and slow it for a few seconds. It is deliberately the mirror of
-Squeeze — the opponent's lightning — and it is the move that evens the two sides
-up. You get Expand and Clutch, both of which act on your own paddle; the opponent
-gets Blink, Overdrive and Squeeze, and Squeeze is aimed at you.
+Vines shoot out of the player's paddle, cross the board, wrap the opponent's paddle
+and slow it. It is the mirror of Squeeze and the move that evens the two sides up:
+you get Expand and Clutch, both acting on your own paddle, while the opponent gets
+Blink, Overdrive and Squeeze, and Squeeze is aimed at you.
 
 **This replaces `pong-shooter-powerup`**, which answered the same asymmetry with a
-collectable that turned your paddle into a gun and bullets that slowed the
-opponent on contact. Same effect, more machinery: it needed a second moving object
-and then a third, where the vine reuses the staging Squeeze already has. Four
-things that entry knew are still true.
+collectable that turned your paddle into a gun. Same effect, more machinery — it
+needed a second moving object and then a third, where the vine reuses the staging
+Squeeze already has. Two things that entry knew survive, and neither is in
+`games/pong/DESIGN.md`:
 
 - **Slow, not shrink.** Squeeze already shrinks a paddle, and two moves doing the
-  same thing read as one move. Slow is a new axis and it is legible: the paddle
+  same thing read as one move. A slow is a new axis and it is legible: the paddle
   visibly cannot get there.
-- **Slowing the ai means a live multiplier, never a write to `AI`.** `AI.speed`
-  and `panicSpeed` are rebuilt from `AI_DEFAULTS` on every mode change, so a
-  debuff written into them is either wiped or leaks into the next mode. Derive the
-  value from what is active — the same shape `syncPaddleSize()` uses for paddle
-  height, and for the same reason: two effects writing one field means whichever
-  ends last wins.
-- **It is a move like any other.** It belongs in `ABILITY` with a `modes` list and
-  an off value for every knob, and both "everything off" tests have to still pass.
-- **Nothing it fires may touch the ball.** The ai reads the ball by simulating
-  clean physics (`predictInterceptY()`), so anything that deflected the ball would
-  make the opponent misread shots for a reason the player cannot see — a bug from
-  where you are sitting, not a mechanic.
+- **Slowing the ai means a live multiplier, never a write to `AI`.** `AI.speed` and
+  `panicSpeed` are rebuilt from `AI_DEFAULTS` on every mode change, so a debuff
+  written into them is either wiped or leaks into the next mode. Derive it from
+  what is active, the way `syncPaddleSize()` does for paddle height.
 
-**Vines, or a green laser?** Gabriel raised the laser after this entry was
-written and is unsure which fits the game better. It decides what the move looks
-like rather than what it does, and it is not settled — **get the answer from him
-before building either.**
+Everything else it must obey is already in `games/pong/DESIGN.md`. It is a move
+like any other, so it takes a `modes` list and an off value for every knob and both
+"everything off" tests still pass. It is staged in three parts because a move whose
+effect lands elsewhere has to be — `makeBolt()` and `strokePath()` already draw a
+jagged glowing path between two points, so a vine wants a different line rather
+than different machinery. And its duration follows "An effect timed against the
+ball", with one exception worth stating: this lands as the ball heads *towards* the
+opponent, so it bites on the very next contact and Squeeze's volley budget must not
+be copied across.
 
-It is not a return to the gun. Whichever way it lands, this stays one earned move
-that crosses the board and slows the opponent, staged the way Squeeze is; the
-shooter's collectable, its stream of bullets and its second and third moving
-objects are gone either way. Two things bear on the choice, neither decisive:
+**Nothing it fires may touch the ball.** `predictInterceptY()` reads the ball by
+simulating clean physics, so a deflection would make the opponent misread shots for
+a reason the player cannot see — a bug from where you are sitting, not a mechanic.
 
-- **A slow has to be legible**, which is the argument the move is built on: the
-  paddle visibly cannot get there. Vines wrapping a paddle say "bound" with no
-  caption. A beam hitting one says "hit", which reads closer to damage than to
-  slow, so a laser has to carry the slow some other way.
-- **Something has to cross the board.** A move whose effect lands elsewhere is
-  drawn in three parts and the middle one is the travel. A vine has that
-  naturally; a laser arrives instantly unless the beam is drawn lingering, which
-  is a choice rather than something the fiction hands you.
+**Vines, or a green laser?** Gabriel raised the laser after this entry was written
+and is unsure which fits the game better. It decides what the move looks like
+rather than what it does. **Get the answer from him before building either.** Two
+things bear on the choice, neither decisive: a slow has to be legible, and vines
+wrapping a paddle say "bound" with no caption where a beam says "hit", which reads
+closer to damage; and something has to cross the board, which a vine does naturally
+and a beam does only if it is drawn lingering.
 
-Four more things are undecided once that is, and the first is the real one:
+Two things stay open once that is settled:
 
-- **How you earn it.** The player's moves are never a random roll — the villain
-  rolls, you earn. Clutch pays out for close calls; Expand is mercy in Assisted
-  and a return streak in Normal. A third player move needs a third condition that
-  is neither. A collectable served into play that you have to hit is one answer,
-  and is the part of the shooter entry worth keeping.
+- **How you earn it.** The villain rolls; you earn. Clutch pays out for close
+  calls and Expand is mercy in Assisted and a return streak in Normal, so a third
+  player move needs a third condition that is neither. A collectable served into
+  play that you have to hit is one answer, and is the part of the shooter entry
+  worth keeping.
 - **What colour it is.** Red means the opponent is doing something to you and all
   three of its moves are red, so a player attack cannot be red. Green is Expand's.
-- **How it is staged.** A move whose effect lands somewhere else is drawn in three
-  parts: the wind-up where it comes from, something crossing, and the effect where
-  it lands. That rule exists because Squeeze got it wrong and the victim looked
-  like the owner. `makeBolt()` and `strokePath()` already draw a jagged glowing
-  path between two points — vines want a different line, not different machinery.
-- **How long it lasts.** Durations aimed at the *player* are set in volleys
-  because the lead-in eats half of one before the ball is coming back. This lands
-  as the ball heads towards the opponent, so it bites on the very next contact:
-  the lead-in argument runs the other way and Squeeze's number must not be copied
-  across. `node tests/volley-sweep.js` is the ruler either way.
 
 ### pong-high-dpi-canvas — Blurry on high-DPI displays
 

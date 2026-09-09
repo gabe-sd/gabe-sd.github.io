@@ -363,12 +363,10 @@ or `PADDLE_SPEED` at all, puts Insane's worst shot beyond what a keyboard can
 answer. Assisted sits 165% under its limit and Normal 50% under, so neither is
 anywhere near this and only Insane needs watching.
 
-This is the same line the "Controls" section is drawn against, and it is a
-sharper version of it. That section sets `PADDLE_SPEED` just under the steepest
-descent **Normal** can produce, so a fast corner shot "has to be read early
-rather than chased down". The measurement here already grants the early read —
-the paddle heads for the true intercept from the first tick — so what it finds is
-what is left after reading perfectly, and Insane spends it all.
+This is a sharper version of the line "Controls" is drawn against. That section
+sets `PADDLE_SPEED` against **Normal**, so a fast corner shot has to be read early
+rather than chased down; the measurement here already grants the early read, so
+what it finds is what is left after reading perfectly — and Insane spends it all.
 
 **With Squeeze active, Insane is already past it** — a limit of 13.0 against a
 cap of 14. A shrunken paddle starts further from the ball and arrives with less
@@ -377,10 +375,9 @@ keyboard input can save, and it is reachable only in a rally long enough for the
 ball to hit the cap (15 contacts from Insane's starting speed) with a Squeeze
 live at the time.
 
-A **mouse is bound by none of this**, which is worth holding next to the
-"Controls" section's note that pointer control is deliberately not rate limited.
-That decision is what keeps Insane playable at its current numbers, and it means
-the mode is meaningfully harder on the keys than with a mouse.
+A **mouse is bound by none of this** — pointer control is not rate limited, per
+"Controls" — so Insane is meaningfully harder on the keys, and that decision is
+what keeps it playable at its current numbers.
 
 **It is not tunnelling.** That was the other candidate explanation and it is
 ruled out: a paddle pinned on the intercept saves every shot at every mode's cap,
@@ -390,11 +387,8 @@ starts disagreeing with a path that would have bounced off a wall inside the sam
 tick. Nothing in the game can reach that speed, so `crossingY()` needs no
 continuous collision detection at any setting the modes can produce.
 
-Blink is the exception, and it moves the number: once it was bound to the ball
-rather than to a clock it became a guaranteed save on the approaches it fires, so
-the same preset reads higher than it used to. That is the whole of the change
-between the old ~98% and today's ~99% — the ai did not get better at reading the
-ball, one of its moves stopped expiring early.
+Blink is the exception, and it moves the save rate without the ai reading the ball
+any better — see "Blink, and the second time a timer was the wrong answer".
 
 That 100% is the entry worth remembering. Making the AI feel human made it
 **unbeatable**, and nothing but playing it revealed that. The cause: a read that
@@ -726,8 +720,7 @@ proves nothing.
 
 The timer here is the one rejected above, and it works for the opposite reason: a
 reward that overstays stops reading as a reward. It is set several times longer
-than the rejected value, because the failure then was expiring before the ball
-came back, and it is bounded at the other end by conceding.
+than the rejected value, and bounded at the other end by conceding.
 
 How long it should last was measured rather than guessed. Simulating a weak, a
 middling and a strong player, the pair that was shipped puts the big paddle on for

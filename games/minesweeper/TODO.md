@@ -21,9 +21,8 @@ the best time.
 - Both panels toggle via the `hidden` attribute, with `aria-expanded` on their
   button kept in step; restoring state on load has to set both, not just the
   attribute.
-- A panel with a `display` rule needs it scoped to `:not([hidden])` — any display
-  value otherwise beats `hidden` and the panel loads open. `.settings` has this;
-  `.instructions` has no display rule so it does not need it yet.
+- `.settings` already scopes its display rule to `:not([hidden])`, per `CLAUDE.md`;
+  `.instructions` has no display rule, so it does not need one yet.
 - `tests/instructions-panel.test.js` and `tests/best-time.test.js` both assume the
   panels start closed. Restoring a saved "open" would break them, so either clear
   the keys in test setup or assert the restore explicitly.
