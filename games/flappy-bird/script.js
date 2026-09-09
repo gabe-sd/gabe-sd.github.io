@@ -414,14 +414,14 @@ helpToggle.addEventListener("click", toggleInstructions);
 helpToggle.addEventListener("click", releaseFocus);
 restart();
 
-/* ---------- PREVIEW ONLY — delete this block, PIPE_STYLES and #vstrip ---------- */
+/* ---------- PREVIEW ONLY — delete this block, PIPE_STYLES and .vstrip ---------- */
 
 const BIRD_GLYPH = `<svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="21" cy="23" rx="11.5" ry="9.5" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M31.8 20.5l9 2.5-9 2.5z" fill="currentColor"/><circle cx="26" cy="19.5" r="2" fill="currentColor"/><path d="M14.5 20.5c6 0.5 9.5 3.5 11 8-6.5 0.5-10.5-2.5-11-8z" fill="currentColor"/><path d="M10.5 20.5l-7-4 1.5 8z" fill="currentColor"/><path d="M17 32.3l-1.6 6M23.5 32.3l-1 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
 
 const CUP_GLYPH = `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 11h16v8a8 8 0 0 1-16 0z" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M16 13h-4v3a5 5 0 0 0 5 5M32 13h4v3a5 5 0 0 1-5 5" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M24 27v6M18 37h12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>`;
 
 (function previewStrip() {
-  const strip = document.getElementById("vstrip");
+  const strip = document.querySelector(".vstrip");
   if (!strip) return;
   const hud = document.querySelector(".hud");
 
@@ -435,10 +435,10 @@ const CUP_GLYPH = `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 11h1
       const b = document.createElement("button");
       b.type = "button";
       b.textContent = text;
-      b.addEventListener("click", () => {
+      b.addEventListener("click", (e) => {
         apply(value);
         made.forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
-        b.blur(); // Space is a flap key, and a focused button would eat it
+        releaseFocus(e); // Space is a flap key, and a focused button would eat it
       });
       strip.appendChild(b);
       return b;
