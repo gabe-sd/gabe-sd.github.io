@@ -1,5 +1,9 @@
 const SIZE = 9;
 const BOX = 3;
+const PROGRESS_KEY = "sudoku.progress";
+// How long Restart / New puzzle stay armed after their first click before the
+// confirm window lapses - see makeConfirmButton().
+const CONFIRM_WINDOW_MS = 5000;
 
 // A small fixed set of hand-picked puzzles, each pre-verified (by
 // tests/sudoku-puzzles.test.js) to have exactly one solution. See "Puzzle
@@ -574,9 +578,61 @@ let givens = [];
 let cellEls = [];
 let selected = null;
 let gameOver = false;
+// The disarm function from each of Restart's and New puzzle's confirm
+// buttons, so placing a digit or arming one can disarm the other - see
+// makeConfirmButton().
+const confirmDisarmers = [];
 
 function currentPuzzle() {
   return PUZZLES[puzzleIndex];
+}
+
+// localStorage is not always available - it throws in private windows, with
+// site data blocked, and from file:// in some browsers. Progress is a nice
+// extra, so every access degrades to "nothing saved" rather than breaking
+// the game. See DESIGN.md's "Stored data" for the shape.
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY);
+    if (raw === null) return null;
+    const parsed = JSON.parse(raw);
+    return isValidProgress(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function isValidProgress(parsed) {
+  if (
+    !parsed ||
+    !Number.isInteger(parsed.puzzleIndex) ||
+    parsed.puzzleIndex < 0 ||
+    parsed.puzzleIndex >= PUZZLES.length ||
+    !Array.isArray(parsed.grid) ||
+    parsed.grid.length !== SIZE ||
+    !parsed.grid.every(
+      (row) =>
+        Array.isArray(row) &&
+        row.length === SIZE &&
+        row.every((v) => Number.isInteger(v) && v >= 0 && v <= 9)
+    )
+  ) {
+    return false;
+  }
+  // The saved grid must agree with this puzzle's givens, in case PUZZLES has
+  // changed since the save - otherwise a stale save could restore digits
+  // into cells this puzzle never gave.
+  return PUZZLES[parsed.puzzleIndex].givens.every((row, r) =>
+    row.every((g, c) => g === 0 || parsed.grid[r][c] === g)
+  );
+}
+
+function saveProgress() {
+  try {
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify({ puzzleIndex, grid }));
+  } catch {
+    // best-effort - the game still works without persistence
+  }
 }
 
 // Every other cell sharing a row, column, or 3x3 box with (r, c) — the peers
@@ -667,12 +723,20 @@ function renderSelection() {
   }
 }
 
+// True once any editable cell differs from its blank starting state - what
+// Restart and New puzzle's confirm step is guarding against discarding.
+function hasProgress() {
+  return grid.some((row, r) => row.some((v, c) => v !== givens[r][c]));
+}
+
 function placeDigit(digit) {
   if (gameOver || !selected) return;
   const [r, c] = selected;
   if (isGiven(r, c)) return;
   grid[r][c] = digit;
   renderCell(r, c);
+  saveProgress();
+  disarmResetButtons();
   checkWin();
 }
 
@@ -682,6 +746,10 @@ function renderCell(r, c) {
   el.textContent = v === 0 ? "" : String(v);
   el.classList.toggle("given", isGiven(r, c));
   el.classList.toggle("wrong", !isGiven(r, c) && conflicts(r, c));
+  // Derived from gameOver, like the two classes above, rather than set once
+  // in checkWin() and never cleared - otherwise a Restart after a win left
+  // every cell, given digits included, stuck green. See DESIGN.md.
+  el.classList.toggle("won", gameOver);
 }
 
 function renderBoard() {
@@ -700,10 +768,7 @@ function checkWin() {
   gameOver = true;
   selected = null;
   statusEl.textContent = "Solved! 🎉";
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) cellEls[r][c].classList.add("won");
-  }
-  renderSelection();
+  renderBoard();
 }
 
 function loadPuzzle() {
@@ -713,6 +778,22 @@ function loadPuzzle() {
   selected = null;
   statusEl.textContent = "Select a cell, then type a digit";
   renderBoard();
+  saveProgress();
+}
+
+// Restores a previously saved grid instead of blanking to givens - the
+// load-time counterpart to loadPuzzle(). checkWin() re-derives gameOver and
+// the won/wrong classes from the restored grid itself rather than trusting
+// anything that was saved, so a stale or hand-edited save can't fake a win.
+function restoreProgress(saved) {
+  puzzleIndex = saved.puzzleIndex;
+  givens = currentPuzzle().givens.map((row) => row.slice());
+  grid = saved.grid.map((row) => row.slice());
+  gameOver = false;
+  selected = null;
+  statusEl.textContent = "Select a cell, then type a digit";
+  renderBoard();
+  checkWin();
 }
 
 function restart() {
@@ -724,6 +805,49 @@ function newPuzzle() {
   loadPuzzle();
 }
 
+function disarmResetButtons() {
+  confirmDisarmers.forEach((disarm) => disarm());
+}
+
+// Two-step confirm for a button that would discard progress: the first click
+// arms it (label flips to a confirmation prompt, styled like Minesweeper's
+// Reset best time) and opens a window to confirm; a second click inside that
+// window runs `onConfirm` and disarms. Skipped entirely when there is
+// nothing to lose - grid already matches givens - so an untouched board
+// still resets in one click, same as before progress was saved. See
+// DESIGN.md.
+function makeConfirmButton(btn, label, onConfirm) {
+  let armed = false;
+  let timer = null;
+
+  function disarm() {
+    armed = false;
+    if (timer) clearTimeout(timer);
+    timer = null;
+    btn.textContent = label;
+    btn.classList.remove("confirming");
+  }
+
+  btn.addEventListener("click", (e) => {
+    if (armed) {
+      disarm();
+      onConfirm();
+    } else if (hasProgress()) {
+      // Only one button stays armed at a time.
+      confirmDisarmers.forEach((other) => other !== disarm && other());
+      armed = true;
+      btn.textContent = "Sure? Click to confirm";
+      btn.classList.add("confirming");
+      timer = setTimeout(disarm, CONFIRM_WINDOW_MS);
+    } else {
+      onConfirm();
+    }
+    releaseFocus(e);
+  });
+
+  confirmDisarmers.push(disarm);
+}
+
 function handleKeydown(e) {
   if (e.key >= "1" && e.key <= "9") {
     placeDigit(Number(e.key));
@@ -732,11 +856,18 @@ function handleKeydown(e) {
   }
 }
 
+function init() {
+  const saved = loadProgress();
+  if (saved) {
+    restoreProgress(saved);
+  } else {
+    restart();
+  }
+}
+
 buildBoard();
-restartBtn.addEventListener("click", restart);
-restartBtn.addEventListener("click", releaseFocus);
-newPuzzleBtn.addEventListener("click", newPuzzle);
-newPuzzleBtn.addEventListener("click", releaseFocus);
+makeConfirmButton(restartBtn, "Restart", restart);
+makeConfirmButton(newPuzzleBtn, "New puzzle", newPuzzle);
 helpToggle.addEventListener("click", toggleInstructions);
 helpToggle.addEventListener("click", releaseFocus);
 numberPad.addEventListener("click", (e) => {
@@ -748,4 +879,4 @@ numberPad.addEventListener("click", (e) => {
   if (e.detail > 0) btn.blur();
 });
 document.addEventListener("keydown", handleKeydown);
-restart();
+init();

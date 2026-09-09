@@ -79,6 +79,14 @@
   color: var(--muted);
 }
 
+/* First click of the two-step confirm on Restart / New puzzle - discarding
+   entered digits cannot be undone. */
+.controls .btn.confirming {
+  background: var(--lose);
+  border-color: var(--lose);
+  color: white;
+}
+
 .instructions h3 {
   margin: 0.7rem 0 0.3rem;
   font-size: 0.75rem;
