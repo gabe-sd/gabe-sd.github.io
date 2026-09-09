@@ -38,31 +38,52 @@
 
 /* ---------- the readout ---------- */
 
-/* Pong's scorebar vocabulary: a lowercase letterspaced label in the dim amber,
-   and the number itself large, tabular and lit. Its ends are flush with the
-   board's, which is what the court-width column buys. */
+/* Pong's scorebar layout with a drawn glyph in place of its word: the number
+   large, tabular and lit. Its ends are flush with the board's, which is what
+   the court-width column buys. */
 .hud {
-  align-items: baseline;
+  align-items: center;
   padding: 0 0 0.55rem;
   margin-bottom: 0;
-  font-size: 0.9rem;
-  letter-spacing: 0.2em;
-  text-transform: lowercase;
 }
 
+/* The glyphs are chrome — one weight, one colour, no hue of their own — the
+   same call hub.css makes for the tile icons beside a coloured bar. */
+.hud .gly svg {
+  display: block;
+  width: 2rem;
+  height: 2rem;
+}
+
+/* The word each glyph stands for, kept for a screen reader and taken out of the
+   picture. Not `display: none`, which would take it out of the reading too. */
+.hud .lbl {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.hud span {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+/* Both numbers are the bird's amber. What separates them is the light rather
+   than the hue: the live count glows, the stored record does not — the same
+   distinction the bird itself makes when it dies. */
 .hud .n {
-  margin-left: 0.5rem;
   font-size: 2rem;
   letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
-  color: var(--p-rose);
-  text-shadow: 0 0 10px rgba(255, 127, 203, 0.5);
+  color: var(--p-amber);
+  text-shadow: 0 0 10px rgba(255, 176, 0, 0.5);
 }
 
-/* The best is a record rather than a live count, so it reads as chrome: amber,
-   unlit. Only what is happening now carries the bird's own hue. */
-.hud .best .n {
-  color: var(--p-amber);
+#best-score .n {
   text-shadow: none;
 }
 
@@ -119,54 +140,3 @@
   cursor: pointer;
 }
 
-/* ---------- preview only: the variant strip. Delete before handover. ---------- */
-
-.vstrip {
-  margin: 0 auto 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  font-size: 0.85rem;
-  letter-spacing: 0.14em;
-  text-transform: lowercase;
-  color: var(--p-dim);
-  position: relative;
-  z-index: 8;
-}
-
-.vgrp {
-  display: flex;
-  gap: 0.4rem;
-  align-items: center;
-}
-
-.vlbl {
-  width: 7em;
-  text-align: right;
-  flex: none;
-}
-
-.vstrip button {
-  font: inherit;
-  letter-spacing: inherit;
-  background: var(--p-panel);
-  color: var(--p-soft);
-  border: 1px solid var(--p-hairline);
-  padding: 0.25rem 0.6rem;
-  cursor: pointer;
-}
-
-.vstrip button[aria-pressed="true"] {
-  background: var(--p-panel-lit);
-  color: var(--p-hot);
-  border-color: var(--p-rule);
-}
-
-.hud .gly svg {
-  width: 2rem;
-  height: 2rem;
-  vertical-align: -0.55em;
-}
-
-.hud[data-hud="words"] .gly { display: none; }
-.hud[data-hud="icons"] .lbl { display: none; }
