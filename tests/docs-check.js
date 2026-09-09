@@ -215,6 +215,52 @@ const brokenRouter = (routerStart === -1 ? [ROUTER_HEADING] : []).concat(
 );
 check("CLAUDE.md routes to a seat file that exists", brokenRouter, "unrouted");
 
+// 8. The other direction on slugs. Check 5 asks whether an open entry has already
+//    landed; this asks whether a slug a doc points at exists at all. They rot in
+//    one specific way: the work lands, the entry is deleted as the convention
+//    requires, and every backticked pointer to it is now aimed at nothing. Check 1
+//    cannot see it - a slug is neither a path nor a function name - and it has
+//    already happened: `design/previews/README.md` sent readers to
+//    `redesign-tokens-hub` for the reasoning, an entry deleted in `5232f4e`.
+//
+//    A slug is open (still to do) or landed (a merge names it, reusing check 5's
+//    pattern). Neither means dangling.
+//
+//    Two scopes keep the false-alarm rate at nothing, and both were measured
+//    rather than guessed. A backticked hyphenated word is usually not a slug at
+//    all, so only known area prefixes count - the game folders, plus the areas
+//    that own no folder. And the reference has to come from outside the backlog:
+//    every false positive in the repo when this was written lived in a TODO.md,
+//    four of them, against fourteen live references from other docs. The naming
+//    rules quote `pong-difficulty-menu` as an illustration rather than a pointer,
+//    and `games/pong/TODO.md` names `pong-shooter-powerup`, an entry retired by
+//    replacement rather than by landing - which has no merge and never will.
+//    The cost of that scope: a dangling pointer inside an entry's own body is not
+//    caught. The rot this exists to stop is a doc sending a reader nowhere, and
+//    the backlog is where slugs legitimately appear without being pointers.
+const SLUG_AREAS = [...new Set(games.map((g) => g.split("-")[0])
+  .concat(["site", "workflow", "design", "redesign"]))];
+const danglingSlugs = docs
+  .filter((f) => !todos.includes(f))
+  .flatMap((f) =>
+    [...read(f).matchAll(/`([a-z0-9]+(?:-[a-z0-9]+)+)`/g)]
+      .map((m) => m[1])
+      .filter((s) => SLUG_AREAS.some((p) => s.startsWith(p + "-")))
+      .map((s) => `${f}:${s}`))
+  .filter((r, i, a) => a.indexOf(r) === i)
+  .filter((r) => {
+    const slug = r.split(":")[1];
+    if (slugs.some((entry) => entry.split(":")[1] === slug)) return false;
+    const log = execFileSync(
+      "git",
+      ["log", "--all", "--oneline", "--merges", "-E",
+       `--grep=^Merge (branch '(worktree-)?${slug}'|(worktree-)?${slug}:)`],
+      { cwd: ROOT, encoding: "utf8" }
+    );
+    return log.trim().length === 0;
+  });
+check("every slug a doc points at is open or landed", danglingSlugs, "dangling");
+
 const failed = results.filter((r) => !r).length;
 console.log(`\n${results.length - failed}/${results.length} checks passed`);
 process.exit(failed ? 1 : 0);
