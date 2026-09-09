@@ -54,8 +54,23 @@ and the shared `#instructions` panel are in place and covered by
 
 The other canvas game, and much simpler than Pong. `readColors()` in
 `games/flappy-bird/script.js` maps `--win` to the pipes and `--lose` to the beak,
-which is decoration borrowing outcome colours — decide whether that survives the new
-palette or whether Flappy takes its own.
+which is decoration borrowing outcome colours. `design/DESIGN.md`'s "What a game
+may vary" already settles the general question — `--win`/`--lose` are outcome
+colours and stay one — so this phase gives the pipes and beak colours of their
+own rather than keeping the borrowed tokens; move `readColors()`'s old-palette
+fallbacks in the same commit as any token it starts reading instead.
+
+Two things ride on this phase rather than waiting for a later one:
+
+- **The `🏆` HUD glyph is shared with Minesweeper**, per `redesign-emoji-glyphs`
+  below. Whatever this phase picks to replace it — word, abbreviation, drawn
+  glyph — has to also work for Minesweeper's HUD, or the two diverge and one of
+  them has to redo it. Decide the convention here, not the glyph alone; the
+  entry below leaves the rest of the sweep for its own phase.
+- **This is the next chance to test whether an in-game accent inherits its hub
+  tile's hue**, per `redesign-category-accents`. Flappy's tile is arcade → rose
+  `#ff7fcb`, the same question Chess and Pong both answered yes to independently.
+  Worth deciding on purpose here rather than by not noticing the option.
 
 ### redesign-minesweeper — Minesweeper
 
@@ -114,6 +129,11 @@ page font, so they may be fine — but nobody has checked them against the palet
 **Pong is the one to notice.** It went through a full redesign phase and kept two
 `🎉`, which says a game's own phase will not necessarily catch these. Hence one entry
 across all four rather than a line in each.
+
+**`🏆` is the one exception to "each takes its own share" below.** It is in both
+Flappy Bird's and Minesweeper's HUD, so the two phases need the same answer for
+it — `redesign-flappy-bird` above decides the convention and Minesweeper's phase
+follows it, rather than each inventing one and the second having to match.
 
 **If the list is edited, sweep for non-ASCII across pages *and* scripts** rather than
 grepping for the glyphs already known about. It was counted the narrow way once and
