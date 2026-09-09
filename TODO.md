@@ -60,20 +60,6 @@ It is the front page of a public repo, but it reads like the internal docs besid
 it. Review with Gabriel before rewriting — what a visitor should get from it is
 his call.
 
-### site-dead-shared-rules — Three rules in `shared.css` are used by nothing
-
-`.page`, `.hint` and `.back-link` are styled in `shared.css` and applied by no
-page on the site. The frame replaced all three: a game page is `.game-page`, its
-link home is the breadcrumb, and standing instructions live in the collapsible
-panel rather than a hint line. The design mockups under `design/` do use `.page`
-and `.hint`, but they are self-contained and define their own — deleting these
-rules cannot touch them.
-
-The contract in `CLAUDE.md` was the thing actively misleading readers and it has
-been corrected; the rules themselves cost nothing but the bytes. They were left
-alone while the redesign held `shared.css`. That landed on 2026-09-07, so the
-sweep is available now.
-
 ### site-favicon — The site has no favicon
 
 Every page 404s `/favicon.ico`, because browsers ask for it whether or not you

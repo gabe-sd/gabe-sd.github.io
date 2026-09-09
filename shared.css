@@ -84,26 +84,6 @@ body {
   }
 }
 
-.page {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.5rem;
-}
-
-.back-link {
-  align-self: flex-start;
-  color: var(--accent);
-  text-decoration: none;
-  font-size: 0.95rem;
-}
-
-.back-link:hover {
-  text-decoration: underline;
-}
-
 h1 {
   margin: 0;
 }
@@ -113,14 +93,6 @@ h1 {
   font-size: 1.1rem;
   min-height: 1.5em;
   text-align: center;
-}
-
-.hint {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--muted);
-  text-align: center;
-  max-width: 420px;
 }
 
 button {
