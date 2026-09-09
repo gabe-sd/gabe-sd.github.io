@@ -151,7 +151,8 @@ is discarded outright rather than partially applied.
 Restart and New puzzle both discard the saved grid (they run `loadPuzzle()`,
 which overwrites it with a fresh blank copy), so both are two-step: a first
 click arms the button — label flips to "Sure? Click to confirm", styled like
-Minesweeper's Reset best time — and a second click within 5s carries it out.
+Minesweeper's Reset best time — and a second click within `CONFIRM_WINDOW_MS`
+carries it out.
 Armed state is per-button but mutually exclusive (arming one disarms the
 other), lapses after the window, and is dropped the moment a digit is placed,
 since continuing to play is a clearer "no" than any timeout. Skipped entirely

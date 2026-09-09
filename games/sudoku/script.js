@@ -746,6 +746,10 @@ function renderCell(r, c) {
   el.textContent = v === 0 ? "" : String(v);
   el.classList.toggle("given", isGiven(r, c));
   el.classList.toggle("wrong", !isGiven(r, c) && conflicts(r, c));
+  // Derived from gameOver, like the two classes above, rather than set once
+  // in checkWin() and never cleared - otherwise a Restart after a win left
+  // every cell, given digits included, stuck green. See DESIGN.md.
+  el.classList.toggle("won", gameOver);
 }
 
 function renderBoard() {
@@ -764,10 +768,7 @@ function checkWin() {
   gameOver = true;
   selected = null;
   statusEl.textContent = "Solved! 🎉";
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) cellEls[r][c].classList.add("won");
-  }
-  renderSelection();
+  renderBoard();
 }
 
 function loadPuzzle() {
