@@ -78,6 +78,12 @@ function readColors() {
     rose: p("--p-rose", "#ff7fcb"),
     hot: p("--p-hot", "#fff2da"),
     pale: p("--p-pale", "#ffd694"),
+    // The palette's own green. It is --win, so a pipe wearing it is decoration
+    // borrowing an outcome colour, which design/DESIGN.md rules out.
+    jade: p("--p-jade", "#5fd9a0"),
+    // A true green, nobody's outcome, warmed and lightened for this ground the
+    // way the six guest hues were. A seventh hue if it is chosen.
+    fern: "#72e07c",
   };
 }
 
@@ -249,6 +255,39 @@ const BIRD_STYLES = {
     ctx.fill();
   },
 
+  // Wire: fowl's line weight on round's silhouette. A hollow body, so the court
+  // shows through the bird and it reads as drawn rather than stamped.
+  wire(r, c) {
+    ctx.strokeStyle = c;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, r - 1, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Fowl's wing wedge, inside the circle rather than hung off it: solid ink on
+    // a hollow body is what stops the outline reading as a ring.
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.moveTo(-6.5, -1.5);
+    ctx.bezierCurveTo(-2.5, -1, 0.5, 1.5, 1.5, 5);
+    ctx.bezierCurveTo(-2.5, 5.5, -6, 2.5, -6.5, -1.5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = colors.beak;
+    ctx.beginPath();
+    ctx.moveTo(r - 8, -2);
+    ctx.lineTo(r - 1, 1);
+    ctx.lineTo(r - 8, 4.5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.arc(r * 0.3, -r * 0.34, 1.9, 0, Math.PI * 2);
+    ctx.fill();
+  },
+
   // Fowl: the hub tile's own bird, drawn on the court. The mark that stands for
   // the game on the shelf becomes the thing you fly.
   fowl(r, c) {
@@ -279,16 +318,31 @@ const BIRD_STYLES = {
 
 let birdStyle = "round";
 let birdHue = "rose";
+// PREVIEW: how far the bird's light reaches past its own edge. Unlike the
+// gate's, this glow cannot be clipped to the hitbox without a hard rim round a
+// round shape — so anything but "none" makes the bird look bigger than the
+// square that actually kills it.
+let birdGlow = 0;
 
 function drawBird() {
   const r = BIRD_SIZE / 2;
   // Nose down as it falls, up as it climbs. Clamped so a long drop does not end
   // up flying backwards.
   const tilt = Math.max(-0.4, Math.min(0.9, bird.vy * 0.06));
+  const c = phase === "over" ? colors.dead : colors[birdHue];
   ctx.save();
   ctx.translate(BIRD_X + r, bird.y + r);
   ctx.rotate(tilt);
-  BIRD_STYLES[birdStyle](r, phase === "over" ? colors.dead : colors[birdHue]);
+  // A single shadowed pass is almost entirely hidden behind the shape casting
+  // it, so the halo is built up by repainting and the clean shape goes on top.
+  if (birdGlow) {
+    ctx.shadowColor = c;
+    ctx.shadowBlur = birdGlow;
+    BIRD_STYLES[birdStyle](r, c);
+    BIRD_STYLES[birdStyle](r, c);
+    ctx.shadowBlur = 0;
+  }
+  BIRD_STYLES[birdStyle](r, c);
   ctx.restore();
 }
 
@@ -494,8 +548,19 @@ const SCORE_GLYPHS = {
   bird: `<svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="21" cy="23" rx="11.5" ry="9.5" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M31.8 20.5l9 2.5-9 2.5z" fill="currentColor"/><circle cx="26" cy="19.5" r="2" fill="currentColor"/><path d="M14.5 20.5c6 0.5 9.5 3.5 11 8-6.5 0.5-10.5-2.5-11-8z" fill="currentColor"/><path d="M10.5 20.5l-7-4 1.5 8z" fill="currentColor"/><path d="M17 32.3l-1.6 6M23.5 32.3l-1 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
   // The thing actually being counted: a pipe pair, and something through it.
   gate: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="26" y="4" width="12" height="16" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="26" y="28" width="12" height="16" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="13" cy="24" r="4" fill="currentColor"/></svg>`,
+  // The same pair with nothing flying through it.
+  pipes: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="18" y="4" width="13" height="16" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="18" y="28" width="13" height="16" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>`,
   // One stroke, two wings: legible at a size the detailed mark is not.
   swift: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 29C11 16 19 16 24 27C29 16 37 16 43 29" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>`,
+  // A single swept wing, solid.
+  wing: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 33c9-15 22-19 38-17-7 11-20 19-38 17z" fill="currentColor"/></svg>`,
+  // The flap itself: one hop upwards, which is the only input the game has.
+  chevron: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M9 31l15-13 15 13" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  // A five-barred gate, which is what a tally mark is called — the count and
+  // the thing being counted are the same drawing.
+  tally: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M11 13v22M19 13v22M27 13v22M35 13v22M7 36L39 12" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>`,
+  // The gap, which is the part of a pipe pair you are actually aiming at.
+  gap: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 6v12M34 6v12M14 42V30M34 42V30" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M14 24h20" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 4"/></svg>`,
 };
 
 const CUP_GLYPH = `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 11h16v8a8 8 0 0 1-16 0z" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M16 13h-4v3a5 5 0 0 0 5 5M32 13h4v3a5 5 0 0 1-5 5" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M24 27v6M18 37h12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>`;
@@ -538,25 +603,34 @@ const CUP_GLYPH = `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 11h1
     pipeStyle = v;
     draw();
   });
-  group("gate hue", [["cyan", "cyan"], ["violet", "violet"], ["lime", "lime"],
-                     ["pale", "pale"], ["rose", "rose"]], (v, init) => {
+  group("gate hue", [["cyan", "cyan"], ["fern", "fern"], ["jade", "jade"],
+                     ["lime", "lime"], ["violet", "violet"], ["pale", "pale"],
+                     ["rose", "rose"]], (v, init) => {
     gateHue = v;
     if (!init) pipeStyle = "c";
     draw();
   });
-  group("bird", [["round", "round"], ["glider", "glider"], ["fowl", "fowl"]], (v) => {
+  group("bird", [["round", "round"], ["wire", "wire"], ["glider", "glider"],
+                 ["fowl", "fowl"]], (v) => {
     birdStyle = v;
     draw();
   });
   group("bird hue", [["rose", "rose"], ["amber", "amber"], ["lime", "lime"],
-                     ["violet", "violet"], ["cyan", "cyan"], ["hot", "white"]], (v) => {
+                     ["violet", "violet"], ["cyan", "cyan"], ["fern", "fern"],
+                     ["hot", "white"]], (v) => {
     birdHue = v;
+    draw();
+  });
+  group("bird glow", [[0, "none"], [10, "soft"], [22, "strong"]], (v) => {
+    birdGlow = v;
     draw();
   });
   group("readout", [["words", "words"], ["icons", "icons"]], (v) => {
     hud.dataset.hud = v;
   });
-  group("score icon", [["bird", "bird"], ["gate", "gate"], ["swift", "swift"]], (v, init) => {
+  group("score icon", [["bird", "bird"], ["gate", "gate"], ["pipes", "pipes"],
+                       ["gap", "gap"], ["swift", "swift"], ["wing", "wing"],
+                       ["chevron", "chevron"], ["tally", "tally"]], (v, init) => {
     scoreEl.querySelector(".gly").innerHTML = SCORE_GLYPHS[v];
     if (!init) hud.dataset.hud = "icons";
   });

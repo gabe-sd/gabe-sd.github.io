@@ -12,7 +12,7 @@ const flaps = Number(process.argv[5] || 0);
   await p.goto(url, { waitUntil: 'networkidle' });
   await p.evaluate(() => document.fonts && document.fonts.ready);
   if (variant && variant !== '-') {
-    await p.click(`#vstrip button:text-is("${variant}")`);
+    await p.click(`.vstrip button:text-is("${variant}")`);
   }
   for (let i = 0; i < flaps; i++) {
     await p.keyboard.press('Space');
