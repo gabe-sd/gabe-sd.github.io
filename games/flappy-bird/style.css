@@ -122,17 +122,28 @@
 /* ---------- preview only: the variant strip. Delete before handover. ---------- */
 
 .vstrip {
-  width: min(100%, calc(400px + 28px));
-  margin: 0 auto 0.8rem;
+  margin: 0 auto 1rem;
   display: flex;
-  gap: 0.4rem;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.3rem;
   font-size: 0.85rem;
   letter-spacing: 0.14em;
   text-transform: lowercase;
   color: var(--p-dim);
   position: relative;
   z-index: 8;
+}
+
+.vgrp {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.vlbl {
+  width: 7em;
+  text-align: right;
+  flex: none;
 }
 
 .vstrip button {

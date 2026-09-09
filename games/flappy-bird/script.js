@@ -71,8 +71,21 @@ function readColors() {
     amber: p("--p-amber", "#ffb000"),
     rule: p("--p-rule", "#7a5008"),
     body: p("--p-panel-lit", "#221709"),
+    // PREVIEW: the hues the gate and the bird are being tried in.
     cyan: p("--p-cyan", "#6fdcf2"),
+    violet: p("--p-violet", "#b9a2ff"),
+    lime: p("--p-lime", "#d4e85c"),
+    rose: p("--p-rose", "#ff7fcb"),
+    hot: p("--p-hot", "#fff2da"),
+    pale: p("--p-pale", "#ffd694"),
   };
+}
+
+// A canvas needs a colour, not a colour and an alpha, so the translucent fills
+// are mixed here rather than with color-mix().
+function veil(hex, alpha) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
 let colors = readColors();
@@ -187,6 +200,86 @@ function endRun(hit) {
     : `${what} — ${score} cleared. Flap to fly again.`;
 }
 
+// PREVIEW: three designs for the bird, one of which survives.
+//
+// Each is drawn about the origin inside a box BIRD_SIZE across, which is
+// exactly the hitbox: the bird has to be the size it kills at. The old beak
+// reached seven pixels past its own right edge, which made the bird look wider
+// than it flies.
+const BIRD_STYLES = {
+  // Round: the shape the game already had, pulled back inside its box.
+  round(r, c) {
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = colors.beak;
+    ctx.beginPath();
+    ctx.moveTo(r - 8, -2);
+    ctx.lineTo(r, 1);
+    ctx.lineTo(r - 8, 5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = colors.eye;
+    ctx.beginPath();
+    ctx.arc(r * 0.3, -r * 0.32, 3.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = colors.pupil;
+    ctx.beginPath();
+    ctx.arc(r * 0.45, -r * 0.32, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  },
+
+  // Glider: not a bird at all but a vector craft, the way chess draws pieces
+  // rather than typing them. The tilt then reads as banking.
+  glider(r, c) {
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.moveTo(r, 0);
+    ctx.lineTo(-r + 2, -r + 2);
+    ctx.lineTo(-r + 7, 0);
+    ctx.lineTo(-r + 2, r - 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = colors.hot;
+    ctx.beginPath();
+    ctx.arc(1, 0, 2, 0, Math.PI * 2);
+    ctx.fill();
+  },
+
+  // Fowl: the hub tile's own bird, drawn on the court. The mark that stands for
+  // the game on the shelf becomes the thing you fly.
+  fowl(r, c) {
+    ctx.save();
+    // The tile icon is drawn on a 48 grid; its ink runs x 3.5-40.8, y 13-38.3.
+    ctx.scale((r * 2) / 37.3, (r * 2) / 37.3);
+    ctx.translate(-22.15, -25.65);
+    ctx.strokeStyle = c;
+    ctx.fillStyle = c;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.ellipse(21, 23, 11.5, 9.5, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fill(new Path2D("M14.5 20.5c6 0.5 9.5 3.5 11 8-6.5 0.5-10.5-2.5-11-8z"));
+    ctx.fill(new Path2D("M10.5 20.5l-7-4 1.5 8z"));
+    ctx.fillStyle = colors.beak;
+    ctx.fill(new Path2D("M31.8 20.5l9 2.5-9 2.5z"));
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.arc(26, 19.5, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.stroke(new Path2D("M17 32.3l-1.6 6M23.5 32.3l-1 6"));
+    ctx.restore();
+  },
+};
+
+let birdStyle = "round";
+let birdHue = "rose";
+
 function drawBird() {
   const r = BIRD_SIZE / 2;
   // Nose down as it falls, up as it climbs. Clamped so a long drop does not end
@@ -195,29 +288,7 @@ function drawBird() {
   ctx.save();
   ctx.translate(BIRD_X + r, bird.y + r);
   ctx.rotate(tilt);
-
-  ctx.fillStyle = phase === "over" ? colors.dead : colors.bird;
-  ctx.beginPath();
-  ctx.arc(0, 0, r, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = colors.beak;
-  ctx.beginPath();
-  ctx.moveTo(r - 2, -2);
-  ctx.lineTo(r + 7, 2);
-  ctx.lineTo(r - 2, 6);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = colors.eye;
-  ctx.beginPath();
-  ctx.arc(r * 0.35, -r * 0.3, 4, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = colors.pupil;
-  ctx.beginPath();
-  ctx.arc(r * 0.5, -r * 0.3, 2, 0, Math.PI * 2);
-  ctx.fill();
-
+  BIRD_STYLES[birdStyle](r, phase === "over" ? colors.dead : colors[birdHue]);
   ctx.restore();
 }
 
@@ -254,15 +325,16 @@ const PIPE_STYLES = {
   // Gate: lit glass in a guest hue that is nobody's outcome. The glow is
   // clipped to the rectangle so the light stops where the pipe does.
   c(x, y, w, h) {
+    const hue = colors[gateHue];
     ctx.save();
     ctx.beginPath();
     ctx.rect(x, y, w, h);
     ctx.clip();
-    ctx.fillStyle = "rgba(111, 220, 242, 0.22)";
+    ctx.fillStyle = veil(hue, 0.22);
     ctx.fillRect(x, y, w, h);
-    ctx.shadowColor = colors.cyan;
+    ctx.shadowColor = hue;
     ctx.shadowBlur = 14;
-    ctx.strokeStyle = colors.cyan;
+    ctx.strokeStyle = hue;
     ctx.lineWidth = 2;
     ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
     ctx.restore();
@@ -270,6 +342,7 @@ const PIPE_STYLES = {
 };
 
 let pipeStyle = "b";
+let gateHue = "cyan";
 
 // The two edges of the world, which behave differently and so cannot look the
 // same. The ground is drawn on the pixels that end the run; the ceiling, which
@@ -414,9 +487,16 @@ helpToggle.addEventListener("click", toggleInstructions);
 helpToggle.addEventListener("click", releaseFocus);
 restart();
 
-/* ---------- PREVIEW ONLY — delete this block, PIPE_STYLES and .vstrip ---------- */
+/* ---------- PREVIEW ONLY — delete this block, PIPE_STYLES, BIRD_STYLES and .vstrip ---------- */
 
-const BIRD_GLYPH = `<svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="21" cy="23" rx="11.5" ry="9.5" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M31.8 20.5l9 2.5-9 2.5z" fill="currentColor"/><circle cx="26" cy="19.5" r="2" fill="currentColor"/><path d="M14.5 20.5c6 0.5 9.5 3.5 11 8-6.5 0.5-10.5-2.5-11-8z" fill="currentColor"/><path d="M10.5 20.5l-7-4 1.5 8z" fill="currentColor"/><path d="M17 32.3l-1.6 6M23.5 32.3l-1 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+const SCORE_GLYPHS = {
+  // The hub tile's own mark, the same one the fowl bird is drawn from.
+  bird: `<svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="21" cy="23" rx="11.5" ry="9.5" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M31.8 20.5l9 2.5-9 2.5z" fill="currentColor"/><circle cx="26" cy="19.5" r="2" fill="currentColor"/><path d="M14.5 20.5c6 0.5 9.5 3.5 11 8-6.5 0.5-10.5-2.5-11-8z" fill="currentColor"/><path d="M10.5 20.5l-7-4 1.5 8z" fill="currentColor"/><path d="M17 32.3l-1.6 6M23.5 32.3l-1 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+  // The thing actually being counted: a pipe pair, and something through it.
+  gate: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="26" y="4" width="12" height="16" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="26" y="28" width="12" height="16" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="13" cy="24" r="4" fill="currentColor"/></svg>`,
+  // One stroke, two wings: legible at a size the detailed mark is not.
+  swift: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 29C11 16 19 16 24 27C29 16 37 16 43 29" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>`,
+};
 
 const CUP_GLYPH = `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 11h16v8a8 8 0 0 1-16 0z" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M16 13h-4v3a5 5 0 0 0 5 5M32 13h4v3a5 5 0 0 1-5 5" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M24 27v6M18 37h12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>`;
 
@@ -425,32 +505,59 @@ const CUP_GLYPH = `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 11h1
   if (!strip) return;
   const hud = document.querySelector(".hud");
 
-  scoreEl.insertAdjacentHTML("afterbegin", `<span class="gly">${BIRD_GLYPH}</span>`);
+  scoreEl.insertAdjacentHTML("afterbegin", `<span class="gly"></span>`);
   bestScoreEl.insertAdjacentHTML("afterbegin", `<span class="gly">${CUP_GLYPH}</span>`);
   hud.dataset.hud = "words";
 
+  // apply(value, init) — init is true for the one call that sets the starting
+  // state, so a group that would otherwise switch you into its own mode on
+  // click does not do it six times on load.
   function group(label, options, apply) {
-    strip.insertAdjacentHTML("beforeend", `<span>${label}</span>`);
+    const row = document.createElement("div");
+    row.className = "vgrp";
+    row.insertAdjacentHTML("beforeend", `<span class="vlbl">${label}</span>`);
+    strip.appendChild(row);
     const made = options.map(([value, text]) => {
       const b = document.createElement("button");
       b.type = "button";
       b.textContent = text;
       b.addEventListener("click", (e) => {
-        apply(value);
+        apply(value, false);
         made.forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
         releaseFocus(e); // Space is a flap key, and a focused button would eat it
       });
-      strip.appendChild(b);
+      row.appendChild(b);
       return b;
     });
-    made[0].click();
+    apply(options[0][0], true);
+    made[0].setAttribute("aria-pressed", "true");
+    made.slice(1).forEach((o) => o.setAttribute("aria-pressed", "false"));
   }
 
   group("pipes", [["b", "conduit"], ["a", "slab"], ["c", "gate"]], (v) => {
     pipeStyle = v;
     draw();
   });
+  group("gate hue", [["cyan", "cyan"], ["violet", "violet"], ["lime", "lime"],
+                     ["pale", "pale"], ["rose", "rose"]], (v, init) => {
+    gateHue = v;
+    if (!init) pipeStyle = "c";
+    draw();
+  });
+  group("bird", [["round", "round"], ["glider", "glider"], ["fowl", "fowl"]], (v) => {
+    birdStyle = v;
+    draw();
+  });
+  group("bird hue", [["rose", "rose"], ["amber", "amber"], ["lime", "lime"],
+                     ["violet", "violet"], ["cyan", "cyan"], ["hot", "white"]], (v) => {
+    birdHue = v;
+    draw();
+  });
   group("readout", [["words", "words"], ["icons", "icons"]], (v) => {
     hud.dataset.hud = v;
+  });
+  group("score icon", [["bird", "bird"], ["gate", "gate"], ["swift", "swift"]], (v, init) => {
+    scoreEl.querySelector(".gly").innerHTML = SCORE_GLYPHS[v];
+    if (!init) hud.dataset.hud = "icons";
   });
 })();
