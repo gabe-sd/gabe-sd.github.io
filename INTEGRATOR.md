@@ -61,6 +61,17 @@ underneath, and the second is the one that bites: the context for that code is a
 in another agent's session and not in yours, and a fix you make on `main` will
 collide with the branch that agent is already holding.
 
+**When that session is gone, file the finding in that game's own `TODO.md`.** Both
+reasons above are reasons not to *fix*, and neither of them survives the worker
+being retired: there is no live context to defer to and no branch left to make
+stale. What does survive is the finding itself, which otherwise exists only in a
+chat log about to close — that happened on `sudoku-puzzle-quality`, where two wrong
+doc claims were found the evening the session ended and it took Gabriel authorising
+a direct edit, by name, to save them. An entry is still an edit in somebody else's
+area, and it is the smallest one available: it changes no behaviour, and the next
+worker on that game reads that file first. Write it as "Reporting a finding" below
+describes, and say in the entry that you found it from this seat.
+
 **Reproduce a claim before you act on it.** A finding from another agent arrives as
 fact and is sometimes wrong. One did here: a worker reported that `exec` in an npm
 script did not release a port, having killed a subshell rather than the process it
@@ -269,6 +280,29 @@ session; then ask.
 
 What is not disposable is uncommitted work, which no branch and no reflog knows about.
 Before a worktree goes idle its agent should commit.
+
+### The server the worktree left behind
+
+`git worktree remove` succeeds while a preview server is still serving that path, and
+the process outlives the tree with its working directory pointing at somewhere that no
+longer exists. One did here, after its worker said it had stopped the server. It is
+quiet rather than harmful, which is exactly the problem: a worktree serves on `PORT=0`,
+so an orphan holds a random port and the usual check — is 8934 taken? — sees nothing
+wrong. So it falls to this seat, as part of cleaning up, rather than to whoever notices.
+
+```bash
+ss -ltnp                            # every listener, with the pid holding it
+ls -l /proc/<pid>/cwd               # "(deleted)" means the tree it served is gone
+kill <pid>                          # plain kill, and never pkill -f
+```
+
+**A deleted working directory is what makes this safe.** "Shared ground" forbids
+killing a process you did not start, because a live session and an abandoned one look
+identical — and that stops being true when the directory the process was launched from
+has been removed. Nobody is working in a directory that is not there, so the deletion
+is the proof, and no one has to be asked. That is also the whole of the licence: a
+listener whose cwd still resolves is somebody's, however sure you are that it is not,
+and it goes back to being a question rather than a sweep.
 
 ## Reading the docs before you merge
 

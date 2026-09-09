@@ -101,82 +101,10 @@ which is why the prefix is `workflow-` and not `site-` — the flag and the slug
 the same thing at two stages.
 
 **If you are a worker, this is not your backlog.** Read it freely; it is often
-where the reason behind a rule is written down, and `WORKER.md` sends you to one
-of these entries on purpose. But do not take work from it. Every entry here lands
+where the reason behind a rule is written down. But do not take work from it.
+Every entry here lands
 in `CLAUDE.md`, in a seat file, or in the checks behind them — all the
 integrator's, and the first two only after review with Gabriel. A worker fixing
 one is rewriting the rules it is working under. If a rule bites you, that is not
 a task to pick up — say so at the time, marked **WORKFLOW ISSUE:**, which is what
 puts an entry here in the first place.
-
-### workflow-worktree-location — Worktrees must live inside the project folder
-
-Gabriel's decision, 2026-09-03: every Claude instance keeps its files under the
-project folder, for security. A worktree at `.claude/worktrees/<slug>` satisfies
-that — it is gitignored, and `tests/docs-check.js` refuses to walk into hidden
-directories so a worktree's `TODO.md` is never read as this branch's. A sibling
-directory outside the repo does not.
-
-It happened once, on a worker spawned before `WORKER.md` existed, whose
-instructions never mentioned a worktree at all. Nothing is being changed for it:
-`WORKER.md` now carries the path inside the command, which is the fix for exactly
-that case. This entry exists to set the trigger:
-
-**If a worker that has read `WORKER.md` still puts a tree outside the project
-folder, the doc is not enough and something structural is needed.** What that
-should be is Gabriel's call before anyone builds it. The obvious candidate — a
-check that fails when `git worktree list` names a path outside the repo — is
-weaker than it sounds, because a test runs after the tree exists and so reports
-rather than prevents.
-
-### workflow-cleared-worker-findings — "Report, never fix" assumes a live worker
-
-`INTEGRATOR.md` tells the integrator to report a finding in a game's area rather
-than fix it, and let it ride on that game's next branch. That reasoning holds only
-while the worker is live — it has no answer for one being cleared. It happened on
-`sudoku-puzzle-quality`: two wrong doc claims found, branch merged, session retired
-the same evening, so the findings existed only in a chat log about to close.
-Gabriel authorised a direct edit in Sudoku's area, once, by name — which worked and
-is not a rule.
-
-What to decide: what the integrator does by default when the owning session is
-gone. Filing an entry in that game's `TODO.md` is the obvious candidate and is
-cheap, but it is still an edit in somebody else's area, which is the thing the rule
-exists to prevent. **Ask Gabriel rather than picking one**; the answer belongs in
-`INTEGRATOR.md` once it is settled.
-
-### workflow-npm-serve-background — `npm run serve` from a worktree binds the port and answers nothing
-
-On 2026-09-07, `PORT=0 npm run serve` and `PORT=8936 npm run serve` started as
-background tasks from a worktree both bound their port and then closed every
-connection without a response — `curl` reported an empty reply, and a browser
-`ERR_EMPTY_RESPONSE`. The same `python3 -u -m http.server <port>` run directly
-from the same directory, in the foreground *or* backgrounded, served normally,
-and `npm run serve` from the shared checkout was fine throughout.
-
-So it is the npm wrapper plus the background task runner, not the server and not
-the worktree. It was worked around by running `python3 -m http.server` directly
-and passing on that URL, which is exactly what the npm script does anyway.
-
-Unresolved: whether this reproduces outside the one harness it was seen in, and
-whether the `exec` in the `serve` script is involved. Worth ten minutes before
-`CLAUDE.md`'s "Port 8934 is the shared checkout's" paragraph tells the next agent
-to run a command that does not work where it tells them to run it.
-
-### workflow-worktree-server-orphan — Removing a worktree leaves its server running
-
-`git worktree remove` succeeds while a preview server is still serving that path,
-and the process outlives the tree with its cwd pointing at a directory that no
-longer exists. One did, after its worker said it had stopped the server and gone
-offline. It is quiet rather than harmful, which is the problem: a worktree serves
-on `PORT=0`, so an orphan holds a random port and the usual check — is 8934 taken?
-— sees nothing wrong. Neither seat file covers it.
-
-Two candidates, neither decided. `WORKER.md` could require verifying with
-`ss -ltnp` rather than trusting the server stopped. Or `INTEGRATOR.md`'s cleanup
-could sweep for listeners whose `/proc/<pid>/cwd` names a deleted path — stronger,
-because it catches the case that actually happened, where the worker believed it
-had cleaned up. It costs more, though: it has the integrator killing a process it
-did not start, which "Shared ground" forbids without asking. That is safe only once
-the owning session is known to be gone, so any such rule has to say how that is
-established. **Decide the boundary with Gabriel before writing either.**
