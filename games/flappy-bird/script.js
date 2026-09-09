@@ -329,20 +329,26 @@ function drawBird() {
   // Nose down as it falls, up as it climbs. Clamped so a long drop does not end
   // up flying backwards.
   const tilt = Math.max(-0.4, Math.min(0.9, bird.vy * 0.06));
-  const c = phase === "over" ? colors.dead : colors[birdHue];
+  const dead = phase === "over";
+  const c = dead ? colors.dead : colors[birdHue];
+  // Death changes the bird four ways at once - hue, fill, outline and the glow
+  // going out - because hue alone is a weak signal when the resting colour and
+  // the state colour are neighbours on the wheel.
+  const style = dead ? "round" : birdStyle;
+  const glow = dead ? 0 : birdGlow;
   ctx.save();
   ctx.translate(BIRD_X + r, bird.y + r);
   ctx.rotate(tilt);
   // A single shadowed pass is almost entirely hidden behind the shape casting
   // it, so the halo is built up by repainting and the clean shape goes on top.
-  if (birdGlow) {
+  if (glow) {
     ctx.shadowColor = c;
-    ctx.shadowBlur = birdGlow;
-    BIRD_STYLES[birdStyle](r, c);
-    BIRD_STYLES[birdStyle](r, c);
+    ctx.shadowBlur = glow;
+    BIRD_STYLES[style](r, c);
+    BIRD_STYLES[style](r, c);
     ctx.shadowBlur = 0;
   }
-  BIRD_STYLES[birdStyle](r, c);
+  BIRD_STYLES[style](r, c);
   ctx.restore();
 }
 
