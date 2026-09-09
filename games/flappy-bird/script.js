@@ -53,12 +53,25 @@ const READY_PROMPT = "Click, tap or press Space to flap";
 // on #board in style.css shows through and follows the theme on its own.
 function readColors() {
   const style = getComputedStyle(document.documentElement);
+  const p = (name, fallback) => style.getPropertyValue(name).trim() || fallback;
   return {
-    fg: style.getPropertyValue("--fg").trim() || "#1c1c1e",
-    bird: style.getPropertyValue("--accent").trim() || "#3b82f6",
-    pipe: style.getPropertyValue("--win").trim() || "#22c55e",
-    beak: style.getPropertyValue("--lose").trim() || "#ef4444",
-    eye: style.getPropertyValue("--cell-bg").trim() || "#ffffff",
+    // The bird is the arcade tile's own hue, the way Pong's player is.
+    bird: p("--p-rose", "#ff7fcb"),
+    // Dying is an outcome, so it is the one thing here that reads --lose.
+    dead: p("--lose", "#ff6a56"),
+    beak: p("--p-amber", "#ffb000"),
+    eye: p("--p-hot", "#fff2da"),
+    pupil: p("--bg", "#0a0704"),
+    // The world's furniture: the ground that ends the run and the ceiling that
+    // only stops you, which have to look like different kinds of edge.
+    ground: p("--p-amber", "#ffb000"),
+    ceiling: p("--p-rule", "#7a5008"),
+    // The pipes, per direction. PREVIEW: two of these three go.
+    coral: p("--lose", "#ff6a56"),
+    amber: p("--p-amber", "#ffb000"),
+    rule: p("--p-rule", "#7a5008"),
+    body: p("--p-panel-lit", "#221709"),
+    cyan: p("--p-cyan", "#6fdcf2"),
   };
 }
 
@@ -107,15 +120,16 @@ function newPipe(x) {
   return { x, gapTop: PIPE_MARGIN + Math.random() * span, passed: false };
 }
 
+// The label beside each number is markup, so only the number is rewritten.
 function renderScore() {
-  scoreEl.textContent = `🐦 ${score}`;
+  scoreEl.querySelector(".n").textContent = String(score);
 }
 
 // Read back from storage rather than from a cached copy, so "unavailable" and
 // "no record yet" are the same thing here and neither needs its own branch.
 function renderBest() {
   const best = loadBestScore();
-  bestScoreEl.textContent = `🏆 ${best === null ? "—" : best}`;
+  bestScoreEl.querySelector(".n").textContent = best === null ? "—" : String(best);
 }
 
 // What the bird is touching, or null. The pipe hitbox is exactly the rectangles
@@ -182,7 +196,7 @@ function drawBird() {
   ctx.translate(BIRD_X + r, bird.y + r);
   ctx.rotate(tilt);
 
-  ctx.fillStyle = phase === "over" ? colors.beak : colors.bird;
+  ctx.fillStyle = phase === "over" ? colors.dead : colors.bird;
   ctx.beginPath();
   ctx.arc(0, 0, r, 0, Math.PI * 2);
   ctx.fill();
@@ -199,7 +213,7 @@ function drawBird() {
   ctx.beginPath();
   ctx.arc(r * 0.35, -r * 0.3, 4, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = colors.fg;
+  ctx.fillStyle = colors.pupil;
   ctx.beginPath();
   ctx.arc(r * 0.5, -r * 0.3, 2, 0, Math.PI * 2);
   ctx.fill();
@@ -207,12 +221,72 @@ function drawBird() {
   ctx.restore();
 }
 
+// PREVIEW: three directions for the pipes, one of which survives.
+//
+// Every one of them paints strictly *inside* the rectangle it is handed. The
+// hitbox is exactly that rectangle, so a lip, an inset or a glow reaching past
+// the edge would make the pipe a different size to look at than to fly through.
+const PIPE_STYLES = {
+  // Slab: solid, in the hue the opponent wears in Pong.
+  a(x, y, w, h) {
+    ctx.fillStyle = colors.coral;
+    ctx.fillRect(x, y, w, h);
+  },
+
+  // Conduit: the machine's own amber. A dark body so the pipe still reads as
+  // solid mass, a lit rim just inside the edge, and rungs across it.
+  b(x, y, w, h) {
+    ctx.fillStyle = colors.body;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = colors.rule;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let ry = y + 16; ry < y + h - 10; ry += 16) {
+      ctx.moveTo(x + 4, Math.round(ry) + 0.5);
+      ctx.lineTo(x + w - 4, Math.round(ry) + 0.5);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = colors.amber;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+  },
+
+  // Gate: lit glass in a guest hue that is nobody's outcome. The glow is
+  // clipped to the rectangle so the light stops where the pipe does.
+  c(x, y, w, h) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    ctx.fillStyle = "rgba(111, 220, 242, 0.22)";
+    ctx.fillRect(x, y, w, h);
+    ctx.shadowColor = colors.cyan;
+    ctx.shadowBlur = 14;
+    ctx.strokeStyle = colors.cyan;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+    ctx.restore();
+  },
+};
+
+let pipeStyle = "b";
+
+// The two edges of the world, which behave differently and so cannot look the
+// same. The ground is drawn on the pixels that end the run; the ceiling, which
+// only stops the bird, is a broken dim rule.
+function drawEdges() {
+  ctx.fillStyle = colors.ground;
+  ctx.fillRect(0, HEIGHT - 2, WIDTH, 2);
+  ctx.fillStyle = colors.ceiling;
+  for (let x = 0; x < WIDTH; x += 12) ctx.fillRect(x, 0, 7, 1);
+}
+
 function draw() {
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
-  ctx.fillStyle = colors.pipe;
+  drawEdges();
   for (const p of pipes) {
-    ctx.fillRect(p.x, 0, PIPE_WIDTH, p.gapTop);
-    ctx.fillRect(p.x, p.gapTop + PIPE_GAP, PIPE_WIDTH, HEIGHT - p.gapTop - PIPE_GAP);
+    PIPE_STYLES[pipeStyle](p.x, 0, PIPE_WIDTH, p.gapTop);
+    PIPE_STYLES[pipeStyle](p.x, p.gapTop + PIPE_GAP, PIPE_WIDTH, HEIGHT - p.gapTop - PIPE_GAP);
   }
   drawBird();
 }
@@ -339,3 +413,44 @@ restartBtn.addEventListener("click", releaseFocus);
 helpToggle.addEventListener("click", toggleInstructions);
 helpToggle.addEventListener("click", releaseFocus);
 restart();
+
+/* ---------- PREVIEW ONLY — delete this block, PIPE_STYLES and #vstrip ---------- */
+
+const BIRD_GLYPH = `<svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="21" cy="23" rx="11.5" ry="9.5" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M31.8 20.5l9 2.5-9 2.5z" fill="currentColor"/><circle cx="26" cy="19.5" r="2" fill="currentColor"/><path d="M14.5 20.5c6 0.5 9.5 3.5 11 8-6.5 0.5-10.5-2.5-11-8z" fill="currentColor"/><path d="M10.5 20.5l-7-4 1.5 8z" fill="currentColor"/><path d="M17 32.3l-1.6 6M23.5 32.3l-1 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+
+const CUP_GLYPH = `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 11h16v8a8 8 0 0 1-16 0z" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M16 13h-4v3a5 5 0 0 0 5 5M32 13h4v3a5 5 0 0 1-5 5" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M24 27v6M18 37h12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>`;
+
+(function previewStrip() {
+  const strip = document.getElementById("vstrip");
+  if (!strip) return;
+  const hud = document.querySelector(".hud");
+
+  scoreEl.insertAdjacentHTML("afterbegin", `<span class="gly">${BIRD_GLYPH}</span>`);
+  bestScoreEl.insertAdjacentHTML("afterbegin", `<span class="gly">${CUP_GLYPH}</span>`);
+  hud.dataset.hud = "words";
+
+  function group(label, options, apply) {
+    strip.insertAdjacentHTML("beforeend", `<span>${label}</span>`);
+    const made = options.map(([value, text]) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = text;
+      b.addEventListener("click", () => {
+        apply(value);
+        made.forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+        b.blur(); // Space is a flap key, and a focused button would eat it
+      });
+      strip.appendChild(b);
+      return b;
+    });
+    made[0].click();
+  }
+
+  group("pipes", [["b", "conduit"], ["a", "slab"], ["c", "gate"]], (v) => {
+    pipeStyle = v;
+    draw();
+  });
+  group("readout", [["words", "words"], ["icons", "icons"]], (v) => {
+    hud.dataset.hud = v;
+  });
+})();

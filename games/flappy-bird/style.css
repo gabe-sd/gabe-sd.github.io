@@ -1,7 +1,114 @@
+/* Flappy Bird wears the shared frame from game.css. What is here is the cabinet
+   the sky sits in — the same machine Pong is set into, at this board's width.
+   See design/DESIGN.md. */
+
+/* ---------- one column, as wide as the board ---------- */
+
+/* Derived from --court exactly as Pong's is: board + the canvas's own 1px
+   border + 12px of bezel padding + the bezel's own 1px border, each doubled.
+   Change the board size and nothing drifts out of line. */
+.cabinet,
+.game-page .game-foot {
+  --court: 400px;
+  width: min(100%, calc(var(--court) + 28px));
+  margin-inline: auto;
+}
+
+/* .game-stage is a flex row for a game with something standing beside its
+   board. Flappy has nothing beside it, and a row would fight the centring. */
+.game-stage {
+  display: block;
+}
+
+/* The cabinet is already a centred column exactly as wide as the board, so the
+   strap, the buttons and the ? panel line up with the board's left edge rather
+   than with each other. */
+.cabinet .game-strap {
+  margin: 0.2rem 0 0.9rem;
+  text-align: left;
+}
+
+.game-page .controls {
+  justify-content: flex-start;
+}
+
+.cabinet .instructions {
+  margin-inline: 0;
+}
+
+/* ---------- the readout ---------- */
+
+/* Pong's scorebar vocabulary: a lowercase letterspaced label in the dim amber,
+   and the number itself large, tabular and lit. Its ends are flush with the
+   board's, which is what the court-width column buys. */
+.hud {
+  align-items: baseline;
+  padding: 0 0 0.55rem;
+  margin-bottom: 0;
+  font-size: 0.9rem;
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+}
+
+.hud .n {
+  margin-left: 0.5rem;
+  font-size: 2rem;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--p-rose);
+  text-shadow: 0 0 10px rgba(255, 127, 203, 0.5);
+}
+
+/* The best is a record rather than a live count, so it reads as chrome: amber,
+   unlit. Only what is happening now carries the bird's own hue. */
+.hud .best .n {
+  color: var(--p-amber);
+  text-shadow: none;
+}
+
+/* ---------- the bezel ---------- */
+
+/* The sky reads as a screen set into a machine rather than a rectangle on
+   black. Square corners: nothing on this page has a radius. */
+.bezel {
+  position: relative;
+  padding: 12px;
+  background: linear-gradient(#160f08, #0d0905);
+  border: 1px solid var(--p-hairline);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8);
+  line-height: 0; /* no descender gap under the canvas */
+}
+
+/* Corner brackets, two sides each, on opposite corners. Two are enough to say
+   "machined panel"; four reads as a border and a border is already there. */
+.bezel::before,
+.bezel::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--p-rule);
+}
+
+.bezel::before {
+  left: 4px;
+  top: 4px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.bezel::after {
+  right: 4px;
+  bottom: 4px;
+  border-left: 0;
+  border-top: 0;
+}
+
 #board {
-  background: var(--cell-bg);
-  border: 2px solid var(--cell-border);
-  border-radius: 8px;
+  /* The same court value Pong's canvas sits on: the two canvas games are one
+     machine and their screens are the same screen. */
+  background: #0d0905;
+  border: 1px solid var(--p-hairline);
   /* The canvas is a fixed pixel size; this keeps it inside a narrow window
      without the script needing to know anything about layout. */
   max-width: 100%;
@@ -12,3 +119,43 @@
   cursor: pointer;
 }
 
+/* ---------- preview only: the variant strip. Delete before handover. ---------- */
+
+.vstrip {
+  width: min(100%, calc(400px + 28px));
+  margin: 0 auto 0.8rem;
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
+  text-transform: lowercase;
+  color: var(--p-dim);
+  position: relative;
+  z-index: 8;
+}
+
+.vstrip button {
+  font: inherit;
+  letter-spacing: inherit;
+  background: var(--p-panel);
+  color: var(--p-soft);
+  border: 1px solid var(--p-hairline);
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+}
+
+.vstrip button[aria-pressed="true"] {
+  background: var(--p-panel-lit);
+  color: var(--p-hot);
+  border-color: var(--p-rule);
+}
+
+.hud .gly svg {
+  width: 2rem;
+  height: 2rem;
+  vertical-align: -0.55em;
+}
+
+.hud[data-hud="words"] .gly { display: none; }
+.hud[data-hud="icons"] .lbl { display: none; }
