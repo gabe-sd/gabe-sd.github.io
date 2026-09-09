@@ -82,6 +82,8 @@ async function firstEditable(page) {
       return saved.puzzleIndex === puzzleIndex &&
         JSON.stringify(saved.grid) === JSON.stringify(givens);
     }));
+  check("the won highlight from the restored solve is gone",
+    (await page.$$("#board .cell.won")).length === 0);
 
   console.log("5. an untouched board resets in one click, no confirm needed");
   const idxBefore5 = await page.evaluate(() => puzzleIndex);

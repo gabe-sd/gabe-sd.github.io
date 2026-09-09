@@ -104,6 +104,8 @@ const { check, report } = makeChecks();
   check("status back to the prompt",
     (await page.textContent("#status")).includes("Select a cell"),
     await page.textContent("#status"));
+  check("no cell still carries the won class from before the reset",
+    (await page.$$("#board .cell.won")).length === 0);
   check("button label restored",
     (await page.textContent("#restart")) === "Restart", await page.textContent("#restart"));
 
