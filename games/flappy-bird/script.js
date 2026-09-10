@@ -66,9 +66,9 @@ function readColors() {
     eye: p("--p-hot", "#fff2da"),
     pupil: p("--bg", "#0a0704"),
     // The pipes, the ground that ends the run and the ceiling that only stops
-    // you — one hue for the whole world, and it is the machine's own amber, so
-    // the board is built out of the same light as the cabinet around it.
-    world: p("--p-amber", "#ffb000"),
+    // you — one hue for the whole world, so the bird is the only other thing
+    // on the board.
+    world: p("--p-lime", "#d4e85c"),
   };
 }
 
@@ -479,6 +479,6 @@ const PREVIEW_HUES = {
   }
 
   const all = Object.keys(PREVIEW_HUES);
-  group("world", all, "amber", (v) => { colors.world = v; });
+  group("world", all, "lime", (v) => { colors.world = v; });
   group("bird", all, "cyan", (v) => { colors.bird = v; });
 })();
