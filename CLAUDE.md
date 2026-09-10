@@ -293,7 +293,11 @@ easiest to lose. Read that file before changing how a game plays, and update it 
 the same commit as the change.
 
 **Keep values out of it.** Those live in the code as named constants, and a doc
-that repeats one is wrong the first time it is tuned.
+that repeats one is wrong the first time it is tuned. **A comment is a doc too:**
+if it names a value that lives in the code below it, the code is the source and
+the comment should name the relationship instead. Flappy Bird's ceiling comment
+named a hue, was corrected once, and went stale again within the hour — because
+each rewrite replaced the hue rather than removing it.
 
 They are kept with the game rather than here so two agents working on two games are
 never editing the same file. What belongs here is only what every game shares.
