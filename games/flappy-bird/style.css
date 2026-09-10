@@ -36,21 +36,6 @@
   margin-inline: 0;
 }
 
-/* The strap's cursor, in the actor's hue: it is the page saying it is waiting
-   for you, and you are the bird. */
-.game-strap::after {
-  background: var(--actor);
-  box-shadow: 0 0 12px var(--actor-glow);
-}
-
-/* The bird's hue, repeated in the chrome. One name, so moving the bird moves
-   every accent with it and the page cannot drift out of agreement with the
-   board. --actor-glow is the same colour at the strength a text-shadow wants. */
-.game-page {
-  --actor: var(--p-cyan);
-  --actor-glow: rgba(111, 220, 242, 0.5);
-}
-
 /* ---------- the readout ---------- */
 
 /* Pong's scorebar layout with a drawn glyph in place of its word: the number
@@ -87,23 +72,18 @@
   gap: 0.55rem;
 }
 
-/* The live count is the bird's hue and lit; the stored record is amber and
-   unlit. Two signals rather than one — what is happening now against what has
-   already happened — and the live half agrees with the thing on the board. */
+/* Both numbers are amber. What separates them is the light rather than the hue:
+   the live count glows, the stored record does not — the same distinction the
+   bird itself makes when it dies. */
 .hud .n {
   font-size: 2rem;
   letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
-  color: var(--actor);
-  text-shadow: 0 0 10px var(--actor-glow);
-}
-
-#score .gly {
-  color: var(--actor);
+  color: var(--p-amber);
+  text-shadow: 0 0 10px rgba(255, 176, 0, 0.5);
 }
 
 #best-score .n {
-  color: var(--p-amber);
   text-shadow: none;
 }
 
@@ -121,16 +101,14 @@
 }
 
 /* Corner brackets, two sides each, on opposite corners. Two are enough to say
-   "machined panel"; four reads as a border and a border is already there. In
-   the actor's hue rather than the rule's: they are the frame's one nod to what
-   is inside it. */
+   "machined panel"; four reads as a border and a border is already there. */
 .bezel::before,
 .bezel::after {
   content: "";
   position: absolute;
   width: 14px;
   height: 14px;
-  border: 1px solid var(--actor);
+  border: 1px solid var(--p-rule);
 }
 
 .bezel::before {

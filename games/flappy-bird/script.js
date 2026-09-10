@@ -58,8 +58,8 @@ function readColors() {
   const style = getComputedStyle(document.documentElement);
   const p = (name, fallback) => style.getPropertyValue(name).trim() || fallback;
   return {
-    // The bird is the one guest hue on the page, and the chrome picks it up as
-    // an accent — see --actor in style.css.
+    // The bird is the one guest hue on the page. It stays on the board — the
+    // chrome picking it up as an accent was tried and dropped.
     bird: p("--p-cyan", "#6fdcf2"),
     // Dying is an outcome, so it is the one thing here that reads --lose.
     dead: p("--lose", "#ff6a56"),
@@ -479,14 +479,6 @@ const PREVIEW_HUES = {
   }
 
   const all = Object.keys(PREVIEW_HUES);
-  const page = document.querySelector(".game-page");
-
   group("world", all, "amber", (v) => { colors.world = v; });
-  group("bird", all, "cyan", (v) => {
-    colors.bird = v;
-    // The chrome accents follow the bird, so moving one moves both and the page
-    // never disagrees with the board.
-    page.style.setProperty("--actor", v);
-    page.style.setProperty("--actor-glow", veil(v, 0.5));
-  });
+  group("bird", all, "cyan", (v) => { colors.bird = v; });
 })();
