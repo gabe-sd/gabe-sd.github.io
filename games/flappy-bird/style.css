@@ -125,6 +125,47 @@
   border-top: 0;
 }
 
+/* ---------- preview only: the hue strip. Delete before handover. ---------- */
+
+.vstrip {
+  margin: 0 auto 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
+  text-transform: lowercase;
+  color: var(--p-dim);
+  position: relative;
+  z-index: 8;
+}
+
+.vgrp {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.vlbl {
+  width: 5em;
+  text-align: right;
+  flex: none;
+}
+
+.vstrip button {
+  font: inherit;
+  letter-spacing: inherit;
+  background: var(--p-panel);
+  border: 1px solid var(--p-hairline);
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+}
+
+.vstrip button[aria-pressed="true"] {
+  background: var(--p-panel-lit);
+  border-color: currentColor;
+}
+
 #board {
   /* The same court value Pong's canvas sits on: the two canvas games are one
      machine and their screens are the same screen. */
