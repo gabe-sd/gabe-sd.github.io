@@ -46,7 +46,9 @@ each of the four remaining games still needs its visual pass. The overhaul lande
 `main` on 2026-09-07 with the hub, the shell, chess and Pong redesigned and the other
 four framed but not restyled inside.
 
-**For all four: the frame has landed** — breadcrumb, title, strap, scanlines, footer
+**Flappy Bird's phase landed on 2026-09-10**, leaving the three below.
+
+**For all three: the frame has landed** — breadcrumb, title, strap, scanlines, footer
 and the shared `#instructions` panel are in place and covered by
 `tests/contract.test.js`. What is left in each is the inside of the board.
 
