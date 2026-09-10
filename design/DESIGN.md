@@ -120,9 +120,8 @@ Six, admitted to boards and category accents only. **Never to the chrome.**
 
 | Value | Name | Hue | Used for |
 | --- | --- | --- | --- |
-| `#6fdcf2` | cyan | 192° | puzzle; an entered Sudoku digit; n2 |
+| `#6fdcf2` | cyan | 192° | puzzle; an entered Sudoku digit; n2; Flappy Bird's whole world |
 | `#5fd9a0` | jade | 157° | strategy; `--win`; n4 |
-| `#72e07c` | fern | 125° | Flappy Bird's whole world — **added later, see below** |
 | `#d4e85c` | lime | 75° | n6 — **the risk value**, see below |
 | `#ff6a56` | coral | 6° | `--lose`; the mine flag; Pong's opponent; n3 |
 | `#ff7fcb` | rose | 328° | arcade; Pong's player; n5 |
@@ -132,15 +131,18 @@ Every one is **warmed and lightened** off the value it came from in Cold
 Terminal or Vector Neon. Do not substitute the originals back: `#3fd4ff` on this
 ground reads as a hole punched to another site.
 
-**Fern is the seventh, added 2026-09-09 for Flappy Bird**, and it is the only
-hue admitted after the palette was set. Gabriel asked for the pipes in the green
-Flappy Bird is remembered by, and neither existing green could do it: jade at
-157° reads as mint rather than as leaf, and lime at 75° sits 34° from the amber
-bird — the same pair this file already flags as the risky one — so the bird all
-but merged with the pipes. Both were built and looked at before fern was drawn.
+**Six is still six, and a seventh was cut and then dropped.** Flappy Bird spent
+2026-09-09 in a true green — `#72e07c`, "fern", added as a `--p-fern` token
+because the pipes were wanted in the green the original game is remembered by and
+neither existing green could do it: jade at 157° reads as mint rather than as
+leaf, and lime at 75° sits 34° from the amber bird, the same pair flagged as the
+risky one below, so the bird all but merged with the pipes. Gabriel then chose
+cyan for that board the next day and the token came back out.
 
-**Adding an eighth needs the same bar.** Two of the six already in hand had to be
-shown to fail at the actual size, not argued about, before a new value was cut.
+**Two things worth keeping from it.** Adding a hue is possible and the bar is
+what fern cleared: two of the six already in hand shown to fail at the real size,
+not argued about. And a hue with nothing reading it does not stay — the token was
+deleted the same commit the last use of it went, rather than left for later.
 
 Minesweeper's eight: **n1 amber, n2 cyan, n3 coral, n4 jade, n5 rose, n6 lime,
 n7 violet, n8 `#fff2da`.** No underline, no second device — eight hues is what
@@ -761,7 +763,7 @@ with `--court: 400px` instead of `600px`. **The two canvas games are one
 machine**, and every width in the column derives from `--court` for the reason
 Pong's does. The court is the same `#0d0905`.
 
-### Amber bird, fern world
+### Amber bird, cyan world
 
 | part | value |
 | --- | --- |
@@ -769,9 +771,9 @@ Pong's does. The court is the same `#0d0905`.
 | its glow | `shadowBlur` 10 in its own colour, two passes under a clean one |
 | dead | `--lose`, same drawing, no glow |
 | the eye | `--p-hot` with a `--bg` pupil |
-| pipes | a `--p-fern` veil at 0.22, a 2px `--p-fern` rim inside the edge, `shadowBlur` 14 clipped to the rectangle |
-| the ground | `--p-fern`, 2px, on the pixels that end the run |
-| the ceiling | `--p-fern` at 0.45, a broken rule — it only stops you |
+| pipes | a `--p-cyan` veil at 0.22, a 2px `--p-cyan` rim inside the edge, `shadowBlur` 14 clipped to the rectangle |
+| the ground | `--p-cyan`, 2px, on the pixels that end the run |
+| the ceiling | `--p-cyan` at 0.45, a broken rule — it only stops you |
 
 **The board is two colours: the bird and everything else.** That is the whole
 idea, and the ground and ceiling wearing the pipes' hue rather than amber is what
@@ -812,6 +814,11 @@ chosen by eye against its own board, and sometimes that lands on the tile's hue.
   which is the pair the colour wheel prefers. Rejected twice over: it reads as
   mint rather than as leaf, and green for the thing that kills you inverts what
   `--win` means everywhere else on the site.
+- **A green world at all**, which is what the original Flappy Bird is remembered
+  by, and which this board shipped in for a day before Gabriel changed it to cyan.
+  The whole of "Six is still six" above is that episode. Green is not wrong here —
+  it is the reference the game comes with — and it lost to a look he preferred on
+  the served page. Anyone reopening it is reopening a decision, not filling a gap.
 - **A rose bird**, above.
 - **A white-hot beak.** `--p-hot` is a *state* value in Pong, and spending it on
   permanent furniture starts blurring what it means. Gabriel also preferred the
@@ -844,13 +851,13 @@ loudly: the canvas quietly carries on painting the design that was replaced,
 every test still passes, and nobody finds out until they look at the game.
 
 Flappy Bird reads `--lose` and `--bg`, plus three raw palette values —
-`--p-amber`, `--p-hot` and `--p-fern`. Pong reads `--fg`, `--accent`,
+`--p-amber`, `--p-hot` and `--p-cyan`. Pong reads `--fg`, `--accent`,
 `--cell-border` and `--muted`, plus four — `--p-rose`, `--p-coral`, `--p-hot`
 and `--p-rule`.
 
 Those raw names are the "what a game may vary" rule below in practice: a paddle
 is not an outcome and neither is a pipe, so neither reads an outcome token, and
-the price is that seven `--p-*` names are load-bearing for a canvas as well as
+the price is that six `--p-*` names are load-bearing for a canvas as well as
 for a stylesheet. **`--lose` is the one contract token either canvas still reads,
 and both read it for the same thing — the moment you lost.**
 
@@ -862,8 +869,8 @@ not reached yet keep rendering correctly.
 **The raw names actually used, in `shared.css`:** `--p-ground`, `--p-panel`,
 `--p-panel-lit`, `--p-hairline`, `--p-rule`, `--p-dim`, `--p-soft`, `--p-amber`,
 `--p-pale`, `--p-hot`, `--p-desc` and `--p-cell` for the amber ramp; `--p-cyan`,
-`--p-jade`, `--p-fern`, `--p-lime`, `--p-coral`, `--p-rose` and `--p-violet` for
-the seven guest hues — one name per row of "The palette" tables above, so a later
+`--p-jade`, `--p-lime`, `--p-coral`, `--p-rose` and `--p-violet` for
+the six guest hues — one name per row of "The palette" tables above, so a later
 phase can read a value this doc describes without re-deriving a name for it.
 `--bloom` and `--bloom-lg` sit alongside them as the two amber text-shadow recipes
 "Chrome, as built" uses for the wordmark and the active nav link.

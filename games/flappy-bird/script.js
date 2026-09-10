@@ -67,7 +67,7 @@ function readColors() {
     pupil: p("--bg", "#0a0704"),
     // The pipes, the ground that ends the run and the ceiling that only stops
     // you — one hue for the whole world, so the bird is the only other thing.
-    world: p("--p-fern", "#72e07c"),
+    world: p("--p-cyan", "#6fdcf2"),
   };
 }
 
