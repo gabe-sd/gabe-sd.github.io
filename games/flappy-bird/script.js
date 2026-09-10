@@ -288,9 +288,9 @@ function drawPipe(x, y, w, h) {
 
 // The two edges of the world, which behave differently and so cannot look the
 // same. The ground is drawn on the pixels that end the run; the ceiling, which
-// only stops the bird, is a broken rule at half strength. Both wear the pipes'
-// hue rather than the machine's amber, so the bird is the only amber inside
-// the board.
+// only stops the bird, is a broken rule at part strength. Both take the pipes'
+// hue rather than one of their own, so the whole world is a single colour and
+// the bird is the only other thing on the board.
 const CEILING_VEIL = 0.45;
 
 function drawEdges() {

@@ -416,12 +416,15 @@ const { check, report } = makeChecks();
           box.maxY = Math.max(box.maxY, y - pad);
         }
       }
+      box.r = BIRD_SIZE / 2;
       return box;
     });
-    // Drawn about the origin, so the hitbox is -r .. +r. One pixel of slack for
-    // the antialiased outside of the outline, which is far short of the seven
-    // this is guarding against.
-    const r = 12;
+    // Drawn about the origin, so the hitbox is -r .. +r, and r comes back from
+    // the page rather than being typed here: a bound that does not follow the
+    // constant it is measuring against goes slack or spurious the day someone
+    // resizes the bird. One pixel of slack for the antialiased outside of the
+    // outline, which is far short of the seven this is guarding against.
+    const r = ink.r;
     const slack = 1;
     check("nothing is drawn past the right edge", ink.maxX <= r + slack, ink.maxX);
     check("nor past the left edge", ink.minX >= -r - slack, ink.minX);
