@@ -58,16 +58,17 @@ function readColors() {
   const style = getComputedStyle(document.documentElement);
   const p = (name, fallback) => style.getPropertyValue(name).trim() || fallback;
   return {
-    // The bird is the machine's own amber, and it is the only amber inside the
-    // board: the world's edges take the pipes' hue so the two do not collide.
-    bird: p("--p-amber", "#ffb000"),
+    // The bird is the one guest hue on the page, and the chrome picks it up as
+    // an accent — see --actor in style.css.
+    bird: p("--p-cyan", "#6fdcf2"),
     // Dying is an outcome, so it is the one thing here that reads --lose.
     dead: p("--lose", "#ff6a56"),
     eye: p("--p-hot", "#fff2da"),
     pupil: p("--bg", "#0a0704"),
     // The pipes, the ground that ends the run and the ceiling that only stops
-    // you — one hue for the whole world, so the bird is the only other thing.
-    world: p("--p-cyan", "#6fdcf2"),
+    // you — one hue for the whole world, and it is the machine's own amber, so
+    // the board is built out of the same light as the cabinet around it.
+    world: p("--p-amber", "#ffb000"),
   };
 }
 
@@ -478,6 +479,14 @@ const PREVIEW_HUES = {
   }
 
   const all = Object.keys(PREVIEW_HUES);
-  group("world", all, "cyan", (v) => { colors.world = v; });
-  group("bird", all, "amber", (v) => { colors.bird = v; });
+  const page = document.querySelector(".game-page");
+
+  group("world", all, "amber", (v) => { colors.world = v; });
+  group("bird", all, "cyan", (v) => {
+    colors.bird = v;
+    // The chrome accents follow the bird, so moving one moves both and the page
+    // never disagrees with the board.
+    page.style.setProperty("--actor", v);
+    page.style.setProperty("--actor-glow", veil(v, 0.5));
+  });
 })();
