@@ -68,7 +68,7 @@ function readColors() {
     // The pipes, the ground that ends the run and the ceiling that only stops
     // you — one hue for the whole world, so the bird is the only other thing
     // on the board.
-    world: p("--p-lime", "#d4e85c"),
+    world: p("--p-violet", "#b9a2ff"),
   };
 }
 
@@ -479,6 +479,6 @@ const PREVIEW_HUES = {
   }
 
   const all = Object.keys(PREVIEW_HUES);
-  group("world", all, "lime", (v) => { colors.world = v; });
+  group("world", all, "violet", (v) => { colors.world = v; });
   group("bird", all, "cyan", (v) => { colors.bird = v; });
 })();
