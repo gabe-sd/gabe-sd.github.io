@@ -101,11 +101,18 @@ Four problems wearing one costume, and they do not have one answer:
 - **The six `🎉`** are a tone choice in a win message, not a palette problem. Whether
   the site wants to sound like that is Gabriel's call, and they are in `#status` text.
 
-**`↑` was checked, and it is not fine.** Looked at on Flappy Bird's page at 4x on
-2026-09-09: VT323 has no U+2191, so the browser falls back and the arrow arrives
-in another face — visibly thinner strokes than the letters either side of it. Not
-the emoji problem, but the same symptom, and it will read the same in Pong. `⌫` in
-Sudoku and `↓` `▶` in Pong are almost certainly the same and were not looked at.
+**All four were checked, and none of them are fine.** VT323 is monospace, so every
+glyph it actually has measures the same width. Measured on a served page at 22px on
+2026-09-10: `M`, `W` and `i` are 8.8px each; `↑` and `↓` are 11px, `▶` is 16.92px
+and `⌫` is 31.11px. Four different widths means four different faces — the browser
+is falling back for every one of them, and at 4x the arrow's strokes are visibly
+thinner than the letters either side of it.
+
+**`shared.css` says otherwise and is not lying.** Its `@font-face` `unicode-range`
+lists U+2191 and U+2193, which is Google's subsetting metadata for the file rather
+than a promise the glyph is in it. The range decides whether the font is consulted;
+if the glyph is missing the browser falls back anyway. Do not take that line as
+evidence a character is covered — measure it.
 
 The fix is a wording change — "Space, ↑ or W" becoming words — and **the words on
 that panel are Gabriel's**, so this needs asking rather than deciding. It stays
