@@ -120,7 +120,7 @@ Six, admitted to boards and category accents only. **Never to the chrome.**
 
 | Value | Name | Hue | Used for |
 | --- | --- | --- | --- |
-| `#6fdcf2` | cyan | 192° | puzzle; an entered Sudoku digit; n2; Flappy Bird's whole world |
+| `#6fdcf2` | cyan | 192° | puzzle; an entered Sudoku digit; n2; Flappy Bird's bird |
 | `#5fd9a0` | jade | 157° | strategy; `--win`; n4 |
 | `#d4e85c` | lime | 75° | n6 — **the risk value**, see below |
 | `#ff6a56` | coral | 6° | `--lose`; the mine flag; Pong's opponent; n3 |
@@ -132,12 +132,13 @@ Terminal or Vector Neon. Do not substitute the originals back: `#3fd4ff` on this
 ground reads as a hole punched to another site.
 
 **Six is still six, and a seventh was cut and then dropped.** Flappy Bird spent
-2026-09-09 in a true green — `#72e07c`, "fern", added as a `--p-fern` token
-because the pipes were wanted in the green the original game is remembered by and
-neither existing green could do it: jade at 157° reads as mint rather than as
-leaf, and lime at 75° sits 34° from the amber bird, the same pair flagged as the
-risky one below, so the bird all but merged with the pipes. Gabriel then chose
-cyan for that board the next day and the token came back out.
+2026-09-09 with an amber bird on a true green world — `#72e07c`, "fern", added as
+a `--p-fern` token because the pipes were wanted in the green the original game is
+remembered by and neither existing green could do it: jade at 157° reads as mint
+rather than as leaf, and lime at 75° sits 34° from that amber bird, the pair
+flagged as the risky one below, so the bird all but merged with the pipes. The
+board went through cyan pipes the next day and ended up inverted — amber world,
+cyan bird — and the token came back out with nothing reading it.
 
 **Two things worth keeping from it.** Adding a hue is possible and the bar is
 what fern cleared: two of the six already in hand shown to fail at the real size,
@@ -763,25 +764,38 @@ with `--court: 400px` instead of `600px`. **The two canvas games are one
 machine**, and every width in the column derives from `--court` for the reason
 Pong's does. The court is the same `#0d0905`.
 
-### Amber bird, cyan world
+### Cyan bird, amber world
 
 | part | value |
 | --- | --- |
-| the bird | `--p-amber`, drawn as a 2px outline with a solid wing and beak inside it |
+| the bird | `--p-cyan`, drawn as a 2px outline with a solid wing and beak inside it |
 | its glow | `shadowBlur` 10 in its own colour, two passes under a clean one |
 | dead | `--lose`, same drawing, no glow |
 | the eye | `--p-hot` with a `--bg` pupil |
-| pipes | a `--p-cyan` veil at 0.22, a 2px `--p-cyan` rim inside the edge, `shadowBlur` 14 clipped to the rectangle |
-| the ground | `--p-cyan`, 2px, on the pixels that end the run |
-| the ceiling | `--p-cyan` at 0.45, a broken rule — it only stops you |
+| pipes | a `--p-amber` veil at 0.22, a 2px `--p-amber` rim inside the edge, `shadowBlur` 14 clipped to the rectangle |
+| the ground | `--p-amber`, 2px, on the pixels that end the run |
+| the ceiling | `--p-amber` at 0.45, a broken rule — it only stops you |
 
-**The board is two colours: the bird and everything else.** That is the whole
-idea, and the ground and ceiling wearing the pipes' hue rather than amber is what
-buys it — the edges belong to the world, not to the page, so the bird is the only
-amber inside the board even though the page around it is amber throughout.
+**The board is two colours: the bird and everything else.** The pipes, the ground
+and the ceiling are one hue, so there is exactly one other thing on the court and
+it is the thing you are flying.
+
+**The world is the machine's own amber, and the bird is the only cool thing on the
+page.** Chosen by eye over a day of switching hues live — the boards that worked
+all paired one warm with one cool, and the ones that failed paired two of a
+temperature. **The rule of thumb that came out of it, and it is a matter of taste
+rather than of theory: one warm and one cool, and where you can, keep the small
+thing warm or the bright thing cool.** A small saturated actor against a large
+calm world is what makes the actor look alive.
+
+**Which of the two carries which is not free either.** A pipe is drawn as a veil
+and a *thin rim*, so its hue has to survive being a one-pixel line on near-black:
+violet was tried there and the pipes half-vanished. A bird is a small solid shape
+and needs no such thing. **The hue that survives a thin outline goes on the world;
+the hue that only has to read as a 24px blob goes on the bird.**
 
 **The beak is the bird's own colour**, which is Gabriel's call against my
-recommendation: a white beak was built and he preferred the plain gold ring.
+recommendation: a white beak was built and he preferred the plain ring.
 
 **Both readout numbers are `--p-amber`, and the light is what separates them** —
 the live score glows, the stored best does not. Same distinction the bird makes
@@ -791,35 +805,54 @@ when it dies, which is why it is worth having twice.
 
 `design/TODO.md`'s `redesign-category-accents` noted that chess and Pong each
 chose an in-game accent matching their hub tile, independently, and asked whether
-Flappy Bird would make it three. **It did not.** Arcade is rose; the bird is
-amber. Rose was built and set against amber on the same frame, and lost on two
-counts: with amber permanently on the board as the ground line and the ceiling,
-rose and amber crowd the warm half of the wheel at 73° apart, and rose is 38°
-from the coral a dead bird turns — a resting colour a neighbour away from its own
-state colour.
+Flappy Bird would make it three. **It did not.** Arcade is rose; the bird is cyan.
+
+Rose was built and looked at first, and lost twice over: against a warm world it
+crowds, and against any world it is 38° from the coral a dead bird turns — a
+resting colour one step from its own state colour, which is no signal at all.
+Neither reason has anything to do with what the hub says.
 
 So the pattern is two games out of three, which makes it a tendency and not a
 rule. **The generalisation that survives is the weaker one:** a game's accent is
 chosen by eye against its own board, and sometimes that lands on the tile's hue.
+
+**Cyan being the puzzle category's hue does not stop it being Flappy's bird**, and
+this is the case that settles it: Minesweeper already paints n3 coral and n4 jade
+without either meaning lost or won. A guest hue carries its meaning on the hub and
+nowhere else.
 
 ### Rejected, with the reason
 
 - **Pipes in coral** — a solid slab in `--lose`. It reads as the hazard it is, but
   the bird turns coral when it dies, so the board would be painted in the colour
   of the thing that just happened to you.
-- **Pipes in amber** — dark conduits with lit amber rims and rungs. Handsome, and
-  the first thing built, but the pipes end up the brightest thing on the board and
-  the bird stops being the subject. It also puts amber against the amber ground.
+- **Amber pipes as dark conduits with rungs**, which is not what shipped. The
+  first thing built, and the pipes ended up the brightest thing on the board with
+  an amber bird in front of them. Amber won as the world only once the bird went
+  cool. **The hue and the treatment are separable and were confused once already.**
 - **Pipes in jade** — the palette's own green, and 4° off rose's exact complement,
   which is the pair the colour wheel prefers. Rejected twice over: it reads as
   mint rather than as leaf, and green for the thing that kills you inverts what
   `--win` means everywhere else on the site.
 - **A green world at all**, which is what the original Flappy Bird is remembered
-  by, and which this board shipped in for a day before Gabriel changed it to cyan.
-  The whole of "Six is still six" above is that episode. Green is not wrong here —
-  it is the reference the game comes with — and it lost to a look he preferred on
-  the served page. Anyone reopening it is reopening a decision, not filling a gap.
+  by, and which this board shipped in for a day. The whole of "Six is still six"
+  above is that episode. Green is not wrong here — it is the reference the game
+  comes with — and it lost to a look Gabriel preferred on the served page. Anyone
+  reopening it is reopening a decision, not filling a gap.
 - **A rose bird**, above.
+- **Cyan against violet, and cyan against jade.** Both cool, 66° and 35° apart.
+  Two hues of one temperature go muddy at speed however far apart the wheel says
+  they are, and this board found it three separate times — rose against violet as
+  well. **Temperature separates before hue angle does.**
+- **A true blue bird.** There is no blue in the palette and this ground is why: it
+  is a brown-black with almost no blue in it, so a cold blue sits on top of the
+  page rather than in it. Cyan, warmed and lightened, is as far that way as the
+  site goes.
+- **The bird's hue repeated in the chrome** — the score number, the score glyph,
+  the bezel brackets and the strap cursor, all following the bird off one
+  `--actor` name. Built and dropped: it put a guest hue on the machine, which is
+  the one thing "chrome against screen" forbids, and it bought nothing the board
+  was not already saying.
 - **A white-hot beak.** `--p-hot` is a *state* value in Pong, and spending it on
   permanent furniture starts blurring what it means. Gabriel also preferred the
   plain ring.

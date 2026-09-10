@@ -149,7 +149,7 @@ here.
 **One half of this now has an answer, and it is no.** Whether a game's in-game
 accent inherits from its hub tile: chess and Pong each said yes independently —
 chess's black army is the strategy tile's jade, Pong's player is the arcade tile's
-rose — and **Flappy Bird said no**. Its tile is arcade rose; its bird is amber.
+rose — and **Flappy Bird said no**. Its tile is arcade rose; its bird is cyan.
 Rose was built and looked at first, and lost for reasons particular to that board;
 `design/DESIGN.md`, "What this answers about hub-tile inheritance", has them.
 

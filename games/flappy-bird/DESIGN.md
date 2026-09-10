@@ -48,6 +48,12 @@ alike.** The ground is drawn on the pixels that end the run; the ceiling, which
 only stops the bird, is a broken rule at part strength. Before this phase neither
 was drawn at all, so the thing that kills you was invisible.
 
+**The pipes, the ground and the ceiling are one colour, and the bird is the only
+other thing on the board.** They are read from one `colors.world`, so keeping
+them in step is not a matter of remembering to. That is a look decision and the
+reasoning is in `design/DESIGN.md`; what belongs here is that a reader adding
+something to the world should reach for the same value rather than a new one.
+
 ## Page ids
 
 On top of the shared `#board`, `#status` and `#restart` from `CLAUDE.md`'s page

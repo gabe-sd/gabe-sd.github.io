@@ -58,17 +58,18 @@ function readColors() {
   const style = getComputedStyle(document.documentElement);
   const p = (name, fallback) => style.getPropertyValue(name).trim() || fallback;
   return {
-    // The bird is the one guest hue on the page. It stays on the board — the
-    // chrome picking it up as an accent was tried and dropped.
+    // The bird is the only cool thing on a warm page, and the only guest hue
+    // anywhere on it. It stays on the board: the chrome picking it up as an
+    // accent was built and dropped.
     bird: p("--p-cyan", "#6fdcf2"),
     // Dying is an outcome, so it is the one thing here that reads --lose.
     dead: p("--lose", "#ff6a56"),
     eye: p("--p-hot", "#fff2da"),
     pupil: p("--bg", "#0a0704"),
     // The pipes, the ground that ends the run and the ceiling that only stops
-    // you — one hue for the whole world, so the bird is the only other thing
-    // on the board.
-    world: p("--p-violet", "#b9a2ff"),
+    // you — one hue for the whole world, and it is the machine's own amber, so
+    // the board is lit by the same light as the cabinet around it.
+    world: p("--p-amber", "#ffb000"),
   };
 }
 
@@ -431,54 +432,3 @@ restartBtn.addEventListener("click", releaseFocus);
 helpToggle.addEventListener("click", toggleInstructions);
 helpToggle.addEventListener("click", releaseFocus);
 restart();
-
-/* ---------- PREVIEW ONLY — delete this block and .vstrip in index.html ----------
- *
- * Reopened 2026-09-10 to reconsider the world hue. The values are typed out
- * rather than read from tokens on purpose: fern is not a token any more, and a
- * preview that could only offer what shared.css already has could not show it.
- * Whatever is chosen goes back to being one --p-* name read by readColors().
- */
-const PREVIEW_HUES = {
-  cyan: "#6fdcf2",
-  fern: "#72e07c",
-  jade: "#5fd9a0",
-  lime: "#d4e85c",
-  violet: "#b9a2ff",
-  rose: "#ff7fcb",
-  coral: "#ff6a56",
-  amber: "#ffb000",
-  pale: "#ffd694",
-  white: "#fff2da",
-};
-
-(function previewStrip() {
-  const strip = document.querySelector(".vstrip");
-  if (!strip) return;
-
-  function group(label, names, current, apply) {
-    const row = document.createElement("div");
-    row.className = "vgrp";
-    row.insertAdjacentHTML("beforeend", `<span class="vlbl">${label}</span>`);
-    strip.appendChild(row);
-    const made = names.map((name) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.textContent = name;
-      b.style.color = PREVIEW_HUES[name];
-      b.setAttribute("aria-pressed", String(name === current));
-      b.addEventListener("click", (e) => {
-        apply(PREVIEW_HUES[name]);
-        draw();
-        made.forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
-        releaseFocus(e); // Space is a flap key, and a focused button would eat it
-      });
-      row.appendChild(b);
-      return b;
-    });
-  }
-
-  const all = Object.keys(PREVIEW_HUES);
-  group("world", all, "violet", (v) => { colors.world = v; });
-  group("bird", all, "cyan", (v) => { colors.bird = v; });
-})();
