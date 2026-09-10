@@ -50,13 +50,6 @@ four framed but not restyled inside.
 and the shared `#instructions` panel are in place and covered by
 `tests/contract.test.js`. What is left in each is the inside of the board.
 
-### redesign-flappy-bird — Flappy Bird
-
-The other canvas game, and much simpler than Pong. `readColors()` in
-`games/flappy-bird/script.js` maps `--win` to the pipes and `--lose` to the beak,
-which is decoration borrowing outcome colours — decide whether that survives the new
-palette or whether Flappy takes its own.
-
 ### redesign-minesweeper — Minesweeper
 
 Mostly `style.css`. The one real piece of work is `.n1` through `.n8`, eight hardcoded
@@ -89,9 +82,10 @@ method that finds a glyph living in a string that has not fired yet:
 | Game | Where | Glyphs |
 | --- | --- | --- |
 | minesweeper | HUD, board, settings button, win message | `🚩` `⏱` `🏆`, `💣` `🚩` as cell content, `⚙` on the settings button, `🎉` ×3 |
-| flappy-bird | HUD | `🐦` `🏆` |
 | pong | status line and the menu | `🎉` ×2 |
 | sudoku | status line | `🎉` |
+
+Flappy Bird's `🐦` and `🏆` are gone — `redesign-flappy-bird` took its own share.
 
 Chess, Tic Tac Toe and the hub have none.
 
@@ -107,13 +101,35 @@ Four problems wearing one costume, and they do not have one answer:
 - **The six `🎉`** are a tone choice in a win message, not a palette problem. Whether
   the site wants to sound like that is Gabriel's call, and they are in `#status` text.
 
-**Not in this entry, and worth a look while someone is in here:** `⌫` in Sudoku and
-`↑` `↓` `▶` in Pong and Flappy Bird. They are monochrome symbols that render in the
-page font, so they may be fine — but nobody has checked them against the palette.
+**All four were checked, and none of them are fine.** VT323 is monospace, so every
+glyph it actually has measures the same width. Measured on a served page at 22px on
+2026-09-10: `M`, `W` and `i` are 8.8px each; `↑` and `↓` are 11px, `▶` is 16.92px
+and `⌫` is 31.11px. Four different widths means four different faces — the browser
+is falling back for every one of them, and at 4x the arrow's strokes are visibly
+thinner than the letters either side of it.
+
+**`shared.css` says otherwise and is not lying.** Its `@font-face` `unicode-range`
+lists U+2191 and U+2193, which is Google's subsetting metadata for the file rather
+than a promise the glyph is in it. The range decides whether the font is consulted;
+if the glyph is missing the browser falls back anyway. Do not take that line as
+evidence a character is covered — measure it.
+
+The fix is a wording change — "Space, ↑ or W" becoming words — and **the words on
+that panel are Gabriel's**, so this needs asking rather than deciding. It stays
+here rather than being folded into a game's phase for that reason.
 
 **Pong is the one to notice.** It went through a full redesign phase and kept two
 `🎉`, which says a game's own phase will not necessarily catch these. Hence one entry
 across all four rather than a line in each.
+
+**`🏆` was the one exception to "each takes its own share" below, and the
+convention is now set.** It was in both Flappy Bird's and Minesweeper's HUD, so
+the two phases needed one answer. Flappy Bird's phase decided it: **a HUD readout
+is a drawn stroke glyph on a 48 grid at the hub's icon weight, `aria-hidden`, plus
+the word it stands for as off-screen text, plus the number.** Not a word on its
+own — words were built and set against glyphs on a served page, and the glyph row
+won. Minesweeper's phase follows that for `🚩` `⏱` `🏆`; its `💣` and `🚩` as cell
+*content* are a different problem and chess is still the precedent there.
 
 **If the list is edited, sweep for non-ASCII across pages *and* scripts** rather than
 grepping for the glyphs already known about. It was counted the narrow way once and
@@ -130,11 +146,15 @@ category is what is unsettled, along with whether categories exist as a visible 
 all. Filter chips and idea tiles were dropped for this project and can be reconsidered
 here.
 
-**One half of this is now answered by practice rather than by decision.** Whether a
-game's in-game accent inherits from its hub tile: both games designed since said yes
-independently — chess's black army is the strategy tile's jade, Pong's player is the
-arcade tile's rose. Neither was argued for on those grounds; each was chosen by eye and
-turned out to agree. That is worth noticing but is not the same as deciding it, and
-Flappy Bird is the next chance to find out whether it generalises.
+**One half of this now has an answer, and it is no.** Whether a game's in-game
+accent inherits from its hub tile: chess and Pong each said yes independently —
+chess's black army is the strategy tile's jade, Pong's player is the arcade tile's
+rose — and **Flappy Bird said no**. Its tile is arcade rose; its bird is cyan.
+Rose was built and looked at first, and lost for reasons particular to that board;
+`design/DESIGN.md`, "What this answers about hub-tile inheritance", has them.
+
+Two out of three is a tendency, not a rule. What is left to decide here is
+narrower than it was: whether categories are a visible idea at all, and whether the
+hub keeps a fixed colour per category — not whether games are obliged to match.
 
 Close this entry by writing the answer into `design/DESIGN.md`, whichever way it goes.

@@ -24,44 +24,60 @@
         <h1 class="game-title">FLAPPY BIRD</h1>
       </div>
 
-      <p id="status" class="status game-strap">Click, tap or press Space to flap</p>
+      <!-- The cabinet is a centred column exactly as wide as the board, so the
+           strap, the readout, the buttons and the panel all line up with the
+           board's own left edge. -->
+      <div class="cabinet">
+        <p id="status" class="status game-strap">Click, tap or press Space to flap</p>
 
-      <div class="game-stage">
-        <!-- The hud is the board's own readout, so it is inside the stack and
-             as wide as the board rather than as wide as the page. -->
-        <div class="board-stack">
+        <div class="game-stage">
           <!-- Both scores live in the DOM rather than being painted on the canvas, so
                a screen reader can read them without a hidden live region shadowing
                them. aria-live because the score changes while nothing is focused. -->
+          <!-- Each readout is a drawn glyph and a number. The glyph is decoration
+               and is hidden from the accessibility tree; the word beside it is
+               real text, off-screen rather than absent, so the row still reads
+               as "score 3" and "best 12". -->
           <div class="hud">
-            <span id="score" aria-live="polite" title="Pipes cleared">🐦 0</span>
-            <span id="best-score" title="Your best on this device">🏆 —</span>
+            <span id="score" aria-live="polite">
+              <span class="gly" aria-hidden="true">
+                <svg viewBox="0 0 48 48"><rect x="18" y="4" width="13" height="16"
+                  fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="18" y="28"
+                  width="13" height="16" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>
+              </span><span class="lbl">score</span><span class="n">0</span>
+            </span>
+            <span id="best-score">
+              <span class="gly" aria-hidden="true">
+                <svg viewBox="0 0 48 48"><path d="M16 11h16v8a8 8 0 0 1-16 0z" fill="none"
+                  stroke="currentColor" stroke-width="2.5"/><path d="M16 13h-4v3a5 5 0 0 0 5 5M32 13h4v3a5 5 0 0 1-5 5"
+                  fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M24 27v6M18 37h12"
+                  fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+              </span><span class="lbl">best</span><span class="n">—</span>
+            </span>
           </div>
-          <canvas id="board" width="400" height="560" aria-label="Flappy Bird game board"></canvas>
+
+          <div class="bezel">
+            <canvas id="board" width="400" height="560" aria-label="Flappy Bird game board"></canvas>
+          </div>
         </div>
-      </div>
 
-      <div class="controls">
-        <button id="restart" class="btn">Restart</button>
-        <button id="help-toggle" class="btn secondary"
-                aria-expanded="false" aria-controls="instructions">How to play</button>
-      </div>
+        <div class="controls">
+          <button id="restart" class="btn">Restart</button>
+          <button id="help-toggle" class="btn secondary"
+                  aria-expanded="false" aria-controls="instructions">How to play</button>
+        </div>
 
-      <div id="instructions" class="instructions" hidden>
-        <ul>
-          <li><b>Space</b>, <b>↑</b> or <b>W</b> — flap</li>
-          <li><b>Click</b> or <b>tap the board</b> — flap</li>
-        </ul>
-        <p>
-          Every flap is a fixed hop upwards; gravity does the rest. One point per
-          pipe cleared. Touching a pipe or the ground ends the run — the ceiling
-          only stops you.
-        </p>
+        <div id="instructions" class="instructions" hidden>
+          <ul>
+            <li><b>Space</b>, <b>↑</b> or <b>W</b> — flap</li>
+            <li><b>Click</b> or <b>tap the board</b> — flap</li>
+          </ul>
+          <p>One point per pipe cleared.</p>
+        </div>
       </div>
 
       <div class="game-foot">
         <span>space, ↑ or W to flap · or click the board</span>
-        <span>the ceiling stops you, the ground ends you</span>
       </div>
     </div>
   </main>

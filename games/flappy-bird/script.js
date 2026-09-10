@@ -47,24 +47,40 @@ const BEST_SCORE_KEY = "flappy.bestScore";
 
 const READY_PROMPT = "Click, tap or press Space to flap";
 
-// A canvas cannot read CSS custom properties, so the theme tokens are copied
-// into plain values here and re-copied whenever the OS theme flips. The sky is
-// not among them: the canvas is cleared rather than filled, so the background
-// on #board in style.css shows through and follows the theme on its own.
+// A canvas cannot read CSS custom properties, so the values the board paints
+// with are copied into plain ones here. The palette is dark-only, so this runs
+// once — see design/DESIGN.md, "Dark only". The sky is not among them: the
+// canvas is cleared rather than filled, so #board's background shows through.
+//
+// Every fallback is the value design/DESIGN.md records for that name, so a
+// missing token paints today's palette rather than a design that was replaced.
 function readColors() {
   const style = getComputedStyle(document.documentElement);
+  const p = (name, fallback) => style.getPropertyValue(name).trim() || fallback;
   return {
-    fg: style.getPropertyValue("--fg").trim() || "#1c1c1e",
-    bird: style.getPropertyValue("--accent").trim() || "#3b82f6",
-    pipe: style.getPropertyValue("--win").trim() || "#22c55e",
-    beak: style.getPropertyValue("--lose").trim() || "#ef4444",
-    eye: style.getPropertyValue("--cell-bg").trim() || "#ffffff",
+    // The bird is the only cool thing on a warm page, and the only guest hue
+    // anywhere on it. It stays on the board: the chrome picking it up as an
+    // accent was built and dropped.
+    bird: p("--p-cyan", "#6fdcf2"),
+    // Dying is an outcome, so it is the one thing here that reads --lose.
+    dead: p("--lose", "#ff6a56"),
+    eye: p("--p-hot", "#fff2da"),
+    pupil: p("--bg", "#0a0704"),
+    // The pipes, the ground that ends the run and the ceiling that only stops
+    // you — one hue for the whole world, and it is the machine's own amber, so
+    // the board is lit by the same light as the cabinet around it.
+    world: p("--p-amber", "#ffb000"),
   };
 }
 
-let colors = readColors();
-const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
-darkQuery.addEventListener("change", () => { colors = readColors(); draw(); });
+// A canvas needs a colour, not a colour and an alpha, so the translucent fills
+// are mixed here rather than with color-mix().
+function veil(hex, alpha) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+const colors = readColors();
 
 // "ready" waits for the first flap, "play" is a live run, "over" is a dead one.
 // update() returns immediately outside "play", which is what lets a test place
@@ -107,15 +123,16 @@ function newPipe(x) {
   return { x, gapTop: PIPE_MARGIN + Math.random() * span, passed: false };
 }
 
+// The label beside each number is markup, so only the number is rewritten.
 function renderScore() {
-  scoreEl.textContent = `🐦 ${score}`;
+  scoreEl.querySelector(".n").textContent = String(score);
 }
 
 // Read back from storage rather than from a cached copy, so "unavailable" and
 // "no record yet" are the same thing here and neither needs its own branch.
 function renderBest() {
   const best = loadBestScore();
-  bestScoreEl.textContent = `🏆 ${best === null ? "—" : best}`;
+  bestScoreEl.querySelector(".n").textContent = best === null ? "—" : String(best);
 }
 
 // What the bird is touching, or null. The pipe hitbox is exactly the rectangles
@@ -172,47 +189,123 @@ function endRun(hit) {
     ? `New best — ${score} ${score === 1 ? "pipe" : "pipes"}! Flap to fly again.`
     : `${what} — ${score} cleared. Flap to fly again.`;
 }
+// How far the bird's light reaches past its own edge. It is the only thing on
+// the board drawn outside its own hitbox, and it is deliberate: the glow says
+// the bird is alive, and going out is half of how death reads.
+const BIRD_GLOW = 10;
+
+// The bird is drawn about the origin inside a box BIRD_SIZE across, which is
+// exactly the hitbox: the bird has to be the size it kills at. An earlier beak
+// reached seven pixels past its own right edge, which made the bird look wider
+// than it flies — see games/flappy-bird/DESIGN.md.
+//
+// Line work rather than a solid shape, because everything else on the board is
+// line work: the gates are hollow, the ceiling is a broken rule.
+function drawBirdShape(r, c) {
+  ctx.strokeStyle = c;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0, 0, r - 1, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // The wing, solid, inside the circle rather than hung off it: ink on a hollow
+  // body is what stops the outline reading as a plain ring.
+  ctx.fillStyle = c;
+  ctx.beginPath();
+  ctx.moveTo(-6.5, -1.5);
+  ctx.bezierCurveTo(-2.5, -1, 0.5, 1.5, 1.5, 5);
+  ctx.bezierCurveTo(-2.5, 5.5, -6, 2.5, -6.5, -1.5);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(r - 8, -2);
+  ctx.lineTo(r - 1, 1);
+  ctx.lineTo(r - 8, 4.5);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = colors.eye;
+  ctx.beginPath();
+  ctx.arc(r * 0.3, -r * 0.34, 2.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = colors.pupil;
+  ctx.beginPath();
+  ctx.arc(r * 0.4, -r * 0.34, 1.3, 0, Math.PI * 2);
+  ctx.fill();
+}
 
 function drawBird() {
   const r = BIRD_SIZE / 2;
   // Nose down as it falls, up as it climbs. Clamped so a long drop does not end
   // up flying backwards.
   const tilt = Math.max(-0.4, Math.min(0.9, bird.vy * 0.06));
+  const dead = phase === "over";
+  const c = dead ? colors.dead : colors.bird;
   ctx.save();
   ctx.translate(BIRD_X + r, bird.y + r);
   ctx.rotate(tilt);
-
-  ctx.fillStyle = phase === "over" ? colors.beak : colors.bird;
-  ctx.beginPath();
-  ctx.arc(0, 0, r, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = colors.beak;
-  ctx.beginPath();
-  ctx.moveTo(r - 2, -2);
-  ctx.lineTo(r + 7, 2);
-  ctx.lineTo(r - 2, 6);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = colors.eye;
-  ctx.beginPath();
-  ctx.arc(r * 0.35, -r * 0.3, 4, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = colors.fg;
-  ctx.beginPath();
-  ctx.arc(r * 0.5, -r * 0.3, 2, 0, Math.PI * 2);
-  ctx.fill();
-
+  // Death keeps the drawing and changes its state: the ink goes to the outcome
+  // colour and the light goes out. Swapping the bird for a solid shape was
+  // tried and rejected — on a board of line work it reads as a piece from
+  // another game.
+  //
+  // A single shadowed pass is almost entirely hidden behind the shape casting
+  // it, so the halo is built by repainting and the clean shape goes on top.
+  if (!dead) {
+    ctx.shadowColor = c;
+    ctx.shadowBlur = BIRD_GLOW;
+    drawBirdShape(r, c);
+    drawBirdShape(r, c);
+    ctx.shadowBlur = 0;
+  }
+  drawBirdShape(r, c);
   ctx.restore();
+}
+
+// A pipe is lit glass rather than a slab: a veil of its own hue, a rim just
+// inside the edge, and a glow clipped to the rectangle so the light stops where
+// the pipe does. Nothing is painted outside the rectangle it is handed — the
+// hitbox is exactly that rectangle, and a lip or a spill would make the pipe a
+// different size to fly through than to look at.
+const PIPE_VEIL = 0.22;
+const PIPE_GLOW = 14;
+
+function drawPipe(x, y, w, h) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  ctx.fillStyle = veil(colors.world, PIPE_VEIL);
+  ctx.fillRect(x, y, w, h);
+  ctx.shadowColor = colors.world;
+  ctx.shadowBlur = PIPE_GLOW;
+  ctx.strokeStyle = colors.world;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+  ctx.restore();
+}
+
+// The two edges of the world, which behave differently and so cannot look the
+// same. The ground is drawn on the pixels that end the run; the ceiling, which
+// only stops the bird, is a broken rule at part strength. Both take the pipes'
+// hue rather than one of their own, so the whole world is a single colour and
+// the bird is the only other thing on the board.
+const CEILING_VEIL = 0.45;
+
+function drawEdges() {
+  ctx.fillStyle = colors.world;
+  ctx.fillRect(0, HEIGHT - 2, WIDTH, 2);
+  ctx.fillStyle = veil(colors.world, CEILING_VEIL);
+  for (let x = 0; x < WIDTH; x += 12) ctx.fillRect(x, 0, 7, 1);
 }
 
 function draw() {
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
-  ctx.fillStyle = colors.pipe;
+  drawEdges();
   for (const p of pipes) {
-    ctx.fillRect(p.x, 0, PIPE_WIDTH, p.gapTop);
-    ctx.fillRect(p.x, p.gapTop + PIPE_GAP, PIPE_WIDTH, HEIGHT - p.gapTop - PIPE_GAP);
+    drawPipe(p.x, 0, PIPE_WIDTH, p.gapTop);
+    drawPipe(p.x, p.gapTop + PIPE_GAP, PIPE_WIDTH, HEIGHT - p.gapTop - PIPE_GAP);
   }
   drawBird();
 }
