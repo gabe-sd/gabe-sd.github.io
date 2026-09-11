@@ -29,11 +29,9 @@ it is owed deference. The target is a dark CRT-phosphor arcade terminal — see
 
 What was decided before the first phase is now built and described in
 `design/DESIGN.md` — the dark-only palette, the self-hosted VT323, the token layering,
-Pong's local colours, the hub's category accents. Two of those decisions are still
+Pong's local colours, the hub's category accents. One of those decisions is still
 live rather than history:
 
-- **`about.html` is a stub.** The nav links to it, so it has to exist, but its words
-  are Gabriel's. "Under construction" and nothing more.
 - **Verification is Gabriel looking at a served page**, and he is asked at the start
   of a phase whether he wants a preview or wants it built. The full version is in
   `ART-DIRECTOR.md`.
