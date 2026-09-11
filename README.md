@@ -1,45 +1,64 @@
-# gabe-sd.github.io
+# Browser Arcade
 
-A small arcade of browser games, live at <https://gabe-sd.github.io/>.
+A collection of browser games and an experiment in organizing Claude agents into a software development team.
 
-Plain HTML, CSS and JavaScript. No build step, no framework, and nothing the
-site needs installed — the files are served exactly as they are in this repo.
-Open `index.html` and it works.
+**[Play the arcade](https://gabe-sd.github.io/)**
 
-## Running it locally
+## About the project
+
+Browser Arcade is a growing collection of games presented in a shared retro-inspired interface.
+
+I built the project to explore a structured approach to agent-assisted development. Claude agents write the code. I lead the team, design features, set the visual direction, and decide what is ready to ship.
+
+## The agent team
+
+Each agent has a specific role:
+
+- The **worker** implements features and fixes.
+- The **integrator** reviews code, runs tests, and manages releases.
+- The **art director** produces mockups and develops the visual direction.
+
+Different roles use different models. Workers use Sonnet for implementation. The integrator and art director use Opus for work that requires broader judgment. The integrator can consult a Fable advisor on key upstream decisions. The art director can delegate suitable tasks to cheaper subagents.
+
+The roles have separate instructions, responsibilities, and boundaries. This gives each agent a clear area of ownership while keeping the final decisions with me.
+
+## Development workflow
+
+1. I define the feature, its behavior, and its constraints.
+2. When visual exploration is needed, the art director produces mockups.
+3. A worker develops the change in an isolated Git worktree and branch.
+4. Browser tests exercise the feature and guard against regressions.
+5. The integrator reviews the code and verifies it against the latest version of the project.
+6. I playtest the result and review the design before it goes live.
+
+This structure lets the agents work quickly without sharing unfinished changes. Automated checks catch repeatable problems. Code review and hands-on playtesting cover the parts that require judgment.
+
+## What I’m exploring
+
+With each new game, I refine the workflow:
+
+- How narrowly defined roles affect development speed
+- How agents can work in parallel without colliding
+- How model selection and context management affect cost
+- Which decisions can be checked automatically
+- Where human review has the most value
+
+The goal is to ship features quickly, minimize costs, and maintain quality through structure and hands-on review.
+
+## Technology
+
+- Plain HTML, CSS, and JavaScript
+- No framework, build step, or runtime dependencies
+- Browser-driven tests using Playwright
+- Git branches and worktrees for isolated development
+- GitHub Pages for hosting
+
+## Running locally
+
+Clone the repository and start the local server:
 
 ```bash
-npm run serve     # http.server on 8934
+git clone https://github.com/gabe-sd/gabe-sd.github.io.git
+cd gabe-sd.github.io
+npm run serve
 ```
-
-Then visit <http://localhost:8934>. A server is not strictly required, since
-every path in the site is relative and `file://` works too, but serving it
-matches how it is deployed.
-
-## Tests
-
-The only dependency in the repo is `playwright-core`, used by the tests and by
-nothing else.
-
-```bash
-npm install     # once
-npm test
-```
-
-The tests drive real pages in a real browser and assert on real game state.
-`tests/README.md` covers what each one is for.
-
-## Deploying
-
-Pushing to `main` deploys. The repo name makes this a GitHub Pages *user* site,
-so it serves from the domain root rather than a subpath.
-
-## Working on it
-
-`CLAUDE.md` has the conventions every game shares, and how several people work on
-this at once without colliding — start there. Which of the three seats you are in
-decides what else you read: `WORKER.md` builds one area in a worktree of its own,
-`INTEGRATOR.md` holds `main` and does the merging, `ART-DIRECTOR.md` owns how the
-site looks across all of it, and they are different jobs. Everything specific to one game lives with that game: `games/<name>/DESIGN.md` for how it works and what must not be broken,
-`games/<name>/TODO.md` for what is not done yet, in priority order. The root
-`TODO.md` keeps what belongs to no single game.
