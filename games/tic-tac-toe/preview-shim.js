@@ -18,8 +18,37 @@
         cell.innerHTML = SVG[mark] + '<span class="sr">' + mark + "</span>";
       }
     });
+    const win = gameOver && checkWinner();
     boardEl.dataset.turn = gameOver ? "" : currentPlayer;
-    boardEl.dataset.over = gameOver ? (checkWinner() ? "win" : "draw") : "";
+    boardEl.dataset.over = gameOver ? (win ? "win" : "draw") : "";
+    boardEl.dataset.winner = win ? win.player : "";
+    strike(win);
+  }
+
+  // The line through a win: centre of the first square to centre of the last,
+  // run on past both by a third of a square.
+  function strike(win) {
+    // A set-up button restarts and replays in one go, so the observer can see
+    // one win replaced by another without the empty board between: key the
+    // line to the squares it runs through, not just to whether there is one.
+    let el = boardEl.querySelector(".strike");
+    const key = win ? win.line.join() : "";
+    if (el && el.dataset.line === key) return;
+    if (el) el.remove();
+    if (!win) return;
+    const a = cells[win.line[0]], c = cells[win.line[2]];
+    const ax = a.offsetLeft + a.offsetWidth / 2, ay = a.offsetTop + a.offsetHeight / 2;
+    const cx = c.offsetLeft + c.offsetWidth / 2, cy = c.offsetTop + c.offsetHeight / 2;
+    const ang = Math.atan2(cy - ay, cx - ax), ext = a.offsetWidth * 0.32;
+    el = document.createElement("i");
+    el.className = "strike";
+    el.dataset.line = key;
+    el.setAttribute("aria-hidden", "true");
+    el.style.left = ax - Math.cos(ang) * ext + "px";
+    el.style.top = ay - Math.sin(ang) * ext + "px";
+    el.style.width = Math.hypot(cx - ax, cy - ay) + 2 * ext + "px";
+    el.style.setProperty("--a", ang + "rad");
+    boardEl.appendChild(el);
   }
 
   new MutationObserver(sync).observe(boardEl, { subtree: true, childList: true, characterData: true });

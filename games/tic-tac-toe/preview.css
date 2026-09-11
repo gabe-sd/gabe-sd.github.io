@@ -16,6 +16,7 @@
   --x: var(--p-pale);
   --o: var(--p-jade);
 
+  position: relative;
   display: grid;
   grid-template-columns: repeat(3, var(--sq));
   grid-template-rows: repeat(3, var(--sq));
@@ -118,17 +119,43 @@ body[data-marks="drawn"] #board[data-turn="O"] {
 
 /* Win: everything off the line goes dark; the line blooms and lights its
    squares in its own colour. Draw: the whole board dims together. */
-#board[data-over="win"] .cell:not(.win) { opacity: 0.28; }
+body:not([data-dim="0"]) #board[data-over="win"] .cell:not(.win) { opacity: 0.28; }
 #board[data-over="draw"] .cell { opacity: 0.45; }
 
-.cell.win {
+body:not([data-win="strike"]) .cell.win {
   background-color: color-mix(in srgb, currentColor 9%, transparent);
 }
 body:not([data-marks="drawn"]) .cell.win[data-mark] {
   text-shadow: 0 0 6px currentColor, 0 0 22px currentColor, 0 0 48px color-mix(in srgb, currentColor 50%, transparent);
 }
-.cell.win svg {
+body:not([data-win="strike"]) .cell.win svg {
   filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 0 16px currentColor);
+}
+
+/* Strike: a line through the three in the winner's colour, at the marks' own
+   stroke weight, drawn from the first square to the last. */
+.strike {
+  position: absolute;
+  height: 5px;
+  margin-top: -2.5px;
+  border-radius: 3px;
+  color: var(--x);
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor, 0 0 18px color-mix(in srgb, currentColor 50%, transparent);
+  transform-origin: 0 50%;
+  transform: rotate(var(--a));
+  pointer-events: none;
+  z-index: 1;
+  animation: strike 0.32s ease-out both;
+}
+#board[data-winner="O"] .strike { color: var(--o); }
+body:not([data-win="strike"]) .strike { display: none; }
+
+@keyframes strike {
+  from { transform: rotate(var(--a)) scaleX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .strike { animation: none; }
 }
 
 /* ---------- A and B: the vector grid ---------- */
@@ -168,6 +195,57 @@ body:not([data-marks="drawn"]) .cell.win[data-mark] {
   background:
     linear-gradient(var(--p-rule) 0 0) 0 calc(33.333%) / 100% var(--line) no-repeat,
     linear-gradient(var(--p-rule) 0 0) 0 calc(66.667%) / 100% var(--line) no-repeat;
+}
+
+/* ---------- refinement panel (preview C) ---------- */
+
+.lab {
+  position: relative;
+  z-index: 7;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.55rem 1rem;
+  align-items: center;
+  max-width: 560px;
+  margin: 1.4rem auto 0;
+  padding: 0.9rem 1.1rem;
+  background: var(--p-panel);
+  border: 1px solid var(--p-hairline);
+  color: var(--p-dim);
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+}
+.lab-k b { color: var(--p-pale); font-weight: normal; }
+.lab-v { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+
+.sw {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+}
+.sw[aria-pressed="true"] {
+  outline: 2px solid var(--p-hot);
+  outline-offset: 3px;
+}
+
+.lab-opt {
+  padding: 0.2rem 0.6rem;
+  background: transparent;
+  border: 1px solid var(--cell-border);
+  border-radius: 0;
+  color: var(--muted);
+  font: inherit;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.lab-opt:hover { border-color: var(--p-rule); color: var(--p-pale); }
+.lab-opt[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--p-ground);
 }
 
 /* ---------- preview switcher ---------- */
