@@ -39,17 +39,20 @@
     if (el && el.dataset.line === key) return;
     if (el) el.remove();
     if (!win) return;
-    const a = cells[win.line[0]], c = cells[win.line[2]];
-    const ax = a.offsetLeft + a.offsetWidth / 2, ay = a.offsetTop + a.offsetHeight / 2;
-    const cx = c.offsetLeft + c.offsetWidth / 2, cy = c.offsetTop + c.offsetHeight / 2;
-    const ang = Math.atan2(cy - ay, cx - ax), ext = a.offsetWidth * 0.32;
+    // Worked out from the squares' indices in percent of the board, never from
+    // measured pixels: a line measured when the game ends stays that size when
+    // the board is resized under it (a phone turned, a window narrowed past the
+    // small-screen breakpoint). The board is square, so one unit serves both axes.
+    const centre = (i) => [((i % 3) + 0.5) / 3 * 100, (Math.floor(i / 3) + 0.5) / 3 * 100];
+    const [ax, ay] = centre(win.line[0]), [cx, cy] = centre(win.line[2]);
+    const ang = Math.atan2(cy - ay, cx - ax), ext = 0.32 / 3 * 100;
     el = document.createElement("i");
     el.className = "strike";
     el.dataset.line = key;
     el.setAttribute("aria-hidden", "true");
-    el.style.left = ax - Math.cos(ang) * ext + "px";
-    el.style.top = ay - Math.sin(ang) * ext + "px";
-    el.style.width = Math.hypot(cx - ax, cy - ay) + 2 * ext + "px";
+    el.style.left = ax - Math.cos(ang) * ext + "%";
+    el.style.top = ay - Math.sin(ang) * ext + "%";
+    el.style.width = Math.hypot(cx - ax, cy - ay) + 2 * ext + "%";
     el.style.setProperty("--a", ang + "rad");
     boardEl.appendChild(el);
   }
