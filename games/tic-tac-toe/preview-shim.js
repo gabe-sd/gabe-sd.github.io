@@ -6,8 +6,11 @@
   const boardEl = document.getElementById("board");
   const drawn = document.body.dataset.marks === "drawn";
   const SVG = {
-    X: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M13 13L35 35M35 13L13 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>',
-    O: '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="11.5" fill="none" stroke="currentColor" stroke-width="3.2"/></svg>',
+    // Each mark twice: a wide ground-coloured .halo under the lit .mk. The halo
+    // only shows when a win line runs behind the marks, and is the gap it
+    // stops short of.
+    X: '<svg viewBox="0 0 48 48" aria-hidden="true"><path class="halo" d="M13 13L35 35M35 13L13 35" fill="none" stroke-width="11" stroke-linecap="round"/><path class="mk" d="M13 13L35 35M35 13L13 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>',
+    O: '<svg viewBox="0 0 48 48" aria-hidden="true"><circle class="halo" cx="24" cy="24" r="11.5" fill="none" stroke-width="11"/><circle class="mk" cx="24" cy="24" r="11.5" fill="none" stroke="currentColor" stroke-width="3.2"/></svg>',
   };
 
   function sync() {

@@ -61,8 +61,18 @@ body:not([data-marks="drawn"]) .cell[data-mark="O"] {
 .cell svg {
   width: 72%;
   height: 72%;
+  overflow: visible;
+}
+.cell svg .mk {
   filter: drop-shadow(0 0 5px color-mix(in srgb, currentColor 55%, transparent));
 }
+.cell svg .halo {
+  stroke: var(--p-ground);
+  display: none;
+}
+/* An O's halo is filled as well, or the line shows through the ring and the
+   O reads as a slashed zero. An X's halo already covers its own middle. */
+.cell svg circle.halo { fill: var(--p-ground); }
 
 .sr {
   position: absolute;
@@ -122,15 +132,22 @@ body[data-marks="drawn"] #board[data-turn="O"] {
 body:not([data-dim="0"]) #board[data-over="win"] .cell:not(.win) { opacity: 0.28; }
 #board[data-over="draw"] .cell { opacity: 0.45; }
 
-body:not([data-win="strike"]) .cell.win {
+body:not([data-win="strike"]):not([data-win="behind"]) .cell.win {
   background-color: color-mix(in srgb, currentColor 9%, transparent);
 }
 body:not([data-marks="drawn"]) .cell.win[data-mark] {
   text-shadow: 0 0 6px currentColor, 0 0 22px currentColor, 0 0 48px color-mix(in srgb, currentColor 50%, transparent);
 }
-body:not([data-win="strike"]) .cell.win svg {
+body:not([data-win="strike"]):not([data-win="behind"]) .cell.win svg .mk {
   filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 0 16px currentColor);
 }
+
+/* Behind: the line runs under the marks, thinner than they are, and each
+   winning mark's halo cuts a gap in it — so a diagonal no longer lies along
+   one arm of an X and swallows it. */
+body[data-win="behind"] .cell { z-index: 1; }
+body[data-win="behind"] .strike { z-index: 0; height: 3px; margin-top: -1.5px; }
+body[data-win="behind"] .cell.win svg .halo { display: inline; }
 
 /* Strike: a line through the three in the winner's colour, at the marks' own
    stroke weight, drawn from the first square to the last. */
@@ -149,7 +166,7 @@ body:not([data-win="strike"]) .cell.win svg {
   animation: strike 0.32s ease-out both;
 }
 #board[data-winner="O"] .strike { color: var(--o); }
-body:not([data-win="strike"]) .strike { display: none; }
+body:not([data-win="strike"]):not([data-win="behind"]) .strike { display: none; }
 
 @keyframes strike {
   from { transform: rotate(var(--a)) scaleX(0); }

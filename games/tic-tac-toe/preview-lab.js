@@ -25,7 +25,7 @@
   lab.innerHTML =
     row('X <b data-name="x"></b>', swatches("x")) +
     row('O <b data-name="o"></b>', swatches("o")) +
-    row("WIN", opt("win", "glow", "Glow") + opt("win", "strike", "Strike")) +
+    row("WIN", opt("win", "glow", "Glow") + opt("win", "strike", "Strike") + opt("win", "behind", "Behind")) +
     row("OTHERS", opt("dim", "1", "Dim") + opt("dim", "0", "Keep lit")) +
     row("SET UP", SETUPS.map(([l], i) => `<button class="lab-opt" data-setup="${i}">${l}</button>`).join(""));
 
