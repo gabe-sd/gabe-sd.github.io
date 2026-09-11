@@ -129,7 +129,7 @@ body[data-marks="drawn"] #board[data-turn="O"] {
 
 /* Win: everything off the line goes dark; the line blooms and lights its
    squares in its own colour. Draw: the whole board dims together. */
-body:not([data-dim="0"]) #board[data-over="win"] .cell:not(.win) { opacity: 0.28; }
+body:not([data-dim="0"]) #board[data-over="win"] .cell:not(.win) { opacity: 0.55; }
 #board[data-over="draw"] .cell { opacity: 0.45; }
 
 body:not([data-win="strike"]):not([data-win="behind"]) .cell.win {
