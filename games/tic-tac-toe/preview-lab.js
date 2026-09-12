@@ -13,7 +13,7 @@
   const boardEl = document.getElementById("board");
   const lab = document.querySelector(".lab");
   const state = Object.assign(
-    { x: "pale", o: "jade", win: "strike", dim: "1" },
+    { x: "violet", o: "jade", win: "glow", gi: "med", fill: "off", dim: "1" },
     Object.fromEntries(new URLSearchParams(location.hash.slice(1)))
   );
 
@@ -26,14 +26,19 @@
     row('X <b data-name="x"></b>', swatches("x")) +
     row('O <b data-name="o"></b>', swatches("o")) +
     row("WIN", opt("win", "glow", "Glow") + opt("win", "strike", "Strike") + opt("win", "behind", "Behind")) +
-    row("OTHERS", opt("dim", "1", "Dim") + opt("dim", "0", "Keep lit")) +
+    row("GLOW", opt("gi", "soft", "Soft") + opt("gi", "med", "Medium") + opt("gi", "strong", "Strong")) +
+    row("FILL", opt("fill", "off", "No fill") + opt("fill", "on", "Lit square")) +
+    row("OTHERS", opt("dim", "0", "Keep lit") + opt("dim", "1", "Dim") + opt("dim", "2", "Dim more")) +
     row("SET UP", SETUPS.map(([l], i) => `<button class="lab-opt" data-setup="${i}">${l}</button>`).join(""));
 
   function apply() {
     boardEl.style.setProperty("--x", `var(--p-${state.x})`);
     boardEl.style.setProperty("--o", `var(--p-${state.o})`);
-    document.body.dataset.win = state.win;
-    document.body.dataset.dim = state.dim;
+    // Every switch but the two colours rides on the body, so a new one added to
+    // the panel needs no line of its own here.
+    for (const [k, v] of Object.entries(state)) {
+      if (k !== "x" && k !== "o") document.body.dataset[k] = v;
+    }
     lab.querySelector('[data-name="x"]').textContent = state.x;
     lab.querySelector('[data-name="o"]').textContent = state.o;
     lab.querySelectorAll("[data-k]").forEach((b) =>

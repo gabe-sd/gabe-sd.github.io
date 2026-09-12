@@ -129,17 +129,26 @@ body[data-marks="drawn"] #board[data-turn="O"] {
 
 /* Win: everything off the line goes dark; the line blooms and lights its
    squares in its own colour. Draw: the whole board dims together. */
-body:not([data-dim="0"]) #board[data-over="win"] .cell:not(.win) { opacity: 0.55; }
+body[data-dim="1"] #board[data-over="win"] .cell:not(.win) { opacity: 0.55; }
+body[data-dim="2"] #board[data-over="win"] .cell:not(.win) { opacity: 0.32; }
 #board[data-over="draw"] .cell { opacity: 0.45; }
 
-body:not([data-win="strike"]):not([data-win="behind"]) .cell.win {
+/* The lit square is now off by default: a fill puts back the boxes the hash
+   board exists to do without, and runs past where the # lines stop. */
+body[data-fill="on"]:not([data-win="strike"]):not([data-win="behind"]) .cell.win {
   background-color: color-mix(in srgb, currentColor 9%, transparent);
 }
 body:not([data-marks="drawn"]) .cell.win[data-mark] {
   text-shadow: 0 0 6px currentColor, 0 0 22px currentColor, 0 0 48px color-mix(in srgb, currentColor 50%, transparent);
 }
+/* Three strengths of the winning glow, so how far it carries without the fill
+   can be answered by looking. */
+body { --gi: drop-shadow(0 0 4px currentColor) drop-shadow(0 0 16px currentColor); }
+body[data-gi="soft"] { --gi: drop-shadow(0 0 3px currentColor) drop-shadow(0 0 9px color-mix(in srgb, currentColor 70%, transparent)); }
+body[data-gi="strong"] { --gi: drop-shadow(0 0 5px currentColor) drop-shadow(0 0 18px currentColor) drop-shadow(0 0 42px color-mix(in srgb, currentColor 60%, transparent)); }
+
 body:not([data-win="strike"]):not([data-win="behind"]) .cell.win svg .mk {
-  filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 0 16px currentColor);
+  filter: var(--gi);
 }
 
 /* Behind: the line runs under the marks, thinner than they are, and each
