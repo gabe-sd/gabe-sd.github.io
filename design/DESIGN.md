@@ -467,9 +467,12 @@ cannot quietly ship on the bare page.
 Two things the frame does *not* decide, which is why each game still has a phase
 of its own: what is inside the board, and what colour it is. Minesweeper's eight
 number hues and its rounded cells, Sudoku's grid lines, Tic Tac Toe's marks and
-Flappy's canvas are all untouched by this, and all still carry pre-redesign
-values. A framed page with a pre-redesign interior is the expected halfway
-state, not an oversight.
+Flappy's canvas were every one of them untouched by the frame landing. **Which of
+those interiors have since had their phase is deliberately not listed here** —
+`design/TODO.md` carries the ones still open, and is deleted from as each lands.
+A sentence here naming them was false within a day of the first phase after it,
+and stayed false through a second. A framed page with a pre-redesign interior is
+the expected halfway state, not an oversight.
 
 ### Centred, because the frame is wider than any board
 
