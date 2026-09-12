@@ -863,6 +863,46 @@ nowhere else.
   instead: a pipe that looks wider than it kills is the same defect as a bird that
   does, and this game has now had both.
 
+## Tic Tac Toe: the hash
+
+Chosen by Gabriel on 2026-09-11 from three directions built and played at board
+size, then refined on the same page against a panel of live switches. The built
+page is `games/tic-tac-toe/`, and that game's own `DESIGN.md` carries the detail;
+what belongs here is the part that speaks to the system.
+
+**The board is four lines and nothing else.** No square, no fill, no frame. The
+two directions that drew a cell per square — chess's vector grid, once with the
+typeface's letters and once with drawn marks — lost because three squares' worth
+of boxes reads as a table. Chess keeps its grid because sixty-four squares need
+naming; nine do not. **A board this small is drawn, not tabulated.**
+
+**The marks are drawn, and each player owns a hue: X violet, O jade.** A hundred
+degrees apart, matched in lightness, neither of them amber. That is the fourth
+game to put a guest hue on the board and keep the chrome amber, and the third to
+draw what an earlier version typed — the site font's own X and O were built first
+and lost, as its chess glyphs did, though for looks rather than for absence.
+
+**A win is said in brightness, never in hue, and this is the general rule the
+game found:** where a player's resting colour *is* a state colour, the state has
+to be carried by something other than colour. `--win` is jade and jade is O all
+game, so the winning three bloom and the rest go half-lit instead. This is the
+same rule "What a game may vary" states from the other side — Pong's paddles at
+rest in the hue a tell already used deleted the tell — reached here by a game that
+could not avoid the collision, only work around it. **A collision that cannot be
+avoided is answered by changing something that is not the hue.**
+
+**A struck line through the three was built and rejected**, and the reason is
+geometric rather than a matter of taste: on a square board a diagonal win runs at
+exactly the angle of one arm of an X, so the line lies along that arm and eats it.
+Running the line *behind* the marks with a gap cut round each one fixes it and is
+the version to reach for if a line is ever wanted again.
+
+**Grid lines belong above a lit cell.** An empty square lights under the pointer,
+and a board whose lines are drawn beneath its squares loses them to that light —
+here the middle column vanished as the pointer crossed it. Anything drawn as the
+board rather than in it goes above the squares' own backgrounds, and the marks go
+above that.
+
 ## How the tokens are layered
 
 `shared.css` already owns nine token names — `--bg`, `--fg`, `--card-bg`,
