@@ -12,8 +12,12 @@ const { launch, url, makeChecks } = require("./helpers");
 const PAGE = url("/games/tic-tac-toe/index.html");
 const { check, report } = makeChecks();
 
-// Amber enough to be the grid: red well ahead of green, blue nearly gone. The
-// lit square behind it (--p-panel-lit) fails this, which is the point.
+// Amber enough to be the grid: red well ahead of green, blue nearly gone. What
+// it has to exclude is anything a hovered square paints, and it does: the glow
+// the board lights a square with is amber too, but translucent over a near-black
+// ground, so it lands far below this threshold — as would an opaque fill in any
+// of the panel colours. Only the line itself passes, which is what lets a count
+// of these pixels mean "the line is still visible".
 function isGrid([r, g, b]) {
   return r > 70 && r > g * 1.4 && b < r * 0.6;
 }

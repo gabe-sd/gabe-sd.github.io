@@ -1,4 +1,4 @@
-// Two players, one keyboard. The marks are drawn rather than typed: VT323's own
+// The marks are drawn rather than typed: VT323's own
 // X and O are a typeface's letters where everything else on this board is a
 // stroke on the hub's 48 grid. See DESIGN.md.
 const WIN_LINES = [
