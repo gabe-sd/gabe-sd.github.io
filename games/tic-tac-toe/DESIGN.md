@@ -71,6 +71,15 @@ An empty square under the pointer lights, and shows a ghost of the mark about to
 land in it, in that player's colour. The status line says it too, but the board
 saying it is what stops a player having to look away from where they are aiming.
 
+**The light is a glow, not a filled square**, and this was got wrong first. A
+flat fill was built and rejected on sight: on the four corners and four sides
+there is no grid line for the rectangle's outer edge to land against, so it drew
+a hard-edged box standing outside the `#` — reintroducing, on hover, exactly the
+box the board is built to do without. A radial glow that fades out before the
+square's own edges has no straight edge to place, so it reads the same wherever
+it lands. It is amber rather than the player's hue: the ghost mark already says
+whose turn it is, and two signals in one hue on one square is one too many.
+
 ## A win is said in brightness, because it cannot be said in colour
 
 The three that won bloom; everything else goes half-lit. **The win may not be

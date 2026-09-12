@@ -88,9 +88,16 @@ function isGrid([r, g, b]) {
 
   console.log("7. hovering a square does not paint over the grid lines");
   // Measured in pixels, because that is the whole claim: the lines are drawn on
-  // the board and a hovered cell lights its own background over them. Counting
-  // grid-coloured pixels in the strip a line runs through is what only a visible
-  // line can produce - a bright fill in some other hue would not pass isGrid.
+  // the board and a hovered cell lights itself over them. Counting grid-coloured
+  // pixels in the strip a line runs through is what only a visible line can
+  // produce - a bright fill in some other hue would not pass isGrid.
+  //
+  // What it catches, established by breaking it three ways: an opaque hover fill
+  // with the lines layered under it takes the count to zero. With the lines
+  // layered above, the same fill passes - which is the layering doing its job.
+  // The glow the board actually uses is translucent, so it passes either way:
+  // this check guards what a player sees, not the z-index that currently
+  // delivers it, and a future hover that paints solid is what it is here for.
   await page.click("#restart");
   const box = await page.locator("#board").boundingBox();
   // The left-hand vertical line of the middle column, sampled down the middle

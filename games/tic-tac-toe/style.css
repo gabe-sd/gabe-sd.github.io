@@ -67,7 +67,7 @@
   font: inherit;
   cursor: pointer;
   color: var(--p-soft);
-  transition: opacity 0.25s, background-color 0.15s;
+  transition: opacity 0.25s;
 }
 
 .cell:disabled { cursor: default; }
@@ -93,10 +93,11 @@
 
 /* An empty square under the pointer lights, and shows a ghost of the mark about
    to land in it — which is how the board says whose turn it is without a second
-   readout. #board carries data-turn; script.js sets it. */
-/* The lit square is a glow that fades out before the square's own edges, not a
-   filled rectangle. A rectangle draws the one thing this board does without: on
-   an outer square, where there is no grid line to stop it, its hard edge stood
+   readout. #board carries data-turn; script.js sets it.
+
+   The light is a glow that fades out before the square's own edges rather than a
+   filled rectangle. A rectangle draws the one thing this board does without, and
+   on an outer square there is no grid line for its edge to land on, so it stood
    outside the # with nothing to explain it. */
 .cell::before {
   content: "";

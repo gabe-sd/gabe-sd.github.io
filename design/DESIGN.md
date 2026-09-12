@@ -903,6 +903,13 @@ here the middle column vanished as the pointer crossed it. Anything drawn as the
 board rather than in it goes above the squares' own backgrounds, and the marks go
 above that.
 
+**A hover light on a board of lines is a glow, not a filled cell.** The fill that
+prompted the layering above was itself rejected a step later, and for a reason
+that generalises past this game: a rectangle needs an edge to land on, and on an
+outer square of a board drawn as lines there is none, so it stands outside the
+figure as a box in its own right. Where a board has no cells to fill, light it
+with something that has no edge.
+
 ## How the tokens are layered
 
 `shared.css` already owns nine token names — `--bg`, `--fg`, `--card-bg`,
