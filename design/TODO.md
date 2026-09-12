@@ -44,9 +44,10 @@ each of the four remaining games still needs its visual pass. The overhaul lande
 `main` on 2026-09-07 with the hub, the shell, chess and Pong redesigned and the other
 four framed but not restyled inside.
 
-**Flappy Bird's phase landed on 2026-09-10**, leaving the three below.
+**Flappy Bird's phase landed on 2026-09-10 and Tic Tac Toe's on 2026-09-11**,
+leaving the two below.
 
-**For all three: the frame has landed** — breadcrumb, title, strap, scanlines, footer
+**For both: the frame has landed** — breadcrumb, title, strap, scanlines, footer
 and the shared `#instructions` panel are in place and covered by
 `tests/contract.test.js`. What is left in each is the inside of the board.
 
@@ -66,11 +67,6 @@ amber the rest of the site uses for ordinary text.
 `style.css` only. The grid's box borders are drawn with `--fg` and the selected cell
 with `color-mix()` on `--accent`; both want checking against the new values rather than
 assuming they carry over.
-
-### redesign-tic-tac-toe — Tic Tac Toe
-
-The smallest stylesheet on the site, 32 lines, all tokens already. Last because it is
-nearly free once everything above has settled.
 
 ### redesign-emoji-glyphs — The emoji, which are the last off-palette thing
 
@@ -152,6 +148,12 @@ chess's black army is the strategy tile's jade, Pong's player is the arcade tile
 rose — and **Flappy Bird said no**. Its tile is arcade rose; its bird is cyan.
 Rose was built and looked at first, and lost for reasons particular to that board;
 `design/DESIGN.md`, "What this answers about hub-tile inheritance", has them.
+
+**Tic Tac Toe is the fourth, and it splits.** Its O is the strategy tile's jade,
+its X is violet, which belongs to no tile — one board carrying both answers at
+once. It went that way for contrast between the two players rather than out of
+any view about the hub, which is itself worth knowing: a game with two actors
+cannot inherit one tile colour for both.
 
 Two out of three is a tendency, not a rule. What is left to decide here is
 narrower than it was: whether categories are a visible idea at all, and whether the

@@ -1,32 +1,168 @@
+/* Tic Tac Toe: the hash.
+ *
+ * The board is the four lines of a # and nothing else — no squares, no fill, no
+ * frame. Three directions were built and looked at on a served page; the two
+ * that drew a cell for every square lost, because a three-square board made of
+ * boxes reads as a table where this reads as something drawn on a screen.
+ * design/DESIGN.md, "Tic Tac Toe: the hash", has the rest.
+ *
+ * The marks are stroke SVG on the hub's 48 grid, drawn by script.js, and each
+ * player owns a hue of its own: see the two tokens below.
+ */
+
 #board {
+  --sq: 104px;
+
+  /* Violet against jade: about a hundred degrees apart, matched in lightness,
+     and neither of them amber, so both stand off the amber grid. Jade is also
+     the strategy tile's hue on the hub, which is where chess's black army gets
+     its colour. */
+  --x: var(--p-violet);
+  --o: var(--p-jade);
+
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(3, minmax(70px, 100px));
-  grid-template-rows: repeat(3, minmax(70px, 100px));
-  gap: 6px;
+  grid-template-columns: repeat(3, var(--sq));
+  grid-template-rows: repeat(3, var(--sq));
 }
 
+/* The lines, drawn as four gradients on the board's own pseudo-elements rather
+   than as borders on the cells: a border belongs to a box, and there are no
+   boxes here. Inset, so they stop short of the board's edge the way a drawn #
+   does, and above the cells, so a lit square cannot paint over them. */
+#board::before,
+#board::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  z-index: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 0 5px rgba(255, 176, 0, 0.35));
+}
+
+#board::before {
+  background:
+    linear-gradient(var(--p-rule) 0 0) 33.333% 0 / 2px 100% no-repeat,
+    linear-gradient(var(--p-rule) 0 0) 66.667% 0 / 2px 100% no-repeat;
+}
+
+#board::after {
+  background:
+    linear-gradient(var(--p-rule) 0 0) 0 33.333% / 100% 2px no-repeat,
+    linear-gradient(var(--p-rule) 0 0) 0 66.667% / 100% 2px no-repeat;
+}
+
+/* ---------- the squares ---------- */
+
 .cell {
-  background: var(--cell-bg);
-  border: 2px solid var(--cell-border);
-  border-radius: 8px;
-  font-size: 2.5rem;
-  font-weight: 600;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font: inherit;
   cursor: pointer;
-  color: var(--fg);
+  color: var(--p-soft);
+  transition: opacity 0.25s;
 }
 
-.cell:hover:not(:disabled) {
-  border-color: var(--accent);
+.cell:disabled { cursor: default; }
+
+/* The two players. Everything else colours itself from these through
+   currentColor, the ghost and the winning glow included. */
+.cell[data-mark="X"] { color: var(--x); }
+.cell[data-mark="O"] { color: var(--o); }
+
+/* ---------- the marks ---------- */
+
+/* Above the grid lines: a mark is the one thing on this board that the # does
+   not run over. */
+.cell svg {
+  position: relative;
+  z-index: 3;
+  width: 72%;
+  height: 72%;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, currentColor 55%, transparent));
 }
 
-.cell:disabled {
-  cursor: default;
+/* ---------- whose turn ---------- */
+
+/* An empty square under the pointer lights, and shows a ghost of the mark about
+   to land in it — which is how the board says whose turn it is without a second
+   readout. #board carries data-turn; script.js sets it.
+
+   The light is a glow that fades out before the square's own edges rather than a
+   filled rectangle. A rectangle draws the one thing this board does without, and
+   on an outer square there is no grid line for its edge to land on, so it stood
+   outside the # with nothing to explain it. */
+.cell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(
+    closest-side,
+    rgba(255, 176, 0, 0.16),
+    rgba(255, 176, 0, 0.07) 55%,
+    transparent
+  );
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
 }
 
-.cell.win {
-  border-color: var(--win);
-  color: var(--win);
+.cell:not(:disabled):is(:hover, :focus-visible)::before { opacity: 1; }
+
+.cell:not(:disabled):hover,
+.cell:not(:disabled):focus-visible {
+  outline: none;
+}
+
+.cell:not(:disabled):is(:hover, :focus-visible)::after {
+  content: "";
+  position: absolute;
+  inset: 14%;
+  z-index: 2;
+  background: var(--ghost);
+  opacity: 0.28;
+  pointer-events: none;
+  -webkit-mask: var(--ghost-shape) center / contain no-repeat;
+  mask: var(--ghost-shape) center / contain no-repeat;
+}
+
+#board[data-turn="X"] {
+  --ghost: var(--x);
+  --ghost-shape: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M13 13L35 35M35 13L13 35' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+#board[data-turn="O"] {
+  --ghost: var(--o);
+  --ghost-shape: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle cx='24' cy='24' r='11.5' fill='none' stroke='%23000' stroke-width='3.2'/%3E%3C/svg%3E");
+}
+
+/* ---------- how it ends ---------- */
+
+/* The win is carried by brightness alone: the three that won bloom, the rest go
+   half-lit. It cannot be carried by colour, because --win is jade and jade is
+   already a player here — and a mark that changes hue on winning would be
+   saying something the board has been using that hue to say all game.
+   A draw dims everything to the same value: nobody's three. */
+#board[data-over="win"] .cell:not(.win) { opacity: 0.55; }
+#board[data-over="draw"] .cell { opacity: 0.55; }
+
+.cell.win svg {
+  filter:
+    drop-shadow(0 0 5px currentColor)
+    drop-shadow(0 0 18px currentColor)
+    drop-shadow(0 0 42px color-mix(in srgb, currentColor 60%, transparent));
+}
+
+/* ---------- smaller screens ---------- */
+
+@media (max-width: 460px) {
+  #board { --sq: 86px; }
 }
