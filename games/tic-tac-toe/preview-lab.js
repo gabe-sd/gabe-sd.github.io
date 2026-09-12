@@ -13,7 +13,7 @@
   const boardEl = document.getElementById("board");
   const lab = document.querySelector(".lab");
   const state = Object.assign(
-    { x: "violet", o: "jade", win: "glow", gi: "med", fill: "off", dim: "1" },
+    { x: "violet", o: "jade", win: "glow", gi: "strong", fill: "off", dim: "1" },
     Object.fromEntries(new URLSearchParams(location.hash.slice(1)))
   );
 

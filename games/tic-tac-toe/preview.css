@@ -58,7 +58,11 @@ body:not([data-marks="drawn"]) .cell[data-mark="O"] {
 }
 
 /* Drawn: inline SVG, coloured through currentColor like chess's pieces. */
+/* Above the grid lines, which are themselves above a lit square: hovering a
+   cell must not paint over the # the board is made of. */
 .cell svg {
+  position: relative;
+  z-index: 3;
   width: 72%;
   height: 72%;
   overflow: visible;
@@ -154,8 +158,7 @@ body:not([data-win="strike"]):not([data-win="behind"]) .cell.win svg .mk {
 /* Behind: the line runs under the marks, thinner than they are, and each
    winning mark's halo cuts a gap in it — so a diagonal no longer lies along
    one arm of an X and swallows it. */
-body[data-win="behind"] .cell { z-index: 1; }
-body[data-win="behind"] .strike { z-index: 0; height: 3px; margin-top: -1.5px; }
+body[data-win="behind"] .strike { z-index: 2; height: 3px; margin-top: -1.5px; }
 body[data-win="behind"] .cell.win svg .halo { display: inline; }
 
 /* Strike: a line through the three in the winner's colour, at the marks' own
@@ -171,7 +174,7 @@ body[data-win="behind"] .cell.win svg .halo { display: inline; }
   transform-origin: 0 50%;
   transform: rotate(var(--a));
   pointer-events: none;
-  z-index: 1;
+  z-index: 4;
   animation: strike 0.32s ease-out both;
 }
 #board[data-winner="O"] .strike { color: var(--o); }
@@ -209,6 +212,7 @@ body:not([data-win="strike"]):not([data-win="behind"]) .strike { display: none; 
   content: "";
   position: absolute;
   pointer-events: none;
+  z-index: 1;
   inset: 6px;
   filter: drop-shadow(0 0 5px rgba(255, 176, 0, 0.35));
 }
